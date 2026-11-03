@@ -25,7 +25,11 @@ export function dibujarTablero(nodo, m, cambios, { alElegirDepartamento }) {
   const conteo = new Map();
   for (const d of m.departamentos) for (const a of d.agentes) conteo.set(a.estado_mostrado, (conteo.get(a.estado_mostrado) ?? 0) + 1);
   const agentes = [...conteo].filter(([, n]) => n > 0).map(([estado, n]) =>
-    el("span", { clase: `tablero-estado ${ESTADOS[estado].clase2d}`, title: ESTADOS[estado].etiqueta }, el("span", { clase: "etiqueta-luz", "aria-hidden": "true" }), `${n} ${ESTADOS[estado].etiqueta.toLowerCase()}`));
+    el("span", { clase: `tablero-estado ${ESTADOS[estado].clase2d}`, title: `${n} ${ESTADOS[estado].etiqueta.toLowerCase()}` },
+      el("span", { clase: "etiqueta-luz", "aria-hidden": "true" }),
+      // En celular se ve el icono y el número (caben todos); el texto completo queda para lectores y en el título.
+      el("span", { clase: "tablero-estado-icono", "aria-hidden": "true" }, ESTADOS[estado].icono), `${n}`,
+      el("span", { clase: "tablero-estado-texto" }, ` ${ESTADOS[estado].etiqueta.toLowerCase()}`)));
 
   const nombreDep = new Map(m.departamentos.map((d) => [d.id, d.nombre]));
   const alertas = [...m.alertas].sort((a, b) => ORDEN.indexOf(a.nivel) - ORDEN.indexOf(b.nivel));
