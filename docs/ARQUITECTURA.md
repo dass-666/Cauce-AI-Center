@@ -35,6 +35,11 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `plano-edificio.js` | Coloca los 8 departamentos en el piso a partir de las celdas de `escena/<proyecto>.json`, con pasillos; cada cuarto crece si necesita más filas de escritorios | No (se prueba en Node) |
 | `edificio.js` | Arma el escenario: un cuarto (modo *Un cuarto*) o todos con losa, pasillos y plantas (modo *Edificio*); decide cuántas veces por segundo se anima cada cuarto | Sí |
 | `medidor.js` | Medidor de `?medir=1`: promedio, mínimo, peor cuadro y segundos bajo 50 cps de los últimos 20 s; se reinicia al cambiar brillo, modo, enfoque o tamaño | No (se prueba en Node) |
+| `arquitectura.js` | Muros exteriores con ventanas, columnas, pretil, recepción (letrero con proyecto, REAL/DEMO y conexión; reloj con la hora local), placas en el pasillo. Sin personas | Sí |
+| `identidad.js` | Tema y color de cada departamento (por palabras del id o del nombre) | No (se prueba en Node) |
+| `iconos.js` | Símbolos de cada tema dibujados en un lienzo | No (usa canvas) |
+| `iluminacion.js` | Luz según la hora local o fija; nunca baja de un mínimo visible | No (se prueba en Node) |
+| `minimapa.js` | Minimapa HTML con el color del estado real de cada departamento | No (canvas 2D) |
 | `oficina.js` | Un departamento: piso, muros, mamparas, escritorios, computadoras, sillas, planta, letrero | Sí |
 | `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, brillo, ciclo de dibujo | Sí |
 
@@ -50,6 +55,10 @@ Reglas:
 - Brillo (bloom): solo escritorio, **apagado por defecto**, se descarga aparte al encenderlo y **se apaga solo** si el equipo no sostiene 40 cuadros/s.
 - `?medir=1` muestra cuadros por segundo, llamadas de dibujo, triángulos, geometrías y texturas.
 - El controlador pide poses (`caminar`, `sentado`, `teclear`…) a un "cuerpo" con método `aplicar(pose, dt)`. Hay dos cuerpos: Kenney (`kenney.js`) y el provisional. Cambiar de personajes no toca la máquina de estados ni los caminos.
+
+**Tablero y cambios (fuera de la 3D, también en el plano):** `app/vistas/tablero.js` muestra REAL/DEMO, conexión, antigüedad del dato, agentes por estado, alertas del archivo y los cambios observados. `app/nucleo/cambios.js` compara la lectura anterior con la actual (estado de agentes, agentes y alertas que aparecen o desaparecen, conexión). No es un historial: no guarda nada al recargar, no inventa pasos intermedios y solo dice entre qué datos (`generado_en`) se observó cada cambio.
+
+**Decoración vs. evidencia:** la luz, el reloj, las ventanas, los muebles por tema y las placas son decoración y nunca simulan trabajo; no hay personas decorativas. La torreta de un departamento solo aparece si el archivo trae alertas suyas: parpadea solo con una alerta crítica y datos vigentes; con datos vencidos queda gris.
 
 ## Adaptadores
 

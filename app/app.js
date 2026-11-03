@@ -3,13 +3,16 @@
 // La vista 3D y three.js solo se descargan si se usan; "Bajo consumo" fuerza el plano 2D.
 
 import { cargarJSON, cargarRegistro } from "./cargador.js";
-import { construirModeloVista, describirDuracion, elegirCarga } from "./nucleo/modelo.js";
+import { construirModeloVista, elegirCarga } from "./nucleo/modelo.js";
 import { crearVista2D } from "./vistas/vista2d.js";
 import { dibujarPanel } from "./vistas/panel.js";
 import { el, fecha } from "./vistas/dom.js";
+import { dibujarTablero } from "./vistas/tablero.js";
+import { crearRegistroCambios } from "./nucleo/cambios.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
+const registroCambios = crearRegistroCambios({ maximo: 30 });
 
 const estado = {
   proyectos: [],
@@ -152,6 +155,7 @@ async function actualizar() {
     distribucion: dist.tipo === "ok" ? dist.datos : null,
     ahora: new Date(),
   });
+  registroCambios.leer(estado.modelo); // solo compara con la lectura anterior de esta página
   dibujar();
 }
 
@@ -169,15 +173,9 @@ function dibujarEstado(m) {
     $("#banda-demo-texto").textContent =
       `DATOS DE DEMOSTRACIÓN · No reflejan actividad real de ${m.proyecto.nombre}. Hora simulada: ${fecha(m.ahora_referencia)}`;
   }
-  const c = $("#conexion");
-  c.className = `conexion conexion-${m.conexion}`;
-  c.replaceChildren(...[
-    el("strong", {}, m.conexion_etiqueta),
-    m.generado_en ? el("span", {}, ` · dato de ${fecha(m.generado_en)} (hace ${describirDuracion(m.edad_segundos)})`) : null,
-    m.fuente ? el("span", {}, ` · ${m.es_demo ? "DEMO" : "REAL"}: ${m.fuente.nombre}`) : null,
-    m.motivo ? el("span", { clase: "conexion-motivo" }, m.motivo) : null,
-    m.nota_origen ? el("span", { clase: "conexion-motivo" }, m.nota_origen) : null,
-  ].filter(Boolean));
+  dibujarTablero($("#conexion"), m, registroCambios.cambios, {
+    alElegirDepartamento(id) { estado.seleccion = { tipo: "departamento", id }; dibujar(); },
+  });
   const det = $("#diagnostico");
   const lineas = [...m.errores, ...m.avisos];
   det.hidden = lineas.length === 0;
