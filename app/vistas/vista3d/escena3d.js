@@ -14,8 +14,10 @@ import { luzSegunHora } from "./iluminacion.js";
 import { crearBarraMovil } from "./barra-movil.js";
 import { vecinoDe, resumenDepartamento } from "./navegacion.js";
 import { crearMinimapa } from "./minimapa.js";
+import { crearBrillo } from "./brillo.js";
+import { escucharDeslizar } from "./gestos.js";
 import { calcularEncuadre, aPixeles, dentro } from "./encuadre.js";
-import { acomodarEtiquetas, nombresCortos, prioridadEtiqueta } from "./etiquetas.js";
+import { crearCapaEtiquetas } from "./etiquetas-dom.js";
 import { crearCatalogoKenney } from "./kenney.js";
 import { Recursos } from "./recursos.js";
 import { crearMedidor, firmaMedicion } from "./medidor.js";
@@ -52,7 +54,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   const botonModo = (valor, texto) => el("button", { type: "button", clase: "boton boton-chico", "data-modo3d": valor }, texto);
   const modoDom = el("div", { clase: "segmentado", role: "group", "aria-label": "Vista 3D" },
     botonModo("edificio", "Edificio"), botonModo("individual", "Un cuarto"));
-  const etiquetasDom = el("div", { clase: "vista3d-etiquetas" });
+  const capaEtiquetas = crearCapaEtiquetas({ movil, alElegir: (id) => alSeleccionar({ tipo: "departamento", id }) });
+  const etiquetasDom = capaEtiquetas.nodo;
   // Celular: barra inferior (◀ departamento ▶ ⋯). Usa las mismas acciones que el teclado y el gesto.
   const barraMovil = movil ? crearBarraMovil({
     alPaso: (paso) => irAVecino(paso),
@@ -159,7 +162,6 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let ultimoAgente = null;
   let recienConstruido = false;
   let ultimoMinimapa = 0;
-  const etiquetas = new Map();
   let claveCargando = null;
   let modelo = null;
   let seleccion = null;
@@ -167,47 +169,16 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let mitadAlto = 4;
   let destruida = false;
 
-  // --- Brillo (bloom): solo escritorio, se carga bajo demanda y se puede apagar ---
-  let composer = null;
-  let bloom = null;
-  let cargandoBrillo = false;
-  let brilloDesde = 0;
+  // --- Brillo (bloom): brillo.js. Solo escritorio, apagado por defecto. ---
+  const brilloFx = crearBrillo({ renderer, escena, camara, alCambiar: () => ajustarTamano() });
   brillo.checked = !movil && leer("cauce.brillo3d") === "1"; // apagado por defecto: se enciende a mano
   brillo.addEventListener("change", () => {
     guardar("cauce.brillo3d", brillo.checked ? "1" : "0");
     aplicarBrillo();
   });
   async function aplicarBrillo() {
-    if (!brillo.checked || movil) {
-      composer?.dispose();
-      bloom?.dispose();
-      composer = bloom = null;
-      return;
-    }
-    if (composer || cargandoBrillo) return;
-    cargandoBrillo = true;
-    try {
-      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await Promise.all([
-        import("three/addons/postprocessing/EffectComposer.js"),
-        import("three/addons/postprocessing/RenderPass.js"),
-        import("three/addons/postprocessing/UnrealBloomPass.js"),
-        import("three/addons/postprocessing/OutputPass.js"),
-      ]);
-      if (destruida || !brillo.checked) return;
-      composer = new EffectComposer(renderer);
-      composer.addPass(new RenderPass(escena, camara));
-      bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.35, 0.62);
-      composer.addPass(bloom);
-      composer.addPass(new OutputPass());
-      brilloDesde = performance.now();
-      ajustarTamano();
-    } catch (e) {
-      // Sin brillo la oficina funciona igual.
-      brillo.checked = false;
-      console.warn("Brillo no disponible:", e);
-    } finally {
-      cargandoBrillo = false;
-    }
+    // Si falla la descarga, queda apagado: la oficina funciona igual sin brillo.
+    if (await brilloFx.activar(brillo.checked && !movil) === "fallo") brillo.checked = false;
   }
   aplicarBrillo();
 
@@ -216,7 +187,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const w = Math.max(1, raiz.clientWidth);
     const h = Math.max(1, raiz.clientHeight);
     renderer.setSize(w, h, false);
-    composer?.setSize(w, h);
+    brilloFx.setSize(w, h);
     const aspecto = w / h;
     camara.top = mitadAlto;
     camara.bottom = -mitadAlto;
@@ -482,34 +453,16 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     alSeleccionar({ tipo: "departamento", id: depMostrado });
   });
 
-  // Deslizar a los lados con un dedo (celular): departamento vecino. Se escucha en toda la vista,
-  // así funciona aunque el dedo empiece sobre una etiqueta; no en la barra, el minimapa ni las medidas.
-  let dedos = 0;
-  let deslizar = null;
   // Tocar fuera de la lista o del menú de la barra móvil los cierra.
   if (barraMovil) raiz.addEventListener("pointerdown", (e) => {
     if (barraMovil.estaAbierta() && !(e.target instanceof Element && e.target.closest(".vista3d-movil"))) barraMovil.cerrar();
   }, true);
-  raiz.addEventListener("pointerdown", (e) => {
-    if (e.pointerType !== "touch") return;
-    dedos++;
-    const enControl = e.target instanceof Element && e.target.closest(".vista3d-barra, .vista3d-minimapa, .vista3d-medidas, .vista3d-personajes, .vista3d-movil");
-    deslizar = dedos > 1 || enControl ? null : { x: e.clientX, y: e.clientY, t: performance.now() };
-  }, true);
-  const soltar = (e) => {
-    if (e.pointerType !== "touch") return;
-    dedos = Math.max(0, dedos - 1);
-    const d = deslizar;
-    deslizar = null;
-    if (!d || e.type === "pointercancel" && !movil) return;
-    const dx = e.clientX - d.x, dy = e.clientY - d.y;
-    if (movil && modelo && escenario && performance.now() - d.t < 700 && Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) {
-      barraMovil?.cerrar();
-      irAVecino(dx < 0 ? 1 : -1);
-    }
-  };
-  raiz.addEventListener("pointerup", soltar, true);
-  raiz.addEventListener("pointercancel", (e) => { if (e.pointerType === "touch") { dedos = Math.max(0, dedos - 1); deslizar = null; } }, true);
+  // Deslizar a los lados con un dedo (celular): departamento vecino (gestos.js).
+  if (movil) escucharDeslizar(raiz, (sentido) => {
+    if (!modelo || !escenario) return;
+    barraMovil?.cerrar();
+    irAVecino(sentido);
+  });
 
   // --- Pérdida del contexto gráfico (driver reiniciado, poca memoria en el móvil) ---
   lienzo.addEventListener("webglcontextlost", (e) => {
@@ -544,7 +497,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       }
     }
     renderer.info.reset();
-    if (composer) composer.render(dt);
+    if (brilloFx.composer) brilloFx.composer.render(dt);
     else renderer.render(escena, camara);
     contarCuadro(t);
   }
@@ -563,30 +516,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
 
   // Nombres de los departamentos como texto nítido (HTML) encima del edificio cuando se ve de lejos.
   function colocarEtiquetas() {
-    const verlas = camara.zoom < 1.9;
-    etiquetasDom.hidden = !verlas;
-    if (!verlas) return;
-    // Se calcula dónde cae cada etiqueta y se ocultan las que chocarían con otra más importante.
     const w = raiz.clientWidth, h = raiz.clientHeight;
-    const items = [];
-    const enPantalla = (x, y, z) => { proyectado.set(x, y, z).project(camara); return { x: (proyectado.x + 1) / 2 * w, y: (1 - proyectado.y) / 2 * h }; };
-    for (const [id, nodo] of etiquetas) {
-      const c = escenario.rectangulo(id);
-      if (!c) continue;
-      // Primero sobre el muro del fondo; si choca, al centro del cuarto; si no, junto a la puerta.
-      const opciones = [enPantalla(c.x, 2.4, c.z - c.fondo / 2), enPantalla(c.x, 1.3, c.z), enPantalla(c.x - c.ancho / 4, 1.0, c.z + c.fondo / 2)];
-      items.push({ id, opciones, w: Number(nodo.dataset.ancho) || 120, h: Number(nodo.dataset.alto) || 24, prioridad: Number(nodo.dataset.prioridad) || 0 });
-    }
-    const zona = zonaLibre();
     // En celular la barra de abajo es fija: ninguna etiqueta debe quedar debajo de ella (ni al bajar la página).
     const limite = barraMovil && !barraMovil.nodo.hidden ? Math.min(h, cajaEnRaiz(barraMovil.nodo.querySelector(".movil-barra")).arriba - 4) : h;
-    const elegidas = acomodarEtiquetas(items, { w, h: limite, arriba: zona.arriba });
-    for (const it of items) {
-      const nodo = etiquetas.get(it.id);
-      const k = elegidas.get(it.id);
-      if (nodo.hidden !== (k === undefined)) nodo.hidden = k === undefined;
-      if (k !== undefined) nodo.style.transform = `translate(${it.opciones[k].x}px, ${it.opciones[k].y}px) translate(-50%, -100%)`;
-    }
+    capaEtiquetas.colocar(camara, escenario, { w, h: limite, alto: h, arriba: zonaLibre().arriba });
   }
 
   function arrancar() {
@@ -615,7 +548,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const cps = medidor.valor;
     // Si con brillo el equipo no sostiene 40 cuadros por segundo, se apaga solo (no se guarda:
     // la próxima visita lo vuelve a intentar). Con ?medir=1 no se apaga, para poder medir su costo.
-    if (composer && !medir && t - brilloDesde > 3000 && cps < 40) {
+    if (brilloFx.composer && !medir && t - brilloFx.desde > 3000 && cps < 40) {
       brillo.checked = false;
       brilloApagadoSolo = cps;
       brillo.parentElement.title = `Se apagó solo: el equipo iba a ${cps} cuadros por segundo`;
@@ -661,7 +594,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       texturas: renderer.info.memory.textures,
       pixelRatio: renderer.getPixelRatio(),
       movil,
-      brillo: Boolean(composer),
+      brillo: Boolean(brilloFx.composer),
       tamano: [lienzo.width, lienzo.height],
       cuadros_totales: r.cuadros_totales,
       departamento: depMostrado,
@@ -733,7 +666,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     selector.value = modo === "edificio" ? (nuevoEnfoque ?? "") : dep.id;
 
     const visibles = modo === "edificio" ? deps : [dep];
-    const clave = `${modo}/${m.proyecto.id}/${m.cuadricula.metros_por_celda}/` +
+    // es_demo en la clave: al pasar de DEMO a REAL la escena se reconstruye y nadie "reacciona" a la diferencia.
+    const clave = `${modo}/${m.proyecto.id}/${m.es_demo ? "demo" : "real"}/${m.cuadricula.metros_por_celda}/` +
       visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => a.id).join(",")}`).join("|");
     const ids = visibles.flatMap((d) => d.agentes.map((a) => a.id));
     if (clave !== claveOficina) {
@@ -819,49 +753,15 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     escenario = null;
     claveOficina = "";
     animCam = null;
-    etiquetas.clear();
-    etiquetasDom.replaceChildren();
+    capaEtiquetas.limpiar();
   }
 
   function crearEtiquetas(visibles) {
-    etiquetas.clear();
-    etiquetasDom.replaceChildren();
-    if (modo !== "edificio") return;
-    for (const d of visibles) {
-      const nodo = el("button", { type: "button", clase: "etiqueta-dep", onclick: () => alSeleccionar({ tipo: "departamento", id: d.id }) });
-      etiquetas.set(d.id, nodo);
-      etiquetasDom.append(nodo);
-    }
+    if (modo === "edificio") capaEtiquetas.crear(visibles);
+    else capaEtiquetas.limpiar();
   }
   function actualizarEtiquetas(visibles, sel) {
-    const cortos = nombresCortos(visibles.map((d) => d.nombre));
-    visibles.forEach((d) => {
-      const nodo = etiquetas.get(d.id);
-      if (nodo) nodo.dataset.prioridad = prioridadEtiqueta({ enfocado: d.id === enfocado || (sel?.tipo === "departamento" && sel.id === d.id), estado: d.estado_resumen, alertas: d.alertas.length });
-    });
-    visibles.forEach((d, i) => { d = { ...d, corto: movil ? cortos[i] : d.nombre }; actualizarEtiqueta(d, sel); });
-  }
-  function actualizarEtiqueta(d, sel) {
-    {
-      const nodo = etiquetas.get(d.id);
-      if (!nodo) return;
-      const ap = d.apariencia_resumen;
-      const clave = `${d.corto}|${d.nombre}|${ap.clase2d}|${d.alertas.length}|${sel?.tipo === "departamento" && sel.id === d.id}`;
-      if (nodo.dataset.clave === clave) return;
-      nodo.dataset.clave = clave;
-      nodo.className = `etiqueta-dep ${ap.clase2d}${sel?.tipo === "departamento" && sel.id === d.id ? " elegida" : ""}`;
-      nodo.replaceChildren(...[el("span", { clase: "etiqueta-luz", "aria-hidden": "true" }), d.corto,
-        el("span", { clase: "solo-lector" }, `, ${ap.etiqueta}`),
-        d.alertas.length ? el("span", { clase: "etiqueta-alertas" }, ` ⚠ ${d.alertas.length}`) : null].filter(Boolean));
-      nodo.title = `${d.nombre}: ${ap.etiqueta}`;
-      nodo.setAttribute("aria-label", `${d.nombre}: ${ap.etiqueta}${d.alertas.length ? `, ${d.alertas.length} alerta(s)` : ""}`);
-      // Tamaño medido una vez por cambio de contenido (no en cada cuadro).
-      const ocultaba = [etiquetasDom.hidden, nodo.hidden];
-      etiquetasDom.hidden = nodo.hidden = false;
-      nodo.dataset.ancho = nodo.offsetWidth;
-      nodo.dataset.alto = nodo.offsetHeight;
-      [etiquetasDom.hidden, nodo.hidden] = ocultaba;
-    }
+    capaEtiquetas.actualizar(visibles, sel, enfocado);
   }
 
   function destruir() {
@@ -873,8 +773,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     observador.disconnect();
     quitarOficina();
     compartidos.liberar();
-    composer?.dispose();
-    bloom?.dispose();
+    brilloFx.destruir();
     controles.dispose();
     renderer.dispose();
     renderer.forceContextLoss();

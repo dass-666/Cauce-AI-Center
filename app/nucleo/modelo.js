@@ -12,6 +12,10 @@ import { ESTADOS, CONEXION, estadoResumen } from "./estados.js";
  */
 export function elegirCarga(real, demo) {
   if (real.tipo === "no_encontrado" && demo && demo.tipo !== "no_encontrado") {
+    // Separación estricta: lo que se lee del lugar de la demostración tiene que decir que es demostración.
+    if (demo.tipo === "ok" && demo.datos?.es_demo !== true) {
+      return { carga: { tipo: "json_invalido", mensaje: "El archivo de demostración no está marcado como demostración (es_demo: true); no se muestra." }, origen: "demo", nota: null };
+    }
     return { carga: demo, origen: "demo", nota: "Todavía no hay datos reales de este proyecto: se muestra la demostración." };
   }
   return { carga: real, origen: "real", nota: null };

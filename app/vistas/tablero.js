@@ -75,6 +75,7 @@ export function textoCambio(c) {
     case "agente_quitado": return `${c.agente} ya no aparece en ${c.departamento}.`;
     case "alerta_nueva": return `Nueva alerta: ${c.titulo}${c.departamento ? ` (${c.departamento})` : ""}.`;
     case "alerta_quitada": return `La alerta "${c.titulo}" ya no aparece en el archivo.`;
+    case "fuente": return `Los datos pasaron de ${c.de} a ${c.a}: no se comparan estados entre fuentes distintas.`;
     case "conexion": return `La conexión pasó de "${c.de}" a "${c.a}".`;
     default: return "Cambio observado.";
   }

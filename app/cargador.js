@@ -1,6 +1,8 @@
 // Lectura de archivos locales desde el navegador. Nunca toca bases de datos:
 // solo lee los JSON que dejan los adaptadores (o los de demostración).
 
+import { validarRegistro } from "./nucleo/registro.js";
+
 export async function cargarJSON(url) {
   let resp;
   try {
@@ -22,7 +24,11 @@ export async function cargarJSON(url) {
 export async function cargarRegistro() {
   for (const url of ["datos/proyectos.local.json", "datos/proyectos.json"]) {
     const r = await cargarJSON(url);
-    if (r.tipo === "ok" && Array.isArray(r.datos?.proyectos)) return { url, proyectos: r.datos.proyectos };
+    if (r.tipo === "ok" && Array.isArray(r.datos?.proyectos)) {
+      const { proyectos, avisos } = validarRegistro(r.datos);
+      for (const a of avisos) console.warn(`${url}: ${a}`);
+      return { url, proyectos, avisos };
+    }
   }
   return { url: null, proyectos: [] };
 }
