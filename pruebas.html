@@ -17,12 +17,15 @@
   <p><a href="index.html" style="color:#ffd89a">Volver al centro de operaciones</a></p>
   <script type="module">
     import { registrarCasos } from "./pruebas/casos.js";
+    import { registrarCasosNaturaleza } from "./pruebas/casos-naturaleza.js";
     import { ejecutar } from "./pruebas/mini.js";
-    registrarCasos(async (ruta) => {
+    const leer = async (ruta) => {
       const r = await fetch(ruta, { cache: "no-store" });
       if (!r.ok) throw new Error(`No se pudo leer ${ruta}`);
       return r.text();
-    });
+    };
+    registrarCasos(leer);
+    registrarCasosNaturaleza(leer);
     const r = await ejecutar();
     const resumen = document.getElementById("resumen");
     resumen.textContent = `${r.pasaron} pasaron, ${r.fallaron} fallaron`;
