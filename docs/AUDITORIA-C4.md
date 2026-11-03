@@ -10,6 +10,7 @@ Escala: **Impacto** (qué tan grave si pasa) · **Riesgo** (qué tan probable) �
 | # | Hallazgo | Impacto | Riesgo | Esfuerzo | Cómo se comprobó |
 |---|---|---|---|---|---|
 | 1 | **Enlaces peligrosos que pasaban el filtro.** `esEnlaceSeguro` aceptaba `" javascript:…"`, `"java\tscript:…"`, `"\u0000javascript:…"` y `"/\\otro.sitio"`: el navegador quita esos espacios y tabuladores y los convierte en `javascript:` o en otro sitio. Un archivo de estado alterado podía ejecutar código al tocar un resultado. | Alto | Bajo (el archivo lo escribe tu propio adaptador, en tu PC) | Bajo | Se confirmó que la versión anterior los aceptaba. Ahora se interpretan como lo haría el navegador (`new URL`) y solo pasan http/https; se rechazan caracteres de control y espacios al inicio o al final. Prueba nueva en `casos.js` (9 casos maliciosos, 3 válidos). |
+| 3 | **Barra móvil opaca:** al bajar la página, el texto de abajo se transparentaba entre los botones. | Bajo | Alto | Bajo | Captura revisada; regresión 47/47. |
 | 2 | **"Reducir movimiento" del sistema no se respetaba** en los viajes de cámara. | Bajo | Medio | Bajo | Con `prefers-reduced-motion: reduce` la cámara salta sin animación. Los personajes siguen animados porque su postura comunica el estado. |
 
 ## Revisado sin problemas (evidencia)
