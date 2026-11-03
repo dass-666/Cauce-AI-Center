@@ -19,7 +19,7 @@ require('fs').mkdirSync(SAL, { recursive: true });
     if (lectura >= 2) {
       d.generado_en = new Date(Date.parse(d.generado_en) + 30000).toISOString(); // un archivo nuevo, 30 s después
       for (const dep of d.departamentos) for (const a of dep.agentes) {
-        if (a.id === 'buscador') a.evidencia.referencia = '[DEMO] id=319 · resultado=ok'; // registro NUEVO
+        if (a.id === 'buscador') Object.assign(a.evidencia, { referencia: '[DEMO] id=319 · resultado=ok', observado_en: '2026-11-03T16:29:20Z' }); // registro NUEVO y reciente
         if (a.id === 'revisor-fuentes') a.estado = 'requiere_revision';                // cambia sin registro nuevo
         if (a.id === 'importador') {
           a.estado = 'error'; a.actividad.fin = '2026-11-03T16:29:20Z';

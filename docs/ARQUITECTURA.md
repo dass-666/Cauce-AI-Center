@@ -80,7 +80,7 @@ El contrato v1 no dice si un agente es un proceso, una persona o un cálculo. Es
 | Naturaleza | Puesto 3D | Personaje |
 |---|---|---|
 | automático | escritorio y silla | solo con evidencia **y** señal de vida (`latido`: un indicador del departamento) |
-| reactivo / programado | escritorio, silla y equipo | ~8 s, solo si esta página vio un registro nuevo entre dos lecturas |
+| reactivo / programado | escritorio, silla y equipo | ~8 s, solo si esta página vio un registro nuevo entre dos lecturas **y** su hora es posterior a la lectura anterior y cabe en la vigencia (un registro viejo que llega tarde no anima a nadie) |
 | humano | escritorio, silla vacía y placa HUMANO | nunca |
 | módulo | escritorio, equipo y gabinete, sin silla | nunca (ni se crea) |
 | futuro | escritorio con cinta, sin silla | nunca |
