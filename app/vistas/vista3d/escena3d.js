@@ -14,6 +14,7 @@ import { luzSegunHora } from "./iluminacion.js";
 import { crearBarraMovil } from "./barra-movil.js";
 import { vecinoDe, resumenDepartamento } from "./navegacion.js";
 import { crearMinimapa } from "./minimapa.js";
+import { crearBrillo } from "./brillo.js";
 import { calcularEncuadre, aPixeles, dentro } from "./encuadre.js";
 import { acomodarEtiquetas, nombresCortos, prioridadEtiqueta } from "./etiquetas.js";
 import { crearCatalogoKenney } from "./kenney.js";
@@ -167,47 +168,16 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let mitadAlto = 4;
   let destruida = false;
 
-  // --- Brillo (bloom): solo escritorio, se carga bajo demanda y se puede apagar ---
-  let composer = null;
-  let bloom = null;
-  let cargandoBrillo = false;
-  let brilloDesde = 0;
+  // --- Brillo (bloom): brillo.js. Solo escritorio, apagado por defecto. ---
+  const brilloFx = crearBrillo({ renderer, escena, camara, alCambiar: () => ajustarTamano() });
   brillo.checked = !movil && leer("cauce.brillo3d") === "1"; // apagado por defecto: se enciende a mano
   brillo.addEventListener("change", () => {
     guardar("cauce.brillo3d", brillo.checked ? "1" : "0");
     aplicarBrillo();
   });
   async function aplicarBrillo() {
-    if (!brillo.checked || movil) {
-      composer?.dispose();
-      bloom?.dispose();
-      composer = bloom = null;
-      return;
-    }
-    if (composer || cargandoBrillo) return;
-    cargandoBrillo = true;
-    try {
-      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await Promise.all([
-        import("three/addons/postprocessing/EffectComposer.js"),
-        import("three/addons/postprocessing/RenderPass.js"),
-        import("three/addons/postprocessing/UnrealBloomPass.js"),
-        import("three/addons/postprocessing/OutputPass.js"),
-      ]);
-      if (destruida || !brillo.checked) return;
-      composer = new EffectComposer(renderer);
-      composer.addPass(new RenderPass(escena, camara));
-      bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.35, 0.62);
-      composer.addPass(bloom);
-      composer.addPass(new OutputPass());
-      brilloDesde = performance.now();
-      ajustarTamano();
-    } catch (e) {
-      // Sin brillo la oficina funciona igual.
-      brillo.checked = false;
-      console.warn("Brillo no disponible:", e);
-    } finally {
-      cargandoBrillo = false;
-    }
+    // Si falla la descarga, queda apagado: la oficina funciona igual sin brillo.
+    if (await brilloFx.activar(brillo.checked && !movil) === "fallo") brillo.checked = false;
   }
   aplicarBrillo();
 
@@ -216,7 +186,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const w = Math.max(1, raiz.clientWidth);
     const h = Math.max(1, raiz.clientHeight);
     renderer.setSize(w, h, false);
-    composer?.setSize(w, h);
+    brilloFx.setSize(w, h);
     const aspecto = w / h;
     camara.top = mitadAlto;
     camara.bottom = -mitadAlto;
@@ -544,7 +514,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       }
     }
     renderer.info.reset();
-    if (composer) composer.render(dt);
+    if (brilloFx.composer) brilloFx.composer.render(dt);
     else renderer.render(escena, camara);
     contarCuadro(t);
   }
@@ -615,7 +585,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const cps = medidor.valor;
     // Si con brillo el equipo no sostiene 40 cuadros por segundo, se apaga solo (no se guarda:
     // la próxima visita lo vuelve a intentar). Con ?medir=1 no se apaga, para poder medir su costo.
-    if (composer && !medir && t - brilloDesde > 3000 && cps < 40) {
+    if (brilloFx.composer && !medir && t - brilloFx.desde > 3000 && cps < 40) {
       brillo.checked = false;
       brilloApagadoSolo = cps;
       brillo.parentElement.title = `Se apagó solo: el equipo iba a ${cps} cuadros por segundo`;
@@ -661,7 +631,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       texturas: renderer.info.memory.textures,
       pixelRatio: renderer.getPixelRatio(),
       movil,
-      brillo: Boolean(composer),
+      brillo: Boolean(brilloFx.composer),
       tamano: [lienzo.width, lienzo.height],
       cuadros_totales: r.cuadros_totales,
       departamento: depMostrado,
@@ -874,8 +844,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     observador.disconnect();
     quitarOficina();
     compartidos.liberar();
-    composer?.dispose();
-    bloom?.dispose();
+    brilloFx.destruir();
     controles.dispose();
     renderer.dispose();
     renderer.forceContextLoss();
