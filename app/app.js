@@ -144,6 +144,9 @@ function dibujarPestanas() {
         await actualizar();
       },
     }, p.nombre)));
+  // En celular la fila se desliza: la pestaña elegida queda a la vista sin mover la página.
+  const elegida = $('#pisos [aria-selected="true"]');
+  if (elegida) elegida.parentElement.scrollLeft = Math.max(0, elegida.offsetLeft - elegida.parentElement.offsetLeft - 8);
 }
 
 let lecturaNumero = 0;

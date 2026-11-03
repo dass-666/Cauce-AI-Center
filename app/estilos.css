@@ -361,6 +361,9 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   /* El título queda para lectores de pantalla: en celular la pantalla es para el edificio. */
   .marca { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .pisos .piso { padding: 5px 10px; font-size: 13px; }
+  /* Fase F: con muchos proyectos el selector se apilaba (266 px con 23). Ahora es una sola fila que se desliza. */
+  .pisos { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; max-width: 100%; }
+  .pisos .piso { flex: none; }
   .controles .boton, .controles .interruptor { font-size: 13px; }
   .banda-demo { padding: 4px 10px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conexion { position: sticky; top: 0; z-index: 12; background: var(--fondo); padding: 6px 10px; font-size: 13px; }

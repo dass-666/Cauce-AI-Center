@@ -1,0 +1,36 @@
+{
+  "descripcion": "Clasificación PROVISIONAL de los puestos del DEMO de Ek Chuah. Ek Chuah todavía NO tiene exportador hacia Cauce: esto solo evita que el DEMO muestre personajes sin evidencia. Revisado en solo lectura contra Ek Chuah main 05eca04 el 2026-11-03. Ek Chuah es investigación y simulación: no opera dinero real. Nada aquí es 'automatico' ni 'programado' porque Cauce aún no recibe ninguna evidencia de ejecución.",
+  "proyecto_id": "ek-chuah",
+  "agentes": {
+    "descargador": {
+      "naturaleza": "reactivo",
+      "proceso": "Comando fetch-macro (también lo corre la tarea de Windows EkChuah-Alertas a las 9:00, según la bitácora del 2026-10-13; no confirmado que siga instalada). Pasará a 'programado' solo con programacion.evidencia.",
+      "evidencia": "fetch_log (status, started_at, finished_at) — aún no exportado"
+    },
+    "vigia": {
+      "naturaleza": "reactivo",
+      "proceso": "Comando alertas (reglas fijas, sin IA), corrido por la misma tarea diaria.",
+      "evidencia": "alerts_sent — aún no exportado"
+    },
+    "redactor": {
+      "naturaleza": "reactivo",
+      "proceso": "Análisis semanal escrito por una tarea de la app de Claude (domingo 8 pm); su salida queda en data/analisis, fuera de git.",
+      "evidencia": "ninguna que Cauce pueda leer todavía"
+    },
+    "simulador": {
+      "naturaleza": "modulo",
+      "proceso": "Comando portfolio-sim: simulación con dinero imaginario que alguien lanza a mano; no registra ejecuciones.",
+      "evidencia": "ninguna"
+    },
+    "evaluador-riesgo": {
+      "naturaleza": "modulo",
+      "proceso": "Comando risk-menu: cálculo al pedirlo; no registra ejecuciones.",
+      "evidencia": "ninguna"
+    },
+    "auditor": {
+      "naturaleza": "humano",
+      "proceso": "Revisión mensual (día 15) que una persona registra en su bitácora.",
+      "evidencia": "ninguna que Cauce pueda leer todavía"
+    }
+  }
+}
