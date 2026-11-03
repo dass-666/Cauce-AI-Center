@@ -427,4 +427,22 @@ export function registrarCasosNaturaleza(leerTexto) {
     crearSeguidorNaturalezas().aplicar(m, await clasificacion(), 0);
     igual([m.alertas.some((a) => a.nivel === "critica"), de(m, "importador").estado_mostrado, de(m, "importador").animacion_mostrada], [true, "requiere_revision", "ausente"]);
   });
+
+  // ---------- Fase F: Ek Chuah no tiene exportador; su DEMO no debe mostrar personajes sin evidencia
+
+  prueba("F · clasificación provisional de Ek Chuah: válida, sin automáticos ni programados y cubre todo su DEMO", async () => {
+    const r = validarNaturalezas(await leerJSON("escena/ek-chuah-naturaleza.json"));
+    igual(r.avisos, []);
+    const demo = await leerJSON("datos/demo/ek-chuah.json");
+    const ids = demo.departamentos.flatMap((d) => d.agentes.map((a) => a.id)).sort();
+    igual([r.valido, [...r.mapa.keys()].sort()], [true, ids]);
+    verdadero([...r.mapa.values()].every((c) => !["automatico", "programado"].includes(c.naturaleza)));
+  });
+
+  prueba("F · DEMO de Ek Chuah con su clasificación: ningún personaje al cargar (no hay evidencia nueva)", async () => {
+    const demo = await leerJSON("datos/demo/ek-chuah.json");
+    const m = construirModeloVista({ proyecto: { id: "ek-chuah", nombre: "Ek Chuah" }, carga: { tipo: "ok", datos: demo }, ahora: new Date() });
+    crearSeguidorNaturalezas().aplicar(m, validarNaturalezas(await leerJSON("escena/ek-chuah-naturaleza.json")), 0);
+    igual(agentes(m).filter((a) => a.animacion_mostrada !== "ausente").map((a) => a.id), []);
+  });
 }
