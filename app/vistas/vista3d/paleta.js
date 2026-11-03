@@ -42,3 +42,7 @@ export function aspecto(numero) {
     piel: PIEL[(numero >>> 8) % PIEL.length],
   };
 }
+
+// Color propio de cada departamento en el edificio (alfombra, franja del muro, marco del letrero).
+// No indica estado: el estado siempre usa COLOR_ESTADO.
+export const ACENTOS = Object.freeze([0xe0a458, 0x7fb3d5, 0xb48ead, 0x8fbc8f, 0xd08770, 0x88c0d0, 0xebcb8b, 0xa3be8c]);

@@ -32,17 +32,22 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `recursos.js` | Lleva la cuenta de geometrías, materiales y texturas para liberarlos de la tarjeta gráfica | No |
 | `personaje.js` | Controlador del personaje (cola de acciones, caminos) y cuerpo provisional hecho con código | Sí |
 | `kenney.js` | Personajes de Kenney (CC0): descarga solo los modelos que se ven, usa sus clips (walk, idle, sit, emote-no) y suma con código teclear, levantar la mano y celebrar. Si un modelo no carga, se usa el cuerpo provisional | Sí |
+| `plano-edificio.js` | Coloca los 8 departamentos en el piso a partir de las celdas de `escena/<proyecto>.json`, con pasillos; cada cuarto crece si necesita más filas de escritorios | No (se prueba en Node) |
+| `edificio.js` | Arma el escenario: un cuarto (modo *Un cuarto*) o todos con losa, pasillos y plantas (modo *Edificio*); decide cuántas veces por segundo se anima cada cuarto | Sí |
+| `medidor.js` | Medidor de `?medir=1`: promedio, mínimo, peor cuadro y segundos bajo 50 cps de los últimos 20 s; se reinicia al cambiar brillo, modo, enfoque o tamaño | No (se prueba en Node) |
 | `oficina.js` | Un departamento: piso, muros, mamparas, escritorios, computadoras, sillas, planta, letrero | Sí |
 | `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, brillo, ciclo de dibujo | Sí |
 
 Reglas:
 
-- **Un departamento a la vez** (selector arriba a la izquierda). Al cambiar, se liberan sus recursos (prueba: 20 cambios sin crecer la memoria).
+- **Dos modos** (se recuerda la elección): *Edificio* muestra los 8 departamentos a la vez; tocar uno acerca la cámara (0.6 s) y el panel muestra sus agentes. *Un cuarto* es la vista individual original. Al cambiar de modo o de departamento se liberan los recursos (prueba: cambios repetidos sin crecer la memoria).
+- **Animación por distancia y enfoque:** el cuarto enfocado se anima en cada cuadro; los demás a 20 veces/s (12 si hay más de 12 personajes; 8 en celular) y los que quedan fuera de pantalla a 2. Lo estático de cada cuarto se fusiona en una geometría por material para hacer menos llamadas de dibujo. Los personajes no se simplifican.
+- Etiquetas con nombre y estado de cada departamento (HTML sobre el lienzo); se ocultan al acercarse.
 - `ausente` (= `sin_datos`) es **silla vacía con la pantalla apagada**. Si un personaje pierde la evidencia, se levanta y sale.
 - La primera vez que se dibuja, cada personaje con evidencia entra caminando desde la puerta (es una animación de llegada, no significa que la tarea acabe de empezar; la hora real está en el panel).
 - `app.js` carga la 3D con `import()` solo si se usa. *Bajo consumo* fuerza el plano 2D y no descarga three.js. Sin WebGL, o si la tarjeta gráfica deja de responder, vuelve sola al plano 2D con aviso.
 - Rendimiento: 60 cuadros/s máx. en escritorio y 30 en celular; resolución limitada (1.25× en celular); sin sombras reales (manchas suaves); sin antialiasing en celular; se detiene con la pestaña oculta.
-- Brillo (bloom): solo escritorio, se descarga aparte, se puede apagar y **se apaga solo** si el equipo no sostiene 40 cuadros/s.
+- Brillo (bloom): solo escritorio, **apagado por defecto**, se descarga aparte al encenderlo y **se apaga solo** si el equipo no sostiene 40 cuadros/s.
 - `?medir=1` muestra cuadros por segundo, llamadas de dibujo, triángulos, geometrías y texturas.
 - El controlador pide poses (`caminar`, `sentado`, `teclear`…) a un "cuerpo" con método `aplicar(pose, dt)`. Hay dos cuerpos: Kenney (`kenney.js`) y el provisional. Cambiar de personajes no toca la máquina de estados ni los caminos.
 

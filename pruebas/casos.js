@@ -8,6 +8,8 @@ import { construirModeloVista, elegirCarga } from "../app/nucleo/modelo.js";
 import { ANIMACIONES_SOPORTADAS, ACCIONES, planDeTransicion } from "../app/vistas/vista3d/maquina.js";
 import { tamanoCuarto, puestos, puerta, camino, longitudCamino, puntoEnCamino, huella, MEDIDAS } from "../app/vistas/vista3d/disposicion.js";
 import { COLOR_ESTADO, aspecto } from "../app/vistas/vista3d/paleta.js";
+import { distribuirEdificio, seEnciman, fondoNecesario, EDIFICIO } from "../app/vistas/vista3d/plano-edificio.js";
+import { crearMedidor, firmaMedicion } from "../app/vistas/vista3d/medidor.js";
 
 export function registrarCasos(leerTexto) {
   const leerJSON = async (ruta) => JSON.parse(await leerTexto(ruta));
@@ -430,5 +432,101 @@ export function registrarCasos(leerTexto) {
     await leerTexto("vendor/kenney-mini-characters/Textures/colormap.png");
     const k = await leerTexto("app/vistas/vista3d/kenney.js");
     for (const sexo of ["female", "male"]) for (const letra of "abcdef") verdadero(k.includes(`"character-${sexo}-${letra}"`), `kenney.js lista character-${sexo}-${letra}`);
+  });
+
+  // ---------- Vista 3D: edificio completo ----------
+  const edificioCompago = async () => {
+    const m = construirModeloVista({
+      proyecto: { id: "compago", nombre: "Compago" },
+      carga: { tipo: "ok", datos: await leerJSON("datos/demo/compago.json") },
+      distribucion: await leerJSON("escena/compago.json"),
+      ahora: new Date("2026-11-03T16:30:00Z"),
+    });
+    const deps = m.departamentos.map((d) => ({ id: d.id, posicion: d.posicion, puestos: Math.max(1, d.agentes.length) }));
+    return { deps, plano: distribuirEdificio(deps) };
+  };
+  prueba("Edificio: los 8 departamentos de Compago, sin encimarse y dentro del edificio", async () => {
+    const { deps, plano } = await edificioCompago();
+    igual(plano.cuartos.length, 8);
+    igual(plano.cuartos.map((c) => c.id), deps.map((d) => d.id));
+    for (let i = 0; i < plano.cuartos.length; i++) {
+      const a = plano.cuartos[i];
+      verdadero(Math.abs(a.x) + a.ancho / 2 <= plano.ancho / 2 + 1e-6 && Math.abs(a.z) + a.fondo / 2 <= plano.fondo / 2 + 1e-6, `${a.id} fuera del edificio`);
+      for (let j = i + 1; j < plano.cuartos.length; j++) verdadero(!seEnciman(a, plano.cuartos[j]), `${a.id} se encima con ${plano.cuartos[j].id}`);
+    }
+  });
+  prueba("Edificio: cada cuarto cabe sus escritorios y hay pasillo entre filas", async () => {
+    const { deps, plano } = await edificioCompago();
+    plano.cuartos.forEach((c, i) => verdadero(c.fondo + 1e-6 >= fondoNecesario(c.ancho, deps[i].puestos), `${c.id} sin espacio`));
+    verdadero(plano.pasillos.length >= 1, "sin pasillo principal");
+    for (const p of plano.pasillos) igual(p.fondo, EDIFICIO.pasilloFilas);
+  });
+  prueba("Edificio: un departamento con muchos personajes agranda su fila, no se enciman", () => {
+    const deps = [
+      { id: "a", posicion: { x: 0, y: 0, ancho: 1, alto: 1 }, puestos: 9 },
+      { id: "b", posicion: { x: 1, y: 0, ancho: 1, alto: 1 }, puestos: 1 },
+      { id: "c", posicion: { x: 0, y: 1, ancho: 2, alto: 1 }, puestos: 1 },
+    ];
+    const plano = distribuirEdificio(deps);
+    verdadero(plano.cuartos[0].fondo >= fondoNecesario(plano.cuartos[0].ancho, 9));
+    verdadero(!seEnciman(plano.cuartos[0], plano.cuartos[2]) && !seEnciman(plano.cuartos[1], plano.cuartos[2]));
+    igual(distribuirEdificio([]).cuartos, []);
+  });
+
+  // --- Medidor de rendimiento (?medir=1) ---
+  const firma = (o = {}) => firmaMedicion({ brillo: "sin brillo", modo: "edificio", enfoque: "", tamano: "100x100", ...o });
+  // Dibuja `seg` segundos a `cps` cuadros por segundo empezando en t0; devuelve el tiempo final.
+  const correr = (m, t0, seg, cps, f = firma()) => {
+    let t = t0;
+    for (let k = 0; k < seg * cps; k++) { t += 1000 / cps; m.vigilar(f, t); m.cuadro(t); }
+    return t;
+  };
+  prueba("Medidor: promedio, mínimo, peor cuadro y segundos bajo 50 cps", () => {
+    const m = crearMedidor({ ventana: 20 });
+    let t = correr(m, 0, 5, 60);
+    t = correr(m, t, 3, 30);
+    const r = m.resumen();
+    verdadero(r.segundos >= 7 && r.segundos <= 8, `segundos ${r.segundos}`);
+    igual(r.minimo, 30);
+    verdadero(r.segundos_bajo_50 >= 2 && r.segundos_bajo_50 <= 3, `bajo 50: ${r.segundos_bajo_50}`);
+    verdadero(Math.abs(r.peor_cuadro_ms - 33.3) < 0.2, `peor ${r.peor_cuadro_ms}`);
+  });
+  prueba("Medidor: la ventana guarda solo los últimos 20 segundos", () => {
+    const m = crearMedidor({ ventana: 20 });
+    let t = correr(m, 0, 3, 30);
+    t = correr(m, t, 25, 60);
+    const r = m.resumen();
+    igual(r.segundos, 20);
+    igual(r.minimo, 60);
+    igual(r.segundos_bajo_50, 0);
+  });
+  for (const [parte, valor] of [["brillo", "brillo"], ["modo", "individual"], ["enfoque", "importacion"], ["tamano", "80x100"]]) {
+    prueba(`Medidor: se reinicia al cambiar ${parte} y dice por qué`, () => {
+      const m = crearMedidor({ ventana: 20 });
+      let t = correr(m, 0, 4, 30);                 // segundos lentos antes del cambio
+      t = correr(m, t, 3, 60, firma({ [parte]: valor }));
+      const r = m.resumen();
+      igual(r.reiniciado_por, parte);
+      igual(r.minimo, 60);                         // lo lento de antes ya no cuenta
+      igual(r.segundos_bajo_50, 0);
+      verdadero(r.peor_cuadro_ms < 17.5, `el hueco del cambio contó como cuadro lento: ${r.peor_cuadro_ms}`);
+      verdadero(r.segundos >= 2 && r.segundos <= 3, `segundos ${r.segundos}`);
+    });
+  }
+  prueba("Medidor: sin cambios no se reinicia; tras pausar la pestaña el hueco no cuenta", () => {
+    const m = crearMedidor({ ventana: 20 });
+    let t = correr(m, 0, 3, 60);
+    m.pausa();
+    t = correr(m, t + 60000, 3, 60);
+    const r = m.resumen();
+    igual(r.reiniciado_por, "inicio");
+    igual(r.minimo, 60);
+    verdadero(r.peor_cuadro_ms < 17.5, `peor ${r.peor_cuadro_ms}`);
+  });
+  prueba("Medidor: el brillo viene apagado por defecto en la escena 3D", async () => {
+    const { readFile } = await import("node:fs/promises").catch(() => ({}));
+    if (!readFile) return; // en el navegador se comprueba en la prueba con Playwright
+    const src = await readFile(new URL("../app/vistas/vista3d/escena3d.js", import.meta.url), "utf8");
+    verdadero(src.includes('leer("cauce.brillo3d") === "1"'), "el brillo debe encenderse solo si el usuario lo eligió");
   });
 }

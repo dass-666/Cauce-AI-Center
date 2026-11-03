@@ -201,7 +201,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   .plano { grid-template-columns: 1fr; }
   .cuarto { grid-column: auto !important; grid-row: auto !important; }
   .principal, .principal:has(.panel:not([hidden])) { grid-template-columns: 1fr; padding: 10px; }
-  .panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; max-height: 65vh; border-radius: 14px 14px 0 0; z-index: 10; }
+  .panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; max-height: 45vh; border-radius: 14px 14px 0 0; z-index: 10; }
   .controles { width: 100%; justify-content: space-between; }
 }
 
@@ -257,3 +257,21 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   .oficina.modo-3d { height: 62vh; min-height: 320px; border-radius: 10px; }
   .controles { flex-wrap: wrap; }
 }
+
+/* Edificio 3D: nombres de los departamentos (HTML nítido sobre el lienzo) */
+.vista3d-etiquetas { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.etiqueta-dep {
+  position: absolute; left: 0; top: 0; pointer-events: auto; white-space: nowrap;
+  display: flex; gap: 6px; align-items: center; padding: 4px 9px; border-radius: 999px;
+  background: #0f1526e0; color: var(--texto); border: 1px solid var(--borde); font: inherit; font-size: 12px; cursor: pointer;
+}
+.etiqueta-dep.elegida { border-color: var(--brillo); color: var(--brillo); }
+.etiqueta-luz { width: 9px; height: 9px; border-radius: 50%; background: var(--c-sin-datos); flex: none; }
+.etiqueta-dep.estado-trabajando .etiqueta-luz { background: var(--c-trabajando); }
+.etiqueta-dep.estado-esperando .etiqueta-luz { background: var(--c-esperando); }
+.etiqueta-dep.estado-finalizado .etiqueta-luz { background: var(--c-finalizado); }
+.etiqueta-dep.estado-error .etiqueta-luz { background: var(--c-error); }
+.etiqueta-dep.estado-revision .etiqueta-luz { background: var(--c-revision); }
+.etiqueta-alertas { color: var(--c-revision); }
+@media (max-width: 760px) { .etiqueta-dep { font-size: 10px; padding: 3px 7px; } }
+@media (max-width: 760px) { .etiqueta-dep { max-width: 104px; overflow: hidden; text-overflow: ellipsis; display: block; } .etiqueta-luz { display: inline-block; margin-right: 4px; } }

@@ -10,17 +10,18 @@ En PowerShell, dentro de tu carpeta `Cauce-AI-Center` de la fase 2:
 
 ```powershell
 git fetch origin
-git switch fase-3d/compago-oficina
+git switch fase-3d/edificio-compago
+git pull
 ```
 
-Si no tienes esa carpeta, ve a tu Escritorio y clónala con `git clone -b fase-3d/compago-oficina https://github.com/dass-666/Cauce-AI-Center.git`.
+Si no tienes esa carpeta, ve a tu Escritorio y clónala con `git clone -b fase-3d/edificio-compago https://github.com/dass-666/Cauce-AI-Center.git`.
 
 ## 2. Pruebas automáticas
 
 1. Doble clic en `iniciar.bat` y deja la ventana abierta.
 2. Abre <http://127.0.0.1:8765/pruebas.html>.
 
-Esperado: `70 pasaron, 0 fallaron`.
+Esperado: `81 pasaron, 0 fallaron`.
 
 ## 3. Animaciones (con datos de demostración)
 
@@ -46,12 +47,18 @@ Después revisa la interacción:
 
 Cierra juegos, videos y programas pesados. Abre <http://127.0.0.1:8765/?medir=1> con la ventana **maximizada**, en *Importación de catálogos*.
 
-Haz estas tres mediciones. En cada una, **no toques nada durante 30 segundos**; después pulsa **Copiar medición** (arriba a la derecha) y pega el texto en un Bloc de notas.
+Arriba aparece **Edificio | Un cuarto**. Por omisión se abre *Edificio* con *Todo el piso* (los 8 departamentos). Toca un departamento (o elígelo en el selector) para acercarte; *Todo el piso* regresa a la vista completa.
+
+El *Brillo* viene **apagado** por defecto. La línea de medición empieza de nuevo cada vez que cambias el brillo, el modo, el departamento enfocado o el tamaño (por ejemplo, al abrirse el panel). Dice cuántos segundos lleva (`en N s`, máximo 20), el **peor cuadro** en milisegundos (16.7 ms = 60 cps), cuántos segundos bajaron de 50 cps y qué lo reinició.
+
+Haz estas mediciones. En cada una, **no toques nada durante 30 segundos**; después pulsa **Copiar medición** (arriba a la derecha) y pega el texto en un Bloc de notas.
 
 | # | Cómo |
 |---|---|
-| A | *Brillo* apagado |
-| B | *Brillo* encendido |
+| A | *Edificio*, *Todo el piso*, *Brillo* apagado |
+| B | *Edificio*, *Todo el piso*, *Brillo* encendido |
+| D | *Edificio*, enfocado en *Importación de catálogos*, *Brillo* apagado |
+| E | *Un cuarto*, *Brillo* apagado (para comparar con tu medición anterior) |
 | C | Celular simulado: F12 → ícono de celular (Ctrl+Shift+M) → elige "iPhone 12 Pro" → F5 para recargar |
 
 Durante la medición A, anota además dos cifras:
@@ -63,9 +70,10 @@ La medición C usa tu PC, no un teléfono: solo comprueba la versión de celular
 
 **Cómo leeremos tus cifras** (es mi criterio propuesto; lo podemos ajustar):
 
-- Promedio de 55 a 60 cps y GPU por debajo del 30%: hay margen para el piso de 8 departamentos con animación.
-- Entre 30 y 55 cps: el piso de 8 se puede hacer, pero animando solo el departamento enfocado.
-- Menos de 30 cps: primero hay que optimizar.
+- A y B con 55–60 cps: el edificio se queda así.
+- A entre 40 y 55: bajo la frecuencia de animación de los cuartos no enfocados y quito adornos (tiras de luz, plantas) antes de tocar los personajes.
+- A por debajo de 40: los cuartos lejanos se dibujan quietos y solo se anima el enfocado.
+- La línea copiada incluye `modo`, número de personajes y cuántos se animaron en el último cuadro: con eso sé dónde está el costo.
 
 ## 5. Conexión con Compago
 
