@@ -71,6 +71,24 @@ Reglas:
 
 **Decoración vs. evidencia:** la luz, el reloj, las ventanas, los muebles por tema y las placas son decoración y nunca simulan trabajo; no hay personas decorativas. La torreta de un departamento solo aparece si el archivo trae alertas suyas: parpadea solo con una alerta crítica y datos vigentes; con datos vencidos queda gris.
 
+## Naturaleza de cada puesto (fase E2)
+
+El contrato v1 no dice si un agente es un proceso, una persona o un cálculo. Eso lo dice
+`escena/<proyecto>-naturaleza.json` (fuera del contrato, revisado contra el código del sistema), y lo aplica
+`app/nucleo/naturaleza.js` en cada lectura, antes de dibujar:
+
+| Naturaleza | Puesto 3D | Personaje |
+|---|---|---|
+| automático | escritorio y silla | solo con evidencia **y** señal de vida (`latido`: un indicador del departamento) |
+| reactivo / programado | escritorio, silla y equipo | ~8 s, solo si esta página vio un registro nuevo entre dos lecturas |
+| humano | escritorio, silla vacía y placa HUMANO | nunca |
+| módulo | escritorio, equipo y gabinete, sin silla | nunca (ni se crea) |
+| futuro | escritorio con cinta, sin silla | nunca |
+
+`programado` exige `programacion.evidencia` (un cron real); sin ella se trata como reactivo. Cambiar de proyecto o
+de fuente (DEMO → REAL) reinicia la cuenta: la primera lectura nunca produce apariciones. Un proyecto sin archivo de
+naturaleza (hoy Ek Chuah) se dibuja como antes.
+
 ## Adaptadores
 
 **Compago (fase 2, construido):** comando `exportar_cauce` en la rama `cauce/exportador-solo-lectura` de Compago (`apps/core/cauce.py`). Usa los modelos de Compago, así que funciona igual con SQLite y PostgreSQL. Garantiza solo lectura en la base (`PRAGMA query_only` / transacción `READ ONLY`), hace 18 consultas por ciclo sin importar el volumen y no exporta nombres de proveedores, productos, archivos, términos de búsqueda, usuarios ni textos de error. Si ya hay un archivo real, el visualizador lo usa; si no existe, muestra la demostración.

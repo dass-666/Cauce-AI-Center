@@ -28,10 +28,13 @@ const { chromium } = require('playwright');
   }
   const tras = await leer();
   ok('cambiar de modo 4 veces no acumula geometrías ni texturas', tras.g <= base.g && tras.t <= base.t, `antes ${base.g}/${base.t}, después ${tras.g}/${tras.t}`);
+  let avisoFalso = '';
   for (let i = 0; i < 3; i++) {
     await p.locator('[data-vista="2d"]').click(); await p.waitForTimeout(1200);
+    avisoFalso ||= (await p.locator('#aviso-vista').isVisible()) ? await p.locator('#aviso-vista').innerText() : '';
     await p.locator('[data-vista="3d"]').click(); await p.waitForTimeout(4000);
   }
+  ok('pasar a 2D a mano no muestra un aviso de falla de la tarjeta gráfica', !avisoFalso, avisoFalso);
   const vuelta = await leer();
   ok('3D ↔ 2D 3 veces: memoria de la escena igual', vuelta.g <= base.g && vuelta.t <= base.t, `${vuelta.g}/${vuelta.t}`);
   const lienzos = await p.evaluate(() => ({ creados: window.__contextos.creados, vivos: document.querySelectorAll('.vista3d canvas').length }));

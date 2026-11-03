@@ -163,7 +163,9 @@ export class Personaje {
     this.estado = agente.estado;
     this.burbuja.material = this.burbujas.material(agente.estado);
     if (this.anilloEstado) this.anilloEstado.material = this.anillosEstado.get(agente.estado) ?? this.anillosEstado.get("sin_datos");
-    const nueva = agente.apariencia.animacion3d;
+    // Con clasificación (naturaleza.js) manda animacion_mostrada: un módulo, un puesto humano o un
+    // reactivo sin registro nuevo observado quedan "ausente" aunque su estado tenga postura.
+    const nueva = agente.animacion_mostrada ?? agente.apariencia.animacion3d;
     if (this.accion || this.cola.length) {
       this.pendiente = nueva;
       return;

@@ -1,0 +1,52 @@
+{
+  "descripcion": "Qué es cada personaje del exportador exportar_cauce de Compago (PR #9 de Compago), revisado contra su código el 2026-11-03. Vive fuera del contrato v1 (como la distribución). 'programado' exige programacion.evidencia (un cron real); sin ella se muestra como reactivo. 'latido': indicador del departamento que dice si el proceso está vivo.",
+  "proyecto_id": "compago",
+  "agentes": {
+    "importador": {
+      "naturaleza": "automatico",
+      "proceso": "manage.py aplicar_importaciones (consumidor continuo con latido)",
+      "evidencia": "ImportJob",
+      "latido": {
+        "indicador": "Consumidor",
+        "vivo": [
+          "activo"
+        ]
+      }
+    },
+    "buscador": {
+      "naturaleza": "reactivo",
+      "proceso": "Búsqueda que lanza una persona desde Compago (DENUE, OpenStreetMap)",
+      "evidencia": "SearchRun"
+    },
+    "revisor-fuentes": {
+      "naturaleza": "reactivo",
+      "proceso": "manage.py revisar_fuentes; pensado para cron pero SIN programación confirmada (reactivo hasta que exista el cron; entonces: naturaleza programado + programacion.evidencia)",
+      "evidencia": "SourceCheck"
+    },
+    "evaluador": {
+      "naturaleza": "humano",
+      "proceso": "Una persona cambia el estado de cada oportunidad",
+      "evidencia": "StatusChange"
+    },
+    "analista-margenes": {
+      "naturaleza": "modulo",
+      "proceso": "Escenarios calculados al abrirlos en Compago; no registra ejecuciones",
+      "evidencia": "ninguna"
+    },
+    "auditor-datos": {
+      "naturaleza": "modulo",
+      "proceso": "manage.py revisar_datos; no guarda el resultado",
+      "evidencia": "ninguna"
+    },
+    "supervisor": {
+      "naturaleza": "modulo",
+      "proceso": "Comprobación de respaldo calculada al exportar (apps.core.estado.respaldo)",
+      "evidencia": "nivel del cálculo"
+    },
+    "enlace-uniq": {
+      "naturaleza": "reactivo",
+      "proceso": "manage.py emitir_paquete_uniq, a petición",
+      "evidencia": "PaqueteEmitido"
+    }
+  }
+}

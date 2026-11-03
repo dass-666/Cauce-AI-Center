@@ -14,7 +14,10 @@ function falsoReal(cambiar) {
   const d = JSON.parse(JSON.stringify(demo));
   d.es_demo = false; delete d.demo; d.fuente = { tipo: 'adaptador', nombre: 'PRUEBA automática (datos ficticios)' };
   d.generado_en = new Date(Date.now() - 5000).toISOString();
-  for (const dep of d.departamentos) for (const a of dep.agentes) if (cambiar[a.id]) Object.assign(a, cambiar[a.id]);
+  for (const dep of d.departamentos) for (const a of dep.agentes) {
+    if (a.evidencia) a.evidencia.referencia = a.evidencia.referencia.replace('[DEMO] ', '') + ' · real'; // otras referencias que la demo
+    if (cambiar[a.id]) Object.assign(a, cambiar[a.id]);
+  }
   return d;
 }
 (async () => {
@@ -30,7 +33,7 @@ function falsoReal(cambiar) {
     if (modoReal === 'roto') return r.fulfill({ status: 200, contentType: 'application/json', body: '{ roto' });
     if (modoReal === 'error500') return r.fulfill({ status: 500, body: 'error' });
     if (modoReal === 'viejo') { const d = falsoReal({}); d.generado_en = new Date(Date.now() - 3 * 3600e3).toISOString(); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(d) }); }
-    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(falsoReal({ 'importador-cola': { estado: 'requiere_revision' } })) });
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(falsoReal({ 'revisor-fuentes': { estado: 'requiere_revision' } })) });
   });
   const pers = () => p.evaluate(() => window.__cauce3d.personajes());
   const sinGestos = async () => (await pers()).every((x) => x.accion === null && x.cola.length === 0);
@@ -43,6 +46,7 @@ function falsoReal(cambiar) {
 
   modoReal = 'si'; await recargar(450);
   ok('DEMO → REAL: la escena se reconstruye sin gestos (justo después de leer)', await sinGestos());
+  ok('DEMO → REAL: ningún reactivo aparece aunque cambien sus referencias', (await pers()).filter((x) => x.id !== 'importador').every((x) => !x.visible));
   await p.waitForTimeout(3000);
   let t = await tablero();
   ok('DEMO → REAL: insignia REAL y sin franja DEMO', /REAL/.test(t) && await p.locator('#banda-demo').isHidden());

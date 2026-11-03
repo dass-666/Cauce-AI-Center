@@ -9,6 +9,7 @@ import { ESTADOS } from "../../nucleo/estados.js";
 import { el } from "../dom.js";
 import { crearEscenario } from "./edificio.js";
 import { crearBurbujas, crearGeometriasPersonaje } from "./personaje.js";
+import { NATURALEZAS } from "../../nucleo/naturaleza.js";
 import { OFICINA, COLOR_ESTADO } from "./paleta.js";
 import { luzSegunHora } from "./iluminacion.js";
 import { crearBarraMovil } from "./barra-movil.js";
@@ -147,6 +148,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     geoSombraEscritorio: compartidos.agregar(new THREE.PlaneGeometry(1.8, 1.4).rotateX(-Math.PI / 2)),
     burbujas: crearBurbujas(compartidos, ESTADOS),
     catalogo: crearCatalogoKenney(compartidos),
+    // Placa «HUMANO» de los puestos de personas (una textura para todo el edificio).
+    matPlacaHumano: compartidos.agregar(new THREE.MeshBasicMaterial({ map: compartidos.agregar(texturaPlaca("HUMANO")), toneMapped: false })),
     matPiso: compartidos.agregar(new THREE.MeshLambertMaterial({ map: compartidos.agregar(texturaDuela()) })),
     // Un material por estado para el anillo bajo cada personaje (opacidad según la hora).
     anillosEstado: new Map(Object.entries(COLOR_ESTADO).map(([estado, color]) =>
@@ -470,6 +473,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   // --- Pérdida del contexto gráfico (driver reiniciado, poca memoria en el móvil) ---
   lienzo.addEventListener("webglcontextlost", (e) => {
     e.preventDefault();
+    if (destruida) return; // la perdemos a propósito al cerrar la vista (forceContextLoss): no es una falla
     detener();
     alFallar("La tarjeta gráfica dejó de responder (contexto WebGL perdido).");
   });
@@ -671,7 +675,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const visibles = modo === "edificio" ? deps : [dep];
     // es_demo en la clave: al pasar de DEMO a REAL la escena se reconstruye y nadie "reacciona" a la diferencia.
     const clave = `${modo}/${m.proyecto.id}/${m.es_demo ? "demo" : "real"}/${m.cuadricula.metros_por_celda}/` +
-      visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => a.id).join(",")}`).join("|");
+      visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => `${a.id}/${a.naturaleza ?? ""}`).join(",")}`).join("|");
     const ids = visibles.flatMap((d) => d.agentes.map((a) => a.id));
     if (clave !== claveOficina) {
       if (escenario) quitarOficina();
@@ -716,10 +720,14 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
 
     const delAviso = modo === "edificio" && !enfocado ? deps : [dep];
     const agentesAviso = delAviso.flatMap((d) => d.agentes);
-    const vacios = agentesAviso.filter((a) => a.estado === "sin_datos").length;
+    const clasificado = agentesAviso.some((a) => a.naturaleza);
+    const vacios = clasificado
+      ? agentesAviso.filter((a) => a.animacion_mostrada === "ausente").length
+      : agentesAviso.filter((a) => a.estado === "sin_datos").length;
     const textos = [];
     if (m.conexion !== "en_linea") textos.push(`${m.conexion_etiqueta}: sin evidencia vigente, los personajes salen de la oficina.`);
     else if (agentesAviso.length === 0) textos.push("Este departamento no tiene personajes.");
+    else if (vacios && clasificado) textos.push(`${vacios} puesto(s) sin personaje (módulos, humanos o sin registro nuevo).`);
     else if (vacios) textos.push(`${vacios} silla(s) vacía(s): sin registro que respalde actividad.`);
     aviso.hidden = textos.length === 0;
     aviso.textContent = textos.join(" ");
@@ -731,6 +739,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       type: "button",
       clase: `chip ${a.apariencia.clase2d}`,
       "aria-pressed": sel?.tipo === "agente" && sel.id === a.id ? "true" : "false",
+      title: `${a.nombre}: ${a.apariencia.etiqueta}${a.naturaleza ? ` · ${NATURALEZAS[a.naturaleza].etiqueta}` : ""}`,
       onclick: () => alSeleccionar({ tipo: "agente", id: a.id }),
     }, el("span", { "aria-hidden": "true" }, a.apariencia.icono), ` ${a.nombre}`)));
     // Ya con avisos y botones en su lugar, se ajusta el encuadre al espacio que de verdad queda libre.
@@ -794,6 +803,26 @@ function seleccionDe(objeto) {
     sel ??= o.userData.seleccion ?? null;
   }
   return sel;
+}
+
+/** Placa con texto (p. ej. «HUMANO») dibujada una vez. */
+function texturaPlaca(texto) {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 64;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#e8ecf5";
+  ctx.fillRect(0, 0, 256, 64);
+  ctx.fillStyle = "#1b2440";
+  ctx.fillRect(0, 0, 256, 6);
+  ctx.fillRect(0, 58, 256, 6);
+  ctx.font = "bold 40px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(texto, 128, 34);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 function texturaRadial() {

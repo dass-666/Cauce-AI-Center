@@ -53,10 +53,10 @@
 <script type="module">
 import { validarDocumento } from "../../app/nucleo/contrato.js";
 import { construirModeloVista } from "../../app/nucleo/modelo.js";
-import { validarNaturalezas, presentar, huellaEvidencia, cambioDeEvidencia, NATURALEZAS, DURACION_BREVE_SEGUNDOS } from "../../app/nucleo/naturaleza.js";
+import { validarNaturalezas, presentar, latidoDe, huellaEvidencia, cambioDeEvidencia, NATURALEZAS, DURACION_BREVE_SEGUNDOS } from "../../app/nucleo/naturaleza.js";
 
 const leer = async (r) => (await fetch(r, { cache: "no-store" })).json();
-const clasif = validarNaturalezas(await leer("compago.json"));
+const clasif = validarNaturalezas(await leer("../../escena/compago-naturaleza.json"));
 const lecturas = [await leer("lectura-1.json"), await leer("lectura-2.json")];
 const proyecto = { id: "compago", nombre: "Compago" };
 let huellaAnterior = null, indice = 0, temporizador = null;
@@ -68,7 +68,7 @@ function svg(puesto, personaje, pantalla, animacion) {
   const silla = `<rect x="40" y="48" width="14" height="4" rx="1" fill="#3d4766"/><rect x="51" y="34" width="3" height="16" fill="#3d4766"/>`;
   const persona = `<circle cx="47" cy="27" r="5" fill="#f2c9a0"/><rect x="42" y="32" width="10" height="14" rx="3" fill="#4a7bd1"/>`;
   if (puesto === "inactivo") return `<svg class="figura" viewBox="0 0 64 64"><rect x="6" y="40" width="52" height="6" fill="#2f3650"/></svg>`;
-  if (puesto === "terminal" && personaje === "ausente")
+  if ((puesto === "terminal" || puesto === "equipo") && personaje === "ausente")
     return `<svg class="figura" viewBox="0 0 64 64"><rect x="14" y="10" width="36" height="46" rx="3" fill="#2a3352" stroke="#55607f"/><rect x="19" y="15" width="26" height="16" rx="2" fill="${pc}"/><circle cx="24" cy="42" r="2" fill="${pc}"/><rect x="29" y="41" width="14" height="2" fill="#55607f"/><rect x="19" y="48" width="26" height="2" fill="#55607f"/></svg>`;
   const placa = puesto === "humano" ? `<rect x="2" y="50" width="30" height="10" rx="2" fill="#e8ecf5"/><text x="17" y="58" font-size="7" text-anchor="middle" fill="#0d1220">HUMANO</text>` : "";
   return `<svg class="figura ${personaje === "breve" ? "breve" : ""}" viewBox="0 0 64 64">${escritorio}${silla}${personaje !== "ausente" ? persona : ""}${placa}</svg>`;
@@ -84,7 +84,8 @@ function dibujar(cambios = true) {
   const avisos = [];
   let hayBreves = false;
   document.getElementById("edificio").innerHTML = m.departamentos.map((d) => d.agentes.map((a) => {
-    const p = presentar(a, clasif.mapa.get(a.id), { cambioObservado: cambios && cambioDeEvidencia(huellaAnterior, h, a.id) });
+    const c = clasif.mapa.get(a.id);
+    const p = presentar(a, c?.naturaleza, { cambioObservado: cambios && cambioDeEvidencia(huellaAnterior, h, a.id), vivo: latidoDe(d, c?.latido) });
     avisos.push(...p.avisos);
     if (p.personaje === "breve") hayBreves = true;
     const act = a.actividad?.descripcion ? `<div class="act">${esc(a.actividad.descripcion)}</div>` : "";
