@@ -421,25 +421,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   const rayo = new THREE.Raycaster();
   const puntero = new THREE.Vector2();
   let inicio = null;
-  let dedos = 0;
-  lienzo.addEventListener("pointerdown", (e) => {
-    if (e.pointerType === "touch") dedos++;
-    inicio = dedos > 1 ? null : { x: e.clientX, y: e.clientY, t: performance.now() };
-  });
-  lienzo.addEventListener("pointercancel", (e) => { if (e.pointerType === "touch") dedos = Math.max(0, dedos - 1); inicio = null; });
+  lienzo.addEventListener("pointerdown", (e) => { inicio = { x: e.clientX, y: e.clientY }; });
+  lienzo.addEventListener("pointercancel", () => { inicio = null; });
   lienzo.addEventListener("pointerup", (e) => {
-    if (e.pointerType === "touch") dedos = Math.max(0, dedos - 1);
     if (!inicio || !escenario) return;
-    const dx = e.clientX - inicio.x, dy = e.clientY - inicio.y;
-    const movido = Math.hypot(dx, dy);
-    const rapido = performance.now() - inicio.t < 700;
+    const movido = Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y);
     inicio = null;
-    // Deslizar a los lados en celular: departamento vecino.
-    if (movil && modelo && rapido && Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) {
-      const destino = vecino(dx < 0 ? 1 : -1);
-      if (destino) alSeleccionar({ tipo: "departamento", id: destino.id });
-      return;
-    }
     if (movido > 6) return;
     const r = lienzo.getBoundingClientRect();
     puntero.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -457,6 +444,31 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     if (modelo) guardar(`cauce.depto3d.${modelo.proyecto.id}`, depMostrado);
     alSeleccionar({ tipo: "departamento", id: depMostrado });
   });
+
+  // Deslizar a los lados con un dedo (celular): departamento vecino. Se escucha en toda la vista,
+  // así funciona aunque el dedo empiece sobre una etiqueta; no en la barra, el minimapa ni las medidas.
+  let dedos = 0;
+  let deslizar = null;
+  raiz.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "touch") return;
+    dedos++;
+    const enControl = e.target instanceof Element && e.target.closest(".vista3d-barra, .vista3d-minimapa, .vista3d-medidas, .vista3d-personajes, .vista3d-movil");
+    deslizar = dedos > 1 || enControl ? null : { x: e.clientX, y: e.clientY, t: performance.now() };
+  }, true);
+  const soltar = (e) => {
+    if (e.pointerType !== "touch") return;
+    dedos = Math.max(0, dedos - 1);
+    const d = deslizar;
+    deslizar = null;
+    if (!d || e.type === "pointercancel" && !movil) return;
+    const dx = e.clientX - d.x, dy = e.clientY - d.y;
+    if (movil && modelo && escenario && performance.now() - d.t < 700 && Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) {
+      const destino = vecino(dx < 0 ? 1 : -1);
+      if (destino) alSeleccionar({ tipo: "departamento", id: destino.id });
+    }
+  };
+  raiz.addEventListener("pointerup", soltar, true);
+  raiz.addEventListener("pointercancel", (e) => { if (e.pointerType === "touch") { dedos = Math.max(0, dedos - 1); deslizar = null; } }, true);
 
   // --- Pérdida del contexto gráfico (driver reiniciado, poca memoria en el móvil) ---
   lienzo.addEventListener("webglcontextlost", (e) => {

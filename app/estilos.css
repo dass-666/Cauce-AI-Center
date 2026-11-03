@@ -314,3 +314,4 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 .vista3d-aviso { right: auto; max-width: calc(100% - 230px); }
 .vista3d-personajes { right: auto; max-width: calc(100% - 230px); }
 @media (max-width: 760px) { .vista3d-aviso, .vista3d-personajes { max-width: calc(100% - 20px); } }
+.vista3d-etiquetas .etiqueta-dep { touch-action: none; } /* deslizar sobre una etiqueta también cambia de departamento */
