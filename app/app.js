@@ -2,7 +2,7 @@
 // tiempo y se los pasa a la vista. La vista 3D se conectará aquí con la misma interfaz.
 
 import { cargarJSON, cargarRegistro } from "./cargador.js";
-import { construirModeloVista, describirDuracion } from "./nucleo/modelo.js";
+import { construirModeloVista, describirDuracion, elegirCarga } from "./nucleo/modelo.js";
 import { crearVista2D } from "./vistas/vista2d.js";
 import { dibujarPanel } from "./vistas/panel.js";
 import { el, fecha } from "./vistas/dom.js";
@@ -81,14 +81,18 @@ function dibujarPestanas() {
 
 async function actualizar() {
   const p = estado.actual;
-  const [carga, dist] = await Promise.all([
+  const [real, dist] = await Promise.all([
     cargarJSON(p.estado),
     p.distribucion ? cargarJSON(p.distribucion) : Promise.resolve({ tipo: "no_encontrado" }),
   ]);
+  // La demostración solo se pide si no existe el archivo real.
+  const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
   if (p !== estado.actual) return; // el usuario cambió de piso mientras cargaba
+  const eleccion = elegirCarga(real, demo);
   estado.modelo = construirModeloVista({
     proyecto: p,
-    carga,
+    carga: eleccion.carga,
+    nota_origen: eleccion.nota,
     distribucion: dist.tipo === "ok" ? dist.datos : null,
     ahora: new Date(),
   });
@@ -114,7 +118,9 @@ function dibujarEstado(m) {
   c.replaceChildren(...[
     el("strong", {}, m.conexion_etiqueta),
     m.generado_en ? el("span", {}, ` · dato de ${fecha(m.generado_en)} (hace ${describirDuracion(m.edad_segundos)})`) : null,
+    m.fuente ? el("span", {}, ` · ${m.es_demo ? "DEMO" : "REAL"}: ${m.fuente.nombre}`) : null,
     m.motivo ? el("span", { clase: "conexion-motivo" }, m.motivo) : null,
+    m.nota_origen ? el("span", { clase: "conexion-motivo" }, m.nota_origen) : null,
   ].filter(Boolean));
   const det = $("#diagnostico");
   const lineas = [...m.errores, ...m.avisos];

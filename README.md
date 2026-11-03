@@ -2,7 +2,7 @@
 
 Oficina virtual para observar el trabajo real de nuestros sistemas (Ek Chuah, Compago y, después, Tezcatlipoca y trading). Cada proyecto es un piso, cada área un departamento y cada proceso un personaje que cambia de estado **solo cuando hay un registro que lo respalda**.
 
-**Estado: fase 1, prototipo 2D con datos de demostración.** Todavía no lee datos reales: los adaptadores de Ek Chuah y Compago son las fases 2 y 3. La oficina 3D es la fase 4.
+**Estado: fase 2.** Compago ya puede mostrar datos reales (ver abajo). Ek Chuah sigue con datos de demostración. La oficina 3D es la fase siguiente.
 
 - Costo: $0. Sin servicios externos, sin bibliotecas en tiempo de ejecución, sin IA.
 - Funciona solo en tu computadora (`127.0.0.1`); no se publica en internet ni en el servidor compartido.
@@ -19,6 +19,21 @@ Necesitas **Python 3** (gratis). Si ya usas Ek Chuah con `uv`, también sirve.
 Si `iniciar.bat` dice que no encontró Python, instálalo desde <https://www.python.org/downloads/> marcando **"Add python.exe to PATH"**, y vuelve a intentarlo. Alternativa manual en PowerShell, dentro de la carpeta: `py servir.py`.
 
 > Si Windows muestra "Windows protegió su PC" al abrir el `.bat`, es porque el archivo viene de internet. Puedes revisarlo con el Bloc de notas: solo busca Python y ejecuta `servir.py`.
+
+## Conectar Compago (datos reales)
+
+Requiere la rama `cauce/exportador-solo-lectura` de Compago (agrega el comando `exportar_cauce`; no cambia su lógica ni su base).
+
+1. Abre `conectar_compago.bat` con el Bloc de notas y cambia `COMPAGO_DIR` por la carpeta de Compago (la que tiene `manage.py`). `CADA=300` = cada 5 minutos (mínimo 60).
+2. Doble clic en `conectar_compago.bat` y deja esa ventana abierta. Cada ciclo escribe `datos\reales\compago.json` y muestra cuánto tardó, cuántas consultas hizo, CPU y memoria.
+3. Con `iniciar.bat` en marcha, el piso **Compago** cambia solo de DEMO a REAL: desaparece la franja amarilla y la barra dice `REAL: Compago · exportar_cauce`.
+
+Qué pasa si algo falla:
+- Si cierras la ventana del exportador, después de 3 ciclos sin datos (15 min con `CADA=300`) el piso se muestra **Datos desactualizados** y todos los personajes pasan a *Sin información*.
+- Si borras `datos\reales\compago.json`, se vuelve a mostrar la demostración, con aviso.
+- Si el archivo está dañado, se muestra **Archivo inválido** (no se tapa con la demostración).
+
+Para una sola exportación (sin repetir), en la carpeta de Compago: `python manage.py exportar_cauce --salida <ruta>\datos\reales\compago.json --medir`.
 
 ## Cómo se usa
 
@@ -55,9 +70,10 @@ Cubren el contrato (archivos válidos e inválidos), las reglas contra actividad
 | `contrato/CONTRATO.md` | **El contrato de datos v1** (empieza aquí) y `contrato/ejemplos/` |
 | `app/nucleo/` | Validación, estados y modelo de vista (compartidos por 2D y 3D) |
 | `app/vistas/` | Vista 2D y panel de detalle |
-| `datos/proyectos.json` | Registro de pisos. Para datos reales: copiarlo como `proyectos.local.json` (no va a git) |
+| `datos/proyectos.json` | Registro de pisos: archivo real (`estado`) y demostración (`demo`) de cada proyecto |
 | `datos/demo/` | Datos de demostración, marcados `[DEMO]` |
-| `datos/reales/` | Donde escribirán los adaptadores (no va a git) |
+| `datos/reales/` | Donde escriben los adaptadores (no va a git) |
+| `conectar_compago.bat` | Arranca el exportador de Compago cada N segundos |
 | `escena/` | Posición de los departamentos (celdas en 2D, metros en 3D) |
 | `pruebas/` | Pruebas automáticas |
 | `docs/` | Arquitectura y licencias |

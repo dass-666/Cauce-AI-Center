@@ -28,9 +28,11 @@ Compago   ──adaptador (solo lectura)──►  datos/reales/compago.json   �
 - `vista3d.js` implementará `crearVista3D(contenedor, { alSeleccionar })` → `{ dibujar(modelo, seleccion), destruir() }`, igual que la 2D. `app.js` elegirá una u otra; *Bajo consumo* volverá a la 2D.
 - Plan técnico previsto: Three.js (licencia MIT) copiado al repositorio en versión fija, cámara ortográfica, luces horneadas, sin sombras ni postprocesado en celular, dibujar solo cuando cambia algo, y recursos CC0 registrados en `docs/LICENCIAS.md`.
 
-## Adaptadores previstos (fases 2 y 3, todavía no construidos)
+## Adaptadores
 
-Leídos del código el 2026-11-03; se verificarán al construirlos.
+**Compago (fase 2, construido):** comando `exportar_cauce` en la rama `cauce/exportador-solo-lectura` de Compago (`apps/core/cauce.py`). Usa los modelos de Compago, así que funciona igual con SQLite y PostgreSQL. Garantiza solo lectura en la base (`PRAGMA query_only` / transacción `READ ONLY`), hace 18 consultas por ciclo sin importar el volumen y no exporta nombres de proveedores, productos, archivos, términos de búsqueda, usuarios ni textos de error. Si ya hay un archivo real, el visualizador lo usa; si no existe, muestra la demostración.
+
+**Ek Chuah (pendiente):**
 
 | Proyecto | Evidencia disponible | Limitación conocida |
 |---|---|---|

@@ -5,6 +5,18 @@
 import { validarDocumento } from "./contrato.js";
 import { ESTADOS, CONEXION, estadoResumen } from "./estados.js";
 
+/**
+ * Elige qué archivo mostrar. Regla: los datos reales mandan siempre que el archivo exista,
+ * aunque sea inválido o viejo (así se ve el problema). La demostración solo se usa cuando
+ * el adaptador todavía no ha generado ningún archivo real.
+ */
+export function elegirCarga(real, demo) {
+  if (real.tipo === "no_encontrado" && demo && demo.tipo !== "no_encontrado") {
+    return { carga: demo, origen: "demo", nota: "Todavía no hay datos reales de este proyecto: se muestra la demostración." };
+  }
+  return { carga: real, origen: "real", nota: null };
+}
+
 // Tolerancia para relojes desfasados entre la PC y el adaptador.
 export const TOLERANCIA_FUTURO_SEGUNDOS = 300;
 
@@ -15,8 +27,9 @@ export const TOLERANCIA_FUTURO_SEGUNDOS = 300;
  * @param {object|null} p.distribucion            Distribución de la escena (opcional).
  * @param {Date} p.ahora                           Hora real de la computadora.
  */
-export function construirModeloVista({ proyecto, carga, distribucion = null, ahora }) {
+export function construirModeloVista({ proyecto, carga, distribucion = null, ahora, nota_origen = null }) {
   const base = {
+    nota_origen,
     proyecto: { id: proyecto.id, nombre: proyecto.nombre },
     es_demo: false,
     ahora_referencia: ahora.toISOString(),

@@ -4,7 +4,7 @@
 import { prueba, igual, verdadero } from "./mini.js";
 import { validarDocumento, esEnlaceSeguro } from "../app/nucleo/contrato.js";
 import { ESTADOS, NOMBRES_ESTADOS, estadoResumen } from "../app/nucleo/estados.js";
-import { construirModeloVista } from "../app/nucleo/modelo.js";
+import { construirModeloVista, elegirCarga } from "../app/nucleo/modelo.js";
 
 export function registrarCasos(leerTexto) {
   const leerJSON = async (ruta) => JSON.parse(await leerTexto(ruta));
@@ -287,4 +287,47 @@ export function registrarCasos(leerTexto) {
       for (const k of Object.keys(dist.departamentos)) verdadero(ids.has(k), `${id}: la distribución menciona "${k}", que no existe`);
     }
   });
+
+  // ---------- Fase 2: cambio de DEMO a REAL ----------
+  const demoOk = { tipo: "ok", datos: { demo: true } };
+  prueba("Sin archivo real se muestra la demostración, con una nota", () => {
+    const e = elegirCarga({ tipo: "no_encontrado" }, demoOk);
+    igual(e.origen, "demo");
+    verdadero(e.nota.includes("demostración"));
+  });
+  prueba("Con archivo real válido se muestran los datos reales", () => {
+    const real = { tipo: "ok", datos: { real: true } };
+    igual(elegirCarga(real, demoOk).carga, real);
+  });
+  prueba("Un archivo real dañado NO se tapa con la demostración", () => {
+    igual(elegirCarga({ tipo: "json_invalido" }, demoOk).origen, "real");
+    igual(elegirCarga({ tipo: "error_red" }, demoOk).origen, "real");
+  });
+  prueba("Sin archivo real ni demostración: sin conexión", () => {
+    const e = elegirCarga({ tipo: "no_encontrado" }, null);
+    igual(construirModeloVista({ proyecto, carga: e.carga, ahora: ahoraMinimo }).conexion, "desconectado");
+  });
+
+  prueba("Una exportación real de Compago (exportar_cauce) cumple el contrato", async () => {
+    const d = await leerJSON("contrato/ejemplos/compago-exportador.json");
+    const r = validarDocumento(d);
+    verdadero(r.valido, JSON.stringify(r.errores));
+    igual(r.avisos, []);
+    igual(d.es_demo, false);
+    igual(d.fuente.tipo, "adaptador");
+  });
+  prueba("La exportación de Compago encaja con la escena de Compago", async () => {
+    const d = await leerJSON("contrato/ejemplos/compago-exportador.json");
+    const dist = await leerJSON("escena/compago.json");
+    const ids = new Set(d.departamentos.map((x) => x.id));
+    for (const k of Object.keys(dist.departamentos)) verdadero(ids.has(k), `escena menciona ${k}`);
+  });
+  prueba("La exportación de Compago se marca desactualizada al pasar su vigencia", async () => {
+    const d = await leerJSON("contrato/ejemplos/compago-exportador.json");
+    const tarde = new Date(Date.parse(d.generado_en) + (d.vigencia_segundos + 1) * 1000);
+    const m = construirModeloVista({ proyecto: { id: "compago", nombre: "Compago" }, carga: { tipo: "ok", datos: d }, ahora: tarde });
+    igual(m.conexion, "desactualizado");
+    verdadero(m.departamentos.every((x) => x.agentes.every((a) => a.estado_mostrado === "sin_datos")));
+  });
 }
+
