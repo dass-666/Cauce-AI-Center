@@ -372,3 +372,53 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   body:has(.vista3d-movil) .panel { bottom: calc(106px + env(safe-area-inset-bottom, 0px)); max-height: 32vh; border-radius: 14px; left: 6px; right: 6px; }
   body:has(.vista3d-movil) { padding-bottom: 110px; }
 }
+
+/* Fase D3 — celular: indicadores que caben, horizontal con poco alto y detalle a un lado. */
+.tablero-estado-icono { display: none; }
+/* Texto oculto a la vista pero leído por lectores de pantalla; el padre relativo evita que ensanche la página. */
+.tablero-estado { position: relative; }
+@media (max-width: 760px) {
+  .tablero-estado { padding: 1px 7px; }
+  .tablero-estado .etiqueta-luz { display: none; }
+  .tablero-estado-icono { display: inline; margin-right: 3px; }
+  .tablero-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+/* Celular vertical: los indicadores van en su propia línea para que se vean todos sin desplazar. */
+@media (max-width: 760px) and (orientation: portrait) {
+  .tablero-fila { flex-wrap: wrap; }
+  .tablero-estados { flex: 1 0 100%; order: 5; }
+  .tablero-fila { gap: 4px 8px; }
+  .tablero-desplegable summary { padding: 2px 6px; }
+  /* La fecha exacta entre paréntesis se oculta; "Dato de hace…" sigue visible. */
+  .tablero-fecha { display: none; }
+}
+/* Celular horizontal (poco alto): una sola franja arriba y el detalle como columna a la derecha. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .cabecera { position: relative; padding: 4px 8px; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+  .marca { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cabecera .boton, .cabecera .piso { padding: 4px 9px; font-size: 13px; }
+  .cabecera .interruptor { font-size: 12px; white-space: nowrap; }
+  .pisos, .controles { flex-wrap: nowrap; }
+  .controles { width: auto; }
+  .banda-demo { display: none; } /* la insignia DEMO sigue en la franja fija de abajo y en la escena */
+  .conexion { position: sticky; top: 0; z-index: 12; background: var(--fondo); padding: 4px 8px; font-size: 12px; }
+  .conexion .conexion-motivo { display: none; }
+  .tablero-fila { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 4px 8px; }
+  .tablero-fila > * { flex: none; }
+  .tablero-estado { padding: 0 6px; font-size: 12px; }
+  .tablero-estado .etiqueta-luz { display: none; }
+  .tablero-estado-icono { display: inline; margin-right: 3px; }
+  .tablero-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .tablero-fuente, .tablero-fecha { display: none; }
+  .principal, .principal:has(.panel:not([hidden])) { padding: 4px 8px; grid-template-columns: 1fr; }
+  .oficina.modo-3d { scroll-margin-top: 34px; height: calc(100svh - 40px); min-height: 240px; }
+  .vista3d.es-movil .vista3d-aviso { top: 40px; max-width: 55%; }
+  body:has(.vista3d-movil) .panel {
+    position: fixed; top: 38px; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); left: auto; right: 6px;
+    width: min(38vw, 340px); max-height: none; overflow: auto; border-radius: 12px; z-index: 14;
+    align-self: stretch; /* el panel base usa `start`; en un elemento fijo eso lo encoge al contenido y lo sube a y=0 */
+  }
+  body:has(.vista3d-movil):has(.panel:not([hidden])) .vista3d.es-movil .vista3d-personajes { right: calc(min(38vw, 340px) + 14px); }
+  .vista3d.es-movil .vista3d-movil { left: 8px; right: 8px; }
+  body:has(.vista3d-movil) { padding-bottom: 70px; }
+}

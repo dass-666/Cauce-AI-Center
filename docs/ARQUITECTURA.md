@@ -45,7 +45,10 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `navegacion.js` | Regla única del departamento vecino (teclado ← →, flechas de la barra móvil y gesto de deslizar) y resumen por departamento (estado, personajes con evidencia, alertas) | No (se prueba en Node) |
 | `barra-movil.js` | Barra inferior de celular ◀ [departamento ▾] ▶ ⋯: lista de departamentos y menú (modo, centrar, volver al piso, luz fija). Solo DOM; no decide nada | No (DOM) |
 | `oficina.js` | Un departamento: piso, muros, mamparas, escritorios, computadoras, sillas, planta, letrero | Sí |
-| `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, brillo, ciclo de dibujo | Sí |
+| `brillo.js` | Brillo (bloom) opcional: lo descarga solo al encenderlo, lo apaga si falla y libera sus recursos (fase D2) | Sí |
+| `gestos.js` | Deslizar con un dedo en celular: `sentidoDeslizar` decide el sentido (se prueba en Node) y `escucharDeslizar` lo conecta (fase D2) | No |
+| `etiquetas-dom.js` | Capa HTML de etiquetas sobre el lienzo: crea, actualiza y coloca las etiquetas usando las reglas de `etiquetas.js` (fase D2) | Usa la cámara |
+| `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, zona libre, ciclo de dibujo. Coordina los módulos anteriores | Sí |
 
 Reglas:
 
@@ -55,12 +58,14 @@ Reglas:
 - Noche: ambiente mínimo 1.7, piso de los cuartos un poco más cálido y anillo de estado bajo cada personaje más visible. No se cambian los materiales de Kenney.
 - Celular: sin giro de cámara; un dedo a los lados cambia de departamento, dos dedos acercan y mueven.
 - `ausente` (= `sin_datos`) es **silla vacía con la pantalla apagada**. Si un personaje pierde la evidencia, se levanta y sale.
-- La primera vez que se dibuja, cada personaje con evidencia entra caminando desde la puerta (es una animación de llegada, no significa que la tarea acabe de empezar; la hora real está en el panel).
+- Al abrir la página, al cambiar de proyecto o al pasar de DEMO a REAL, cada personaje aparece ya en su postura: los gestos (entrar, celebrar, reaccionar) solo se ven ante un cambio observado entre dos lecturas (fase C3; DEMO→REAL en D1).
 - `app.js` carga la 3D con `import()` solo si se usa. *Bajo consumo* fuerza el plano 2D y no descarga three.js. Sin WebGL, o si la tarjeta gráfica deja de responder, vuelve sola al plano 2D con aviso.
 - Rendimiento: 60 cuadros/s máx. en escritorio y 30 en celular; resolución limitada (1.25× en celular); sin sombras reales (manchas suaves); sin antialiasing en celular; se detiene con la pestaña oculta.
 - Brillo (bloom): solo escritorio, **apagado por defecto**, se descarga aparte al encenderlo y **se apaga solo** si el equipo no sostiene 40 cuadros/s.
 - `?medir=1` muestra cuadros por segundo, llamadas de dibujo, triángulos, geometrías y texturas.
 - El controlador pide poses (`caminar`, `sentado`, `teclear`…) a un "cuerpo" con método `aplicar(pose, dt)`. Hay dos cuerpos: Kenney (`kenney.js`) y el provisional. Cambiar de personajes no toca la máquina de estados ni los caminos.
+
+**Registro e integraciones (fase D1/D4):** `app/nucleo/registro.js` valida `datos/proyectos.json` (ids, rutas solo dentro de `datos/reales/`, `datos/demo/` y `escena/`) y `herramientas/validar-estado.mjs` revisa un archivo de estado antes de abrir la página. Detalle en `docs/INTEGRACIONES.md`.
 
 **Tablero y cambios (fuera de la 3D, también en el plano):** `app/vistas/tablero.js` muestra REAL/DEMO, conexión, antigüedad del dato, agentes por estado, alertas del archivo y los cambios observados. `app/nucleo/cambios.js` compara la lectura anterior con la actual (estado de agentes, agentes y alertas que aparecen o desaparecen, conexión). No es un historial: no guarda nada al recargar, no inventa pasos intermedios y solo dice entre qué datos (`generado_en`) se observó cada cambio.
 

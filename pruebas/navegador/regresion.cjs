@@ -98,8 +98,9 @@ require('fs').mkdirSync(SAL, { recursive: true });
     // Detalle: elegir un personaje abre el panel abajo sin tapar todo el edificio.
     await p.locator('.movil-actual').click(); await p.locator('.movil-fila', { hasText: 'Auditoría' }).click(); await p.waitForTimeout(1500);
     await p.locator('.vista3d-personajes .chip').first().click(); await p.waitForTimeout(1500);
-    const alto = await p.evaluate(() => { const r = document.querySelector('#panel').getBoundingClientRect(); return { panel: r.height, vh: innerHeight, visible: !document.querySelector('#panel').hidden }; });
-    ok(`${nombre}: panel de detalle ≤ 50% de la pantalla`, alto.visible && alto.panel <= alto.vh * 0.5 + 1, `${Math.round(alto.panel)} de ${alto.vh}px`);
+    // Se mide el ÁREA: en vertical el detalle es una hoja abajo y en horizontal (D3) una columna a la derecha.
+    const alto = await p.evaluate(() => { const r = document.querySelector('#panel').getBoundingClientRect(); return { area: (r.width * r.height) / (innerWidth * innerHeight), visible: !document.querySelector('#panel').hidden }; });
+    ok(`${nombre}: panel de detalle ≤ 50% de la pantalla`, alto.visible && alto.area <= 0.5, `${Math.round(alto.area * 100)} % del área`);
     await p.screenshot({ path: `${SAL}/${nombre}-panel.png` });
     // Cabecera REAL/DEMO y conexión pegada arriba al bajar.
     await p.evaluate(() => window.scrollTo(0, 400)); await p.waitForTimeout(300);

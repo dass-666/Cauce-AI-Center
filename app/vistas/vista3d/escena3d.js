@@ -207,17 +207,20 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   function zonaLibre() {
     const w = Math.max(1, raiz.clientWidth), h = Math.max(1, raiz.clientHeight);
     const barra = raiz.querySelector(".vista3d-barra");
-    let abajo = h - 8;
+    let abajo = h - 8, izq = 8, der = w - 8;
     let arriba = barra ? barra.offsetTop + barra.offsetHeight + 6 : 8;
     // Lo que flota abajo sube el límite inferior; lo que flota arriba (el aviso en celular) baja el superior.
     for (const n of [aviso, personajesDom, barraMovil?.nodo, ...tapan()]) {
       if (!n || n.hidden || n.offsetHeight === 0 || !n.childNodes.length) continue;
       const c = cajaEnRaiz(n);
       if (c.abajo <= 0 || c.arriba >= h || c.der <= 0 || c.izq >= w) continue; // fuera de la vista (p. ej. el panel a un lado en escritorio)
-      if ((c.arriba + c.abajo) / 2 < h / 2) arriba = Math.max(arriba, c.abajo + 6);
+      const columna = Math.min(c.abajo, h) - Math.max(c.arriba, 0) > h * 0.6 && c.der - c.izq < w * 0.6;
+      if (columna) { // a un lado (el detalle en celular horizontal): achica el ancho, no el alto
+        if ((c.izq + c.der) / 2 > w / 2) der = Math.min(der, c.izq - 6); else izq = Math.max(izq, c.der + 6);
+      } else if ((c.arriba + c.abajo) / 2 < h / 2) arriba = Math.max(arriba, c.abajo + 6);
       else abajo = Math.min(abajo, c.arriba - 6);
     }
-    return { w, h, arriba, abajo: Math.max(arriba + 60, abajo), izq: 8, der: w - 8 };
+    return { w, h, arriba, abajo: Math.max(arriba + 60, abajo), izq, der: Math.max(izq + 60, der) };
   }
   /** Caja de un control flotante en píxeles de la vista (sirve también para la barra móvil, que es fija). */
   function cajaEnRaiz(n) {
