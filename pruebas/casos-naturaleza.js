@@ -223,7 +223,8 @@ export function registrarCasosNaturaleza(leerTexto) {
     igual(s.aplicar(m1, c, 0), null);
     verdadero(agentes(m1).filter((a) => a.naturaleza !== "automatico").every((a) => a.animacion_mostrada === "ausente"), "primera lectura");
     const d2 = await conLatido();
-    de({ departamentos: d2.departamentos }, "buscador").evidencia.referencia = "id=5001 · resultado=ok";
+    d2.generado_en = "2026-11-03T02:38:00Z"; // un archivo nuevo, con un registro posterior al anterior
+    Object.assign(de({ departamentos: d2.departamentos }, "buscador").evidencia, { referencia: "id=5001 · resultado=ok", observado_en: "2026-11-03T02:37:00Z" });
     const m2 = modelo(d2);
     igual(s.aplicar(m2, c, 1000), 8000);
     igual([de(m2, "buscador").presentacion.personaje, de(m2, "buscador").animacion_mostrada], ["breve", "estirarse"]);
@@ -342,5 +343,88 @@ export function registrarCasosNaturaleza(leerTexto) {
     const m = modelo(real);
     igual(s.aplicar(m, c, 1000), null);
     verdadero(agentes(m).every((a) => a.presentacion.personaje !== "breve"));
+  });
+
+  // ---------- E3: un registro "nuevo para esta página" pero viejo no es actividad
+
+  const conBusqueda = async (ref, observado, generado) => {
+    const d = await conLatido();
+    d.generado_en = generado;
+    Object.assign(d.departamentos[1].agentes[0].evidencia, { referencia: ref, observado_en: observado });
+    return d;
+  };
+
+  prueba("E3 · pestaña oculta una hora: un registro de hace 50 min no hace aparecer a nadie al volver", async () => {
+    const c = await clasificacion();
+    const s = crearSeguidorNaturalezas();
+    s.aplicar(construirModeloVista({ proyecto, carga: { tipo: "ok", datos: await conBusqueda("id=1", "2026-11-03T01:00:00Z", "2026-11-03T01:30:00Z") }, ahora: new Date("2026-11-03T01:30:10Z") }), c, 0);
+    const m = construirModeloVista({ proyecto, carga: { tipo: "ok", datos: await conBusqueda("id=2", "2026-11-03T01:40:00Z", "2026-11-03T02:30:00Z") }, ahora: new Date("2026-11-03T02:30:10Z") });
+    igual(s.aplicar(m, c, 3600e3), null);
+    igual(de(m, "buscador").presentacion.personaje, "ausente");
+  });
+
+  prueba("E3 · registro reciente (posterior a la lectura anterior y dentro de la vigencia): aparece breve", async () => {
+    const c = await clasificacion();
+    const s = crearSeguidorNaturalezas();
+    s.aplicar(construirModeloVista({ proyecto, carga: { tipo: "ok", datos: await conBusqueda("id=1", "2026-11-03T02:00:00Z", "2026-11-03T02:30:00Z") }, ahora: new Date("2026-11-03T02:30:10Z") }), c, 0);
+    const m = construirModeloVista({ proyecto, carga: { tipo: "ok", datos: await conBusqueda("id=2", "2026-11-03T02:33:00Z", "2026-11-03T02:35:00Z") }, ahora: new Date("2026-11-03T02:35:10Z") });
+    igual(s.aplicar(m, c, 1000), 8000);
+    igual(de(m, "buscador").presentacion.personaje, "breve");
+  });
+
+  prueba("E3 · registro nuevo sin hora (observado_en, fin ni inicio): no aparece nadie", async () => {
+    const c = await clasificacion();
+    const s = crearSeguidorNaturalezas();
+    s.aplicar(modelo(await conLatido()), c, 0);
+    const d = await conLatido();
+    const b = d.departamentos[1].agentes[0];
+    b.evidencia = { origen: "SearchRun", referencia: "id=9" };
+    delete b.actividad.inicio; delete b.actividad.fin;
+    const m = modelo(d);
+    s.aplicar(m, c, 1000);
+    igual(de(m, "buscador").presentacion.personaje, "ausente");
+  });
+
+  prueba("E3 · registro anterior a la lectura anterior (llegó tarde al archivo): no aparece nadie", async () => {
+    const c = await clasificacion();
+    const s = crearSeguidorNaturalezas();
+    s.aplicar(construirModeloVista({ proyecto, carga: { tipo: "ok", datos: await conBusqueda("id=1", "2026-11-03T02:20:00Z", "2026-11-03T02:30:00Z") }, ahora: new Date("2026-11-03T02:30:10Z") }), c, 0);
+    const m = construirModeloVista({ proyecto, carga: { tipo: "ok", datos: await conBusqueda("id=2", "2026-11-03T02:25:00Z", "2026-11-03T02:35:00Z") }, ahora: new Date("2026-11-03T02:35:10Z") });
+    s.aplicar(m, c, 1000);
+    igual(de(m, "buscador").presentacion.personaje, "ausente");
+  });
+
+  // ---------- E3: documentos producidos por el exportador corregido de Compago (PR #10, commit 8c207ce)
+  // Generados con una base SQLite aislada (ver docs/VALIDAR-FASE-E3.md). Se evalúan 10 s después de generarse.
+
+  const PR10 = [
+    ["real-vacio", "REAL", "sin evidencia", "ausente"],
+    ["real-activo-espera", "REAL", "activo", "presente"],
+    ["real-activo-aplicando", "REAL", "activo", "presente"],
+    ["real-detenido-cola", "REAL", "detenido", "ausente"],
+    ["real-indeterminado", "REAL", "indeterminado", "ausente"],
+    ["real-activo-historico", "REAL", "activo", "presente"],
+    ["demo-activo", "DEMO", "activo", "presente"],
+  ];
+  for (const [nombre, fuente, consumidor, importador] of PR10) {
+    prueba(`E3 · exportador PR #10 «${nombre}»: válido, ${fuente}, Consumidor ${consumidor} → importador ${importador}`, async () => {
+      const d = await leerJSON(`contrato/ejemplos/compago-pr10/${nombre}.json`);
+      const r = validarDocumento(d);
+      verdadero(r.valido, JSON.stringify(r.errores));
+      const m = construirModeloVista({ proyecto, carga: { tipo: "ok", datos: d }, ahora: new Date(Date.parse(d.generado_en) + 10000) });
+      igual([m.conexion, m.es_demo ? "DEMO" : "REAL", m.departamentos.length, m.avisos], ["en_linea", fuente, 8, []]);
+      crearSeguidorNaturalezas().aplicar(m, await clasificacion(), 0);
+      const imp = de(m, "importador");
+      igual([m.departamentos[0].indicadores.find((i) => i.etiqueta === "Consumidor").valor, imp.presentacion.personaje], [consumidor, importador]);
+      // Las alertas nunca se convierten en personajes: fuera del importador, nadie aparece al cargar.
+      igual(agentes(m).filter((a) => a.id !== "importador" && a.animacion_mostrada !== "ausente").map((a) => a.id), []);
+    });
+  }
+
+  prueba("E3 · exportador PR #10: detenido con cola trae alerta crítica y el importador queda en revisión, sin figura", async () => {
+    const d = await leerJSON("contrato/ejemplos/compago-pr10/real-detenido-cola.json");
+    const m = construirModeloVista({ proyecto, carga: { tipo: "ok", datos: d }, ahora: new Date(Date.parse(d.generado_en) + 10000) });
+    crearSeguidorNaturalezas().aplicar(m, await clasificacion(), 0);
+    igual([m.alertas.some((a) => a.nivel === "critica"), de(m, "importador").estado_mostrado, de(m, "importador").animacion_mostrada], [true, "requiere_revision", "ausente"]);
   });
 }

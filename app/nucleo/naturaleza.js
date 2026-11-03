@@ -148,6 +148,20 @@ export function cambioDeEvidencia(antes, ahora, id) {
 }
 
 /**
+ * Un registro nuevo para ESTA página puede ser viejo (pestaña oculta, exportador detenido un rato). Solo cuenta
+ * como actividad si su hora (evidencia.observado_en, o actividad.fin / inicio) es posterior a la lectura anterior
+ * y cabe en la vigencia del archivo. Sin hora, no se puede saber: no cuenta.
+ */
+export function esReciente(agente, modelo, generadoAnterior) {
+  const t = Date.parse(agente?.evidencia?.observado_en ?? agente?.actividad?.fin ?? agente?.actividad?.inicio ?? "");
+  if (!Number.isFinite(t)) return false;
+  // Mismo segundo que la lectura anterior: cuenta (las horas vienen redondeadas al segundo).
+  if (generadoAnterior && t < Date.parse(generadoAnterior)) return false;
+  const ref = Date.parse(modelo.ahora_referencia ?? modelo.generado_en);
+  return ref - t <= (modelo.vigencia_segundos ?? 0) * 1000;
+}
+
+/**
  * Lleva la cuenta entre lecturas de UNA página: cuándo se vio un registro nuevo y hasta cuándo dura
  * la aparición breve. Decora cada agente del modelo con naturaleza, presentacion y animacion_mostrada.
  * reiniciar() al cambiar de proyecto: la siguiente lectura vuelve a ser "primera".
@@ -156,9 +170,10 @@ export function crearSeguidorNaturalezas({ duracionMs = DURACION_BREVE_SEGUNDOS 
   let huella = null;
   let modeloVisto = null;
   let fuenteVista = null;
+  let generadoAnterior = null; // generado_en de la lectura anterior con departamentos
   const hasta = new Map(); // agente → fin de la aparición breve (ms)
   return {
-    reiniciar() { huella = null; modeloVisto = null; fuenteVista = null; hasta.clear(); },
+    reiniciar() { huella = null; modeloVisto = null; fuenteVista = null; generadoAnterior = null; hasta.clear(); },
     /**
      * @param modelo  modelo de vista (se modifica: agrega campos a cada agente).
      * @param clasificacion  resultado de validarNaturalezas, o null (proyecto sin clasificar: no se toca).
@@ -171,9 +186,13 @@ export function crearSeguidorNaturalezas({ duracionMs = DURACION_BREVE_SEGUNDOS 
       if (nueva && modelo.departamentos.length) {
         // DEMO → REAL (u otro adaptador): otra fuente no es un registro nuevo; se vuelve a empezar.
         const fuente = `${modelo.es_demo}|${modelo.fuente?.tipo}|${modelo.fuente?.nombre}`;
-        if (fuente !== fuenteVista) { huella = null; hasta.clear(); fuenteVista = fuente; }
+        if (fuente !== fuenteVista) { huella = null; hasta.clear(); fuenteVista = fuente; generadoAnterior = null; }
         const h = huellaEvidencia(modelo);
-        for (const id of h.keys()) if (cambioDeEvidencia(huella, h, id)) hasta.set(id, ahoraMs + duracionMs);
+        const porId = new Map(modelo.departamentos.flatMap((d) => d.agentes.map((a) => [a.id, a])));
+        for (const id of h.keys()) {
+          if (cambioDeEvidencia(huella, h, id) && esReciente(porId.get(id), modelo, generadoAnterior)) hasta.set(id, ahoraMs + duracionMs);
+        }
+        generadoAnterior = modelo.generado_en;
         huella = h; // solo se guarda una lectura con departamentos (una falla de lectura no borra la memoria)
       }
       modeloVisto = modelo;
