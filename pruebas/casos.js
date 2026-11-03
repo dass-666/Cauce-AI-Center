@@ -12,6 +12,8 @@ import { distribuirEdificio, seEnciman, fondoNecesario, EDIFICIO } from "../app/
 import { crearMedidor, firmaMedicion } from "../app/vistas/vista3d/medidor.js";
 import { fotografia, compararLecturas, crearRegistroCambios } from "../app/nucleo/cambios.js";
 import { textoCambio } from "../app/vistas/tablero.js";
+import { calcularEncuadre, aPixeles, dentro } from "../app/vistas/vista3d/encuadre.js";
+import { acomodarEtiquetas, nombresCortos, prioridadEtiqueta } from "../app/vistas/vista3d/etiquetas.js";
 import { temaDe, acentoDe } from "../app/vistas/vista3d/identidad.js";
 import { luzSegunHora, LUZ_FIJA, HEMI_MINIMA } from "../app/vistas/vista3d/iluminacion.js";
 
@@ -601,5 +603,64 @@ export function registrarCasos(leerTexto) {
     const [c] = compararLecturas(fotografia(lectura("2026-11-03T10:00:00Z", { a: "esperando" })), fotografia(lectura("2026-11-03T10:15:00Z", { a: "trabajando" })));
     igual(textoCambio(c), "a (Dep) pasó de Esperando a Trabajando.");
     igual(c.entre, ["2026-11-03T10:00:00Z", "2026-11-03T10:15:00Z"]);
+  });
+
+  // --- Fase C, PR 1: noche, encuadre y etiquetas ---
+  prueba("Noche: el ambiente nunca baja de 1.7 y de noche se marca para encender oficinas y anillos", () => {
+    for (let h = 0; h < 24; h += 0.25) verdadero(luzSegunHora(h).hemi >= 1.7, `oscuro a las ${h}`);
+    igual(luzSegunHora(23).noche, 1);
+    igual(luzSegunHora(12).noche, 0);
+    igual(luzSegunHora(23, true).noche, 0, "la luz fija no cambia de noche");
+  });
+  const zonaPrueba = { w: 1000, h: 600, arriba: 60, abajo: 540, izq: 8, der: 992 };
+  const caja = [{ x: -10, y: -4 }, { x: 10, y: -4 }, { x: -10, y: 4 }, { x: 10, y: 4 }];
+  prueba("Encuadre: todo el escenario cabe en la zona libre (sin barra ni avisos) y la aprovecha", () => {
+    const e = calcularEncuadre(caja, zonaPrueba);
+    const px = caja.map((p) => aPixeles(p, e, zonaPrueba));
+    for (const p of px) verdadero(dentro(p, zonaPrueba), `fuera de la zona: ${JSON.stringify(p)}`);
+    const ancho = Math.max(...px.map((p) => p.x)) - Math.min(...px.map((p) => p.x));
+    const alto = Math.max(...px.map((p) => p.y)) - Math.min(...px.map((p) => p.y));
+    verdadero(ancho >= 0.9 * (zonaPrueba.der - zonaPrueba.izq) || alto >= 0.9 * (zonaPrueba.abajo - zonaPrueba.arriba), "deja demasiado espacio vacío");
+  });
+  prueba("Encuadre: con la barra arriba, el centro baja al centro de la zona libre", () => {
+    const e = calcularEncuadre(caja, zonaPrueba);
+    const centro = aPixeles({ x: 0, y: 0 }, e, zonaPrueba);
+    verdadero(Math.abs(centro.y - (zonaPrueba.arriba + zonaPrueba.abajo) / 2) < 1, `centro en ${centro.y}`);
+    const menos = calcularEncuadre(caja, zonaPrueba, 0.7);
+    verdadero(menos.mitadAlto > e.mitadAlto, "menor llenado = más alejado");
+  });
+  prueba("Etiquetas: nunca quedan encimadas y gana la más importante", () => {
+    const uno = (id, x, y, prioridad, extra = []) => ({ id, w: 120, h: 24, prioridad, opciones: [{ x, y }, ...extra] });
+    const items = [
+      uno("a", 100, 100, 10),
+      uno("b", 130, 105, 60),
+      uno("c", 400, 100, 5),
+      uno("d", 5, 300, 90),    // se saldría del lienzo
+      uno("e", 600, 40, 90),   // quedaría bajo la barra
+      uno("f", 140, 102, 20, [{ x: 140, y: 200 }]), // choca con b, pero tiene otro lugar libre
+    ];
+    const v = acomodarEtiquetas(items, { w: 800, h: 600, arriba: 50 });
+    igual([...v.keys()].sort(), ["b", "c", "f"]);
+    igual(v.get("f"), 1, "usa su segunda opción");
+    // Sin pares que se crucen entre las visibles, con muchas etiquetas al azar (semilla fija).
+    let semilla = 7;
+    const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
+    const muchas = Array.from({ length: 40 }, (_, i) => ({ id: String(i), w: 60 + azar() * 80, h: 22, prioridad: Math.floor(azar() * 100), opciones: [{ x: azar() * 800, y: 60 + azar() * 540 }, { x: azar() * 800, y: 60 + azar() * 540 }] }));
+    const elegidas = acomodarEtiquetas(muchas, { w: 800, h: 600, arriba: 50 });
+    const vis = muchas.filter((m) => elegidas.has(m.id)).map((m) => ({ ...m, ...m.opciones[elegidas.get(m.id)] }));
+    for (let i = 0; i < vis.length; i++) for (let j = i + 1; j < vis.length; j++) {
+      const a = vis[i], b = vis[j];
+      verdadero(!(Math.abs(a.x - b.x) * 2 < a.w + b.w && Math.abs(a.y - b.y) < (a.h + b.h) / 2), `se enciman ${a.id} y ${b.id}`);
+    }
+    verdadero(prioridadEtiqueta({ enfocado: false, estado: "error", alertas: 0 }) > prioridadEtiqueta({ enfocado: false, estado: "esperando", alertas: 0 }));
+  });
+  prueba("Etiquetas: nombres cortos únicos para los departamentos de Compago", async () => {
+    const { modelo } = await edificioCompago();
+    const nombres = modelo.departamentos.map((d) => d.nombre);
+    const cortos = nombresCortos(nombres);
+    igual(new Set(cortos).size, nombres.length, `repetidos: ${cortos.join(", ")}`);
+    for (const c of cortos) verdadero(c.length <= 16, `largo: ${c}`);
+    igual(nombresCortos(["Importación de catálogos"]), ["Importación"]);
+    igual(nombresCortos(["Revisión de fuentes", "Revisión de listas"]), ["Revisión fuentes", "Revisión listas"]);
   });
 }

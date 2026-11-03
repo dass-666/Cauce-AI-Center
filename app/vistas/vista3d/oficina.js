@@ -205,6 +205,7 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     agente, puesto: lugares[i], cuarto, retraso: i * 0.9,
     fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(id, recursos) : null,
     geo: compartido.geoPersonaje, recursos, texturaSombra: compartido.texturaSombra, burbujas: compartido.burbujas,
+    anillosEstado: compartido.anillosEstado ?? null,
   }));
   for (const per of personajes) grupo.add(per.raiz);
 
