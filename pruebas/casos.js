@@ -18,6 +18,7 @@ import { acomodarEtiquetas, nombresCortos, prioridadEtiqueta } from "../app/vist
 import { temaDe, acentoDe } from "../app/vistas/vista3d/identidad.js";
 import { luzSegunHora, LUZ_FIJA, HEMI_MINIMA } from "../app/vistas/vista3d/iluminacion.js";
 import { vecinoDe, resumenDepartamento } from "../app/vistas/vista3d/navegacion.js";
+import { sentidoDeslizar } from "../app/vistas/vista3d/gestos.js";
 
 export function registrarCasos(leerTexto) {
   const leerJSON = async (ruta) => JSON.parse(await leerTexto(ruta));
@@ -795,5 +796,12 @@ export function registrarCasos(leerTexto) {
     verdadero(src.includes("vecinoDe(modelo.departamentos"));
     igual((src.match(/irAVecino\(/g) ?? []).length >= 4, true, "flechas, teclado y gesto pasan por irAVecino");
     verdadero(!/findIndex\(\(d\) => d\.id === \(modo/.test(src), "no queda una segunda copia de la regla del vecino");
+  });
+  prueba("D2: regla del gesto de deslizar (gestos.js)", () => {
+    igual(sentidoDeslizar(-120, 10, 200), 1, "dedo a la izquierda = siguiente");
+    igual(sentidoDeslizar(120, 10, 200), -1);
+    igual(sentidoDeslizar(40, 0, 200), 0, "muy corto");
+    igual(sentidoDeslizar(-120, 100, 200), 0, "más vertical que horizontal");
+    igual(sentidoDeslizar(-120, 0, 900), 0, "muy lento");
   });
 }

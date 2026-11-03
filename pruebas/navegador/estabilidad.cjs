@@ -28,6 +28,8 @@ function falsoReal(cambiar) {
   await p.route('**/datos/reales/compago.json*', (r) => {
     if (modoReal === 'no') return r.fulfill({ status: 404, body: '' });
     if (modoReal === 'roto') return r.fulfill({ status: 200, contentType: 'application/json', body: '{ roto' });
+    if (modoReal === 'error500') return r.fulfill({ status: 500, body: 'error' });
+    if (modoReal === 'viejo') { const d = falsoReal({}); d.generado_en = new Date(Date.now() - 3 * 3600e3).toISOString(); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(d) }); }
     return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(falsoReal({ 'importador-cola': { estado: 'requiere_revision' } })) });
   });
   const pers = () => p.evaluate(() => window.__cauce3d.personajes());
@@ -55,6 +57,14 @@ function falsoReal(cambiar) {
   ok('archivo inválido: conexión no vigente y personajes salen o ya no están', !/En línea/.test(t) && ps.every((x) => !x.visible || ['salir', 'levantarse'].includes(x.accion)), t.split('\n')[0]);
   modoReal = 'si'; await recargar(4000);
   ok('reconexión: vuelve "En línea"', /En línea/.test(await tablero()));
+  modoReal = 'error500'; await recargar(1500);
+  t = await tablero();
+  ok('error del servidor: "Sin conexión" y no se usa la demo', /Sin conexión/.test(t) && await p.locator('#banda-demo').isHidden(), t.split('\n')[0]);
+  modoReal = 'viejo'; await recargar(3000);
+  t = await tablero();
+  ok('dato de hace 3 h: "Datos desactualizados" y nadie trabajando', /desactualizados/i.test(t) && (await pers()).every((x) => !x.visible || x.accion === 'salir' || x.accion === 'levantarse'), t.split('\n')[0]);
+  modoReal = 'si'; await recargar(5000);
+  ok('vuelve a datos vigentes: "En línea"', /En línea/.test(await tablero()));
 
   // Cambio de proyecto y vuelta: sin gestos y el registro empieza de cero.
   await p.getByRole('tab', { name: 'Ek Chuah' }).click(); await p.waitForTimeout(4000);
