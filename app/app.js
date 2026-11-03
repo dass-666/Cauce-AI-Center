@@ -9,10 +9,15 @@ import { dibujarPanel } from "./vistas/panel.js";
 import { el, fecha } from "./vistas/dom.js";
 import { dibujarTablero } from "./vistas/tablero.js";
 import { crearRegistroCambios } from "./nucleo/cambios.js";
+import { crearSeguidorNaturalezas, validarNaturalezas } from "./nucleo/naturaleza.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
 const registroCambios = crearRegistroCambios({ maximo: 30 });
+// Qué es cada puesto (escena/<id>-naturaleza.json). Sin ese archivo, el proyecto se ve como antes.
+const seguidor = crearSeguidorNaturalezas();
+const clasificaciones = new Map(); // proyecto → resultado de validarNaturalezas o null
+let temporizadorBreve = null;
 
 const estado = {
   proyectos: [],
@@ -133,6 +138,7 @@ function dibujarPestanas() {
       onclick: async () => {
         estado.actual = p;
         estado.seleccion = null;
+        seguidor.reiniciar(); // la primera lectura del otro piso no cuenta como cambio observado
         guardarPreferencia("cauce.proyecto", p.id);
         dibujarPestanas();
         await actualizar();
@@ -152,6 +158,7 @@ async function actualizar() {
   ]);
   // La demostración solo se pide si no existe el archivo real.
   const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
+  const clasificacion = await clasificacionDe(p);
   if (p !== estado.actual || numero !== lecturaNumero) return; // cambió de piso o llegó una lectura más nueva
   const eleccion = elegirCarga(real, demo);
   estado.modelo = construirModeloVista({
@@ -162,6 +169,30 @@ async function actualizar() {
     ahora: new Date(),
   });
   registroCambios.leer(estado.modelo); // solo compara con la lectura anterior de esta página
+  estado.clasificacion = clasificacion;
+  aplicarNaturalezas();
+}
+
+async function clasificacionDe(p) {
+  if (!clasificaciones.has(p.id)) {
+    const r = p.naturalezas ? await cargarJSON(p.naturalezas) : { tipo: "no_encontrado" };
+    let c = null;
+    if (r.tipo === "ok") {
+      c = validarNaturalezas(r.datos);
+      for (const t of [...c.errores, ...c.avisos]) console.warn(`${p.naturalezas}: ${t}`);
+    }
+    clasificaciones.set(p.id, c);
+  }
+  return clasificaciones.get(p.id);
+}
+
+/** Decora el modelo (naturaleza de cada puesto) y, si alguien apareció brevemente, vuelve a dibujar cuando se vaya. */
+function aplicarNaturalezas() {
+  clearTimeout(temporizadorBreve);
+  const m = estado.modelo;
+  if (!m) return;
+  const proximo = seguidor.aplicar(m, estado.clasificacion, Date.now());
+  if (proximo !== null) temporizadorBreve = setTimeout(aplicarNaturalezas, proximo + 50);
   dibujar();
 }
 

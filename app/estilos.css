@@ -157,6 +157,11 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 .personaje.estado-sin-datos .cabeza, .personaje.estado-sin-datos .cuerpo { opacity: 0; }
 .personaje.estado-sin-datos .escena-puesto { opacity: .5; filter: grayscale(1); }
 .personaje.estado-sin-datos .monitor { box-shadow: none; }
+/* Naturaleza del puesto (fase E2): sin figura cuando no hay nadie que mostrar. */
+.personaje.sin-figura .cabeza, .personaje.sin-figura .cuerpo { opacity: 0; animation: none; }
+.personaje.puesto-humano .escritorio::after { content: "HUMANO"; position: absolute; left: 50%; top: 1px; transform: translateX(-50%); font-size: 7px; font-weight: 700; color: #1b2440; background: #e8ecf5; padding: 0 3px; border-radius: 2px; }
+.personaje.puesto-equipo .escena-puesto::before, .personaje.puesto-terminal .escena-puesto::before { content: ""; position: absolute; right: 4px; bottom: 16px; width: 9px; height: 16px; border-radius: 2px; background: #6b7694; box-shadow: inset 0 3px 0 var(--color-estado); }
+.naturaleza-texto { font-size: 10px; color: var(--tenue, #9aa6c4); }
 
 @keyframes teclear { 50% { transform: translateY(2px); } }
 @keyframes parpadeo { 50% { filter: brightness(1.6); } }

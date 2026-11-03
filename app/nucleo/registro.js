@@ -3,15 +3,16 @@
 //   estado        → datos/reales/<archivo>.json  (lo escribe el adaptador de solo lectura; fuera de git)
 //   demo          → datos/demo/<archivo>.json    (opcional; debe venir marcado es_demo: true)
 //   distribucion  → escena/<archivo>.json        (opcional)
+//   naturalezas   → escena/<archivo>.json        (opcional; por omisión escena/<id>-naturaleza.json, si existe)
 // Así un registro mal escrito no puede leer otro sitio ni mezclar una demostración con datos reales.
 
 const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const ARCHIVO = (carpeta) => new RegExp(`^${carpeta}/[a-z0-9][a-z0-9._-]{0,80}\\.json$`);
-const RUTAS = { estado: ARCHIVO("datos/reales"), demo: ARCHIVO("datos/demo"), distribucion: ARCHIVO("escena") };
+const RUTAS = { estado: ARCHIVO("datos/reales"), demo: ARCHIVO("datos/demo"), distribucion: ARCHIVO("escena"), naturalezas: ARCHIVO("escena") };
 
 /**
  * @param {any} datos  contenido del registro ({ proyectos: [...] })
- * @returns {{ proyectos: Array<{id,nombre,estado,demo,distribucion}>, avisos: string[] }}
+ * @returns {{ proyectos: Array<{id,nombre,estado,demo,distribucion,naturalezas}>, avisos: string[] }}
  */
 export function validarRegistro(datos) {
   const avisos = [];
@@ -35,7 +36,8 @@ export function validarRegistro(datos) {
       return null;
     };
     vistos.add(p.id);
-    proyectos.push({ id: p.id, nombre: p.nombre.trim(), estado: p.estado, demo: opcional("demo"), distribucion: opcional("distribucion") });
+    proyectos.push({ id: p.id, nombre: p.nombre.trim(), estado: p.estado, demo: opcional("demo"), distribucion: opcional("distribucion"),
+      naturalezas: opcional("naturalezas") ?? `escena/${p.id}-naturaleza.json` });
   });
   return { proyectos, avisos };
 }

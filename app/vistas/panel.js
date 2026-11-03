@@ -1,6 +1,7 @@
 // Panel de detalle: lo que se sabe (y lo que no) del departamento o personaje elegido.
 // Se comparte entre la vista 2D y la futura vista 3D.
 
+import { NATURALEZAS } from "../nucleo/naturaleza.js";
 import { el, fecha } from "./dom.js";
 import { describirDuracion } from "../nucleo/modelo.js";
 import { ESTADOS } from "../nucleo/estados.js";
@@ -41,6 +42,7 @@ function detalleAgente(a, dep, modelo) {
     fila("Función", a.rol),
     fila("Estado", ap.etiqueta),
   ];
+  if (a.naturaleza) filas.push(fila("Qué es", `${NATURALEZAS[a.naturaleza].etiqueta}. ${a.presentacion.texto}`));
   if (a.ultimo_estado_conocido) {
     filas.push(fila("Último estado reportado", `${ESTADOS[a.ultimo_estado_conocido].etiqueta} (no confiable: ${modelo.conexion_etiqueta.toLowerCase()})`));
   }
@@ -82,7 +84,7 @@ function detalleDepartamento(dep) {
       : null,
     el("h3", {}, "Personajes"),
     dep.agentes.length
-      ? el("ul", { clase: "lista" }, dep.agentes.map((a) => el("li", {}, `${a.nombre}: ${a.apariencia.etiqueta}`)))
+      ? el("ul", { clase: "lista" }, dep.agentes.map((a) => el("li", {}, `${a.nombre}${a.naturaleza ? ` (${NATURALEZAS[a.naturaleza].corta.toLowerCase()})` : ""}: ${a.apariencia.etiqueta}`)))
       : el("p", { clase: "detalle-nota" }, "Ninguno."),
     el("h3", {}, "Alertas"),
     dep.alertas.length

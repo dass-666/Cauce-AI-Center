@@ -8,6 +8,7 @@ import { COLOR_ESTADO, OFICINA } from "./paleta.js";
 import { Personaje } from "./personaje.js";
 import { Recursos } from "./recursos.js";
 import { dibujarIcono, hex } from "./iconos.js";
+import { NATURALEZAS } from "../../nucleo/naturaleza.js";
 
 const ALTO_ESCRITORIO = 0.6;
 
@@ -125,12 +126,23 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     poste: recursos.agregar(new THREE.CylinderGeometry(0.03, 0.03, 0.26, 8)),
     ruedas: recursos.agregar(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 10)),
     taza: recursos.agregar(new THREE.CylinderGeometry(0.04, 0.035, 0.09, 10)),
+    // Equipo (terminal de proceso o módulo), gabinete bajo el escritorio y placa de puesto humano.
+    torre: caja(0.2, 0.32, 0.36),
+    luzTorre: caja(0.02, 0.03, 0.2),
+    gabinete: caja(0.5, 0.48, 0.5),
+    ranura: caja(0.4, 0.025, 0.02),
+    placa: recursos.agregar(new THREE.PlaneGeometry(0.72, 0.18)),
+    pieplaca: caja(0.72, 0.03, 0.08),
+    cinta: caja(0.22, 0.012, 0.74),
   };
+  const matCinta = mat(0xd9b23a);
   const pantallas = [];
   lugares.forEach((l, i) => {
     const puesto = new THREE.Group();
     puesto.position.set(l.x, 0, l.z);
     const agente = dep.agentes[i] ?? null;
+    // Tipo de puesto según lo que el agente ES (naturaleza.js). Sin clasificación: puesto de siempre.
+    const tipo = agente?.presentacion?.puesto ?? "personaje";
 
     const cubierta = new THREE.Mesh(g.cubierta, m.madera);
     cubierta.position.y = ALTO_ESCRITORIO;
@@ -153,8 +165,17 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     teclado.position.set(0, ALTO_ESCRITORIO + 0.035, 0.1);
     const taza = new THREE.Mesh(g.taza, m.marco);
     taza.position.set(0.48, ALTO_ESCRITORIO + 0.07, 0.05);
-    puesto.add(monitor, pie, pantalla, teclado, taza);
+    puesto.add(monitor, pie, pantalla, teclado);
+    if (tipo !== "equipo") puesto.add(taza); // un equipo no tiene a nadie tomando café
     pantallas.push({ material: matPantalla, agenteId: agente?.id ?? null });
+    agregarMueblesDePuesto(puesto, tipo, g, m, mat(acento ?? OFICINA.brillo), matCinta, compartido.matPlacaHumano);
+    if (tipo === "equipo" || tipo === "inactivo") { // sin silla: nadie se sienta ahí
+      const sombraE = new THREE.Mesh(compartido.geoSombraEscritorio, compartido.matSombra);
+      sombraE.position.y = 0.006;
+      puesto.add(sombraE);
+      grupo.add(puesto);
+      return;
+    }
 
     // Silla detrás del escritorio (+Z), mirando al monitor.
     const silla = new THREE.Group();
@@ -200,13 +221,14 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
   // Todo lo que no se mueve se junta en una malla por material: menos llamadas de dibujo.
   fusionarEstaticos(grupo, recursos);
 
-  // Personajes.
-  const personajes = dep.agentes.map((agente, i) => new Personaje({
+  // Personajes: solo donde alguna vez puede haber alguien (no en módulos, puestos humanos ni futuros).
+  const puedeTenerPersonaje = (a) => !a.naturaleza || NATURALEZAS[a.naturaleza]?.personaje;
+  const personajes = dep.agentes.map((agente, i) => puedeTenerPersonaje(agente) && new Personaje({
     agente, puesto: lugares[i], cuarto, retraso: i * 0.9,
     fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(id, recursos) : null,
     geo: compartido.geoPersonaje, recursos, texturaSombra: compartido.texturaSombra, burbujas: compartido.burbujas,
     anillosEstado: compartido.anillosEstado ?? null,
-  }));
+  })).filter(Boolean);
   for (const per of personajes) grupo.add(per.raiz);
 
   function actualizar(depNuevo, modeloNuevo) {
@@ -217,8 +239,8 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     }
     for (const pan of pantallas) {
       const a = pan.agenteId ? porId.get(pan.agenteId) : null;
-      // Pantalla apagada si no hay evidencia; si la hay, del color del estado.
-      pan.material.color.setHex(a && a.estado !== "sin_datos" ? COLOR_ESTADO[a.estado] : OFICINA.pantallaApagada);
+      // Pantalla apagada si no hay evidencia; si la hay, del color del estado (o lo que diga su naturaleza).
+      pan.material.color.setHex(colorPantalla(a));
     }
     letrero.dibujar(depNuevo, modeloNuevo);
     torreta.mostrar(depNuevo.alertas, modeloNuevo.conexion === "en_linea");
@@ -243,6 +265,44 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
       recursos.liberar();
     },
   };
+}
+
+const COLOR_REGISTRO_HUMANO = 0xb78cff;
+function colorPantalla(a) {
+  if (!a) return OFICINA.pantallaApagada;
+  const p = a.presentacion?.pantalla;
+  if (p === undefined) return a.estado !== "sin_datos" ? COLOR_ESTADO[a.estado] : OFICINA.pantallaApagada;
+  if (p === "apagada") return OFICINA.pantallaApagada;
+  if (p === "registro") return COLOR_REGISTRO_HUMANO;
+  return COLOR_ESTADO[p] ?? OFICINA.pantallaApagada;
+}
+
+/**
+ * Muebles propios del tipo de puesto. Todo es estático (se fusiona con el cuarto): no agrega llamadas de dibujo
+ * salvo la placa HUMANO (una por cuarto que la tenga, compartida en todo el edificio).
+ *   terminal  equipo sobre el escritorio (proceso reactivo o programado: alguien puede venir un momento)
+ *   equipo    equipo sobre el escritorio y gabinete debajo; sin silla (módulo de software)
+ *   humano    placa «HUMANO» al frente del escritorio; la silla queda vacía
+ *   inactivo  cinta amarilla sobre el escritorio; sin silla (función futura)
+ */
+function agregarMueblesDePuesto(puesto, tipo, g, m, matAcento, matCinta, matPlaca) {
+  const poner = (geo, material, x, y, z) => { const o = new THREE.Mesh(geo, material); o.position.set(x, y, z); puesto.add(o); return o; };
+  if (tipo === "terminal" || tipo === "equipo") {
+    poner(g.torre, m.metal, -0.48, ALTO_ESCRITORIO + 0.185, -0.12);
+    poner(g.luzTorre, matAcento, -0.37, ALTO_ESCRITORIO + 0.27, -0.12);
+  }
+  if (tipo === "equipo") {
+    poner(g.gabinete, m.metal, 0.25, 0.26, -0.05);
+    for (const y of [0.18, 0.3, 0.42]) poner(g.ranura, matAcento, 0.25, y, 0.205);
+  }
+  if (tipo === "humano" && matPlaca) {
+    poner(g.pieplaca, m.maderaOscura, 0, ALTO_ESCRITORIO + 0.04, 0.3);
+    const placa = poner(g.placa, matPlaca, 0, ALTO_ESCRITORIO + 0.11, 0.33);
+    placa.rotation.x = -0.85; // inclinada hacia la cámara isométrica
+  }
+  if (tipo === "inactivo") {
+    for (const x of [-0.35, 0.35]) poner(g.cinta, matCinta, x, ALTO_ESCRITORIO + 0.03, 0).rotation.y = 0.5;
+  }
 }
 
 /** Letrero con nombre, estado, tres indicadores y la marca DEMO. Se redibuja solo si cambia. */

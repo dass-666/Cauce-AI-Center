@@ -3,6 +3,7 @@
 //   vista.dibujar(modelo, seleccion);  vista.destruir();
 // Solo dibuja: todas las reglas (qué estado mostrar) vienen ya resueltas en el modelo.
 
+import { NATURALEZAS } from "../nucleo/naturaleza.js";
 import { el } from "./dom.js";
 
 export function crearVista2D(contenedor, { alSeleccionar }) {
@@ -69,11 +70,14 @@ export function crearVista2D(contenedor, { alSeleccionar }) {
 function personaje(a, seleccion, alSeleccionar) {
   const elegido = seleccion?.tipo === "agente" && seleccion.id === a.id;
   const ap = a.apariencia;
+  // Con clasificación (naturaleza.js): módulos, humanos y reactivos sin registro nuevo no muestran figura.
+  const nat = a.naturaleza ? NATURALEZAS[a.naturaleza] : null;
+  const sinFigura = nat && a.animacion_mostrada === "ausente";
   return el("button", {
-    clase: `personaje ${ap.clase2d}${elegido ? " elegido" : ""}`,
+    clase: `personaje ${ap.clase2d}${elegido ? " elegido" : ""}${nat ? ` puesto-${nat.puesto}` : ""}${sinFigura ? " sin-figura" : ""}`,
     type: "button",
     "aria-pressed": elegido ? "true" : "false",
-    title: `${a.nombre}: ${ap.etiqueta}`,
+    title: `${a.nombre}: ${ap.etiqueta}${nat ? ` · ${nat.etiqueta}` : ""}`,
     onclick: (ev) => {
       ev.stopPropagation();
       alSeleccionar({ tipo: "agente", id: a.id });
@@ -87,5 +91,6 @@ function personaje(a, seleccion, alSeleccionar) {
       el("span", { clase: "escritorio" })),
     el("span", { clase: "gafete" }, a.nombre),
     el("span", { clase: "estado-texto" }, ap.etiqueta),
+    nat ? el("span", { clase: "naturaleza-texto" }, nat.corta) : null,
   );
 }

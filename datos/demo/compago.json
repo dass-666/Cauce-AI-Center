@@ -1,140 +1,277 @@
 {
   "contrato": "cauce.estado-proyecto",
   "version": "1.0.0",
-  "proyecto": { "id": "compago", "nombre": "Compago" },
+  "proyecto": {
+    "id": "compago",
+    "nombre": "Compago"
+  },
   "generado_en": "2026-11-03T16:29:00Z",
   "vigencia_segundos": 600,
   "es_demo": true,
-  "demo": { "ahora_simulado": "2026-11-03T16:30:00Z" },
-  "fuente": { "tipo": "demo", "nombre": "Ejemplo escrito a mano (no viene de Compago)", "version": "1" },
+  "demo": {
+    "ahora_simulado": "2026-11-03T16:30:00Z"
+  },
+  "fuente": {
+    "tipo": "demo",
+    "nombre": "Simulación escrita a mano con la forma de exportar_cauce (no viene de Compago)",
+    "version": "2"
+  },
   "departamentos": [
     {
       "id": "importacion",
       "nombre": "Importación de catálogos",
-      "descripcion": "Cola de importación (ImportJob / ImportBatch). Compago aplica cada lote en una sola transacción y no informa avance por fila.",
+      "descripcion": "[DEMO] Cola de importación de Compago (ImportJob). Cada lote se aplica completo en una sola transacción.",
       "indicadores": [
-        { "etiqueta": "En cola", "valor": 1 },
-        { "etiqueta": "Fallidos 7 días", "valor": 1 },
-        { "etiqueta": "Aplicados 7 días", "valor": 4 }
+        {
+          "etiqueta": "En cola",
+          "valor": 1
+        },
+        {
+          "etiqueta": "Aplicados 7 días",
+          "valor": 12
+        },
+        {
+          "etiqueta": "Fallidos 7 días",
+          "valor": 1
+        },
+        {
+          "etiqueta": "Consumidor",
+          "valor": "activo"
+        }
       ],
       "agentes": [
         {
           "id": "importador",
           "nombre": "Importador",
-          "rol": "Aplica lotes de productos y ofertas aprobados en la vista previa",
+          "rol": "Aplica los lotes aprobados en la vista previa",
           "estado": "trabajando",
-          "actividad": { "descripcion": "[DEMO] Aplicando lote de 2,000 filas (catalogo-proveedor.xlsx)", "inicio": "2026-11-03T16:24:10Z" },
-          "evidencia": { "origen": "ImportJob", "referencia": "[DEMO] estado=procesando, intento 1", "observado_en": "2026-11-03T16:29:00Z" }
-        },
-        {
-          "id": "importador-cola",
-          "nombre": "En espera",
-          "rol": "Siguiente lote en la cola",
-          "estado": "esperando",
-          "actividad": { "descripcion": "[DEMO] Lote de proveedores en cola (85 filas)" },
-          "evidencia": { "origen": "ImportJob", "referencia": "[DEMO] estado=en_cola" }
+          "actividad": {
+            "descripcion": "[DEMO] Aplicando lote #41 de productos y ofertas (2,000 filas). Compago aplica todo el lote de una vez y no informa avance parcial.",
+            "inicio": "2026-11-03T16:27:30Z"
+          },
+          "evidencia": {
+            "origen": "ImportJob",
+            "referencia": "[DEMO] id=41 · estado=procesando, intento 1",
+            "observado_en": "2026-11-03T16:27:30Z"
+          }
         }
       ]
     },
     {
       "id": "busqueda",
       "nombre": "Búsqueda de proveedores",
-      "descripcion": "Consultas a DENUE (INEGI) y OpenStreetMap (SearchRun).",
-      "indicadores": [ { "etiqueta": "Consultas hoy", "valor": 3 } ],
+      "descripcion": "[DEMO] Consultas a fuentes públicas (DENUE, OpenStreetMap). No se exportan los términos buscados.",
+      "indicadores": [
+        {
+          "etiqueta": "Consultas hoy",
+          "valor": 7
+        },
+        {
+          "etiqueta": "Resultados por revisar",
+          "valor": 12
+        }
+      ],
       "agentes": [
         {
           "id": "buscador",
           "nombre": "Buscadora",
-          "rol": "Busca proveedores en fuentes públicas",
+          "rol": "Consulta fuentes públicas de proveedores",
           "estado": "finalizado",
-          "actividad": { "descripcion": "[DEMO] Búsqueda DENUE: 37 resultados, 12 nuevos", "inicio": "2026-11-03T16:05:00Z", "fin": "2026-11-03T16:05:04Z" },
-          "evidencia": { "origen": "SearchRun", "referencia": "[DEMO] outcome=ok" }
+          "actividad": {
+            "descripcion": "[DEMO] Consulta a denue: 37 resultado(s), 12 nuevo(s).",
+            "inicio": "2026-11-03T16:12:00Z",
+            "fin": "2026-11-03T16:12:00Z"
+          },
+          "evidencia": {
+            "origen": "SearchRun",
+            "referencia": "[DEMO] id=318 · resultado=ok",
+            "observado_en": "2026-11-03T16:12:00Z"
+          }
         }
       ]
     },
     {
       "id": "fuentes",
-      "nombre": "Revisión de fuentes",
-      "descripcion": "Comando revisar_fuentes: revisa archivos que llegan a la carpeta de cada fuente de catálogo (SourceCheck).",
+      "nombre": "Revisión de listas",
+      "descripcion": "[DEMO] Comando revisar_fuentes: revisa archivos nuevos de listas de proveedores. No se exportan nombres de archivo ni de proveedor.",
+      "indicadores": [
+        {
+          "etiqueta": "Listas atrasadas",
+          "valor": 0
+        },
+        {
+          "etiqueta": "Sin analizar",
+          "valor": 1,
+          "nota": "últimas 200 revisiones"
+        }
+      ],
       "agentes": [
         {
           "id": "revisor-fuentes",
           "nombre": "Revisor",
-          "rol": "Detecta archivos nuevos de catálogo y prepara la vista previa",
+          "rol": "Detecta archivos nuevos de listas y prepara la vista previa",
           "estado": "error",
-          "actividad": { "descripcion": "[DEMO] Revisión de lista-precios-oct.csv", "inicio": "2026-11-03T15:10:00Z", "fin": "2026-11-03T15:10:02Z" },
-          "evidencia": { "origen": "SourceCheck", "referencia": "[DEMO] outcome=error" },
-          "error": { "mensaje": "[DEMO] Encabezados repetidos: el archivo no se analizó.", "codigo": "error" }
+          "actividad": {
+            "descripcion": "[DEMO] No pudo analizar un archivo de lista.",
+            "inicio": "2026-11-03T15:10:02Z",
+            "fin": "2026-11-03T15:10:02Z"
+          },
+          "evidencia": {
+            "origen": "SourceCheck",
+            "referencia": "[DEMO] id=77 · resultado=error",
+            "observado_en": "2026-11-03T15:10:02Z"
+          },
+          "error": {
+            "mensaje": "[DEMO] El detalle está en Compago, Pendientes (revisión #77).",
+            "codigo": "error"
+          }
         }
       ]
     },
     {
       "id": "oportunidades",
       "nombre": "Evaluación de oportunidades",
-      "descripcion": "Oportunidades por estado del flujo (encontrada, evaluada, candidata, descartada).",
+      "descripcion": "[DEMO] Cuántas oportunidades hay en cada estado del flujo.",
       "indicadores": [
-        { "etiqueta": "Encontradas", "valor": 14 },
-        { "etiqueta": "Evaluadas", "valor": 5 },
-        { "etiqueta": "Candidatas", "valor": 2 }
+        {
+          "etiqueta": "En evaluación",
+          "valor": 3
+        },
+        {
+          "etiqueta": "Aprobadas",
+          "valor": 1
+        }
       ],
       "agentes": [
-        { "id": "evaluador", "nombre": "Evaluador", "rol": "Lleva el seguimiento de oportunidades para decisión humana", "estado": "esperando" }
+        {
+          "id": "evaluador",
+          "nombre": "Seguimiento",
+          "rol": "Muestra el avance del flujo de oportunidades",
+          "estado": "esperando",
+          "actividad": {
+            "descripcion": "[DEMO] Último cambio registrado: pasó a «En evaluación».",
+            "inicio": "2026-11-03T13:40:00Z",
+            "fin": "2026-11-03T13:40:00Z"
+          },
+          "evidencia": {
+            "origen": "StatusChange",
+            "referencia": "[DEMO] id=29",
+            "observado_en": "2026-11-03T13:40:00Z"
+          }
+        }
       ]
     },
     {
       "id": "margenes",
       "nombre": "Márgenes y rentabilidad",
-      "descripcion": "Escenarios económicos calculados por el calculador determinista.",
+      "descripcion": "[DEMO] Los escenarios se calculan al abrirlos en Compago; no hay un proceso que registre ejecuciones.",
+      "indicadores": [
+        {
+          "etiqueta": "Escenarios guardados",
+          "valor": 4
+        }
+      ],
       "agentes": [
         {
           "id": "analista-margenes",
           "nombre": "Analista",
-          "rol": "Señala aprobaciones cuyos datos cambiaron",
-          "estado": "requiere_revision",
-          "actividad": { "descripcion": "[DEMO] 2 aprobaciones por revisar: cambió la cotización" },
-          "evidencia": { "origen": "pendientes", "referencia": "[DEMO] Revisar la aprobación" }
+          "rol": "Calcula márgenes y capital necesario",
+          "estado": "sin_datos"
         }
       ]
     },
     {
       "id": "auditoria",
       "nombre": "Auditoría de datos",
-      "descripcion": "Comando revisar_datos: informa inconsistencias sin corregirlas.",
-      "indicadores": [ { "etiqueta": "Inconsistencias", "valor": 6 } ],
+      "descripcion": "[DEMO] revisar_datos calcula las inconsistencias al ejecutarlo y no guarda el resultado; repetirlo en cada ciclo sería costoso.",
+      "indicadores": [
+        {
+          "etiqueta": "Inconsistencias",
+          "valor": null,
+          "nota": "no registradas"
+        }
+      ],
       "agentes": [
         {
           "id": "auditor-datos",
           "nombre": "Auditora",
-          "rol": "Revisa vínculos, fechas, GTIN y datos sin fuente",
-          "estado": "finalizado",
-          "actividad": { "descripcion": "[DEMO] Revisión de datos completa", "inicio": "2026-11-03T14:00:00Z", "fin": "2026-11-03T14:00:09Z" },
-          "evidencia": { "origen": "revisar_datos", "referencia": "[DEMO] 6 hallazgos" }
+          "rol": "Revisa vínculos, fechas, identificadores y datos sin fuente",
+          "estado": "sin_datos"
         }
       ]
     },
     {
       "id": "supervision",
       "nombre": "Supervisión",
-      "descripcion": "Comprobaciones de la página de estado: base, cola, fuentes, respaldo y accesos.",
-      "indicadores": [ { "etiqueta": "Base", "valor": "OK" }, { "etiqueta": "Último respaldo", "valor": "hace 20 h" } ],
+      "descripcion": "[DEMO] Comprobaciones de la página de estado de Compago (solo nivel y resumen, sin detalles).",
+      "indicadores": [
+        {
+          "etiqueta": "Respaldo",
+          "valor": "Aviso"
+        }
+      ],
       "agentes": [
-        { "id": "supervisor", "nombre": "Supervisora", "rol": "Resume la salud del sistema", "estado": "esperando" }
+        {
+          "id": "supervisor",
+          "nombre": "Supervisora",
+          "rol": "Vigila respaldos y salud general",
+          "estado": "requiere_revision",
+          "actividad": {
+            "descripcion": "[DEMO] Respaldo: No hay respaldos registrados."
+          },
+          "evidencia": {
+            "origen": "apps.core.estado.respaldo",
+            "referencia": "[DEMO] nivel=aviso"
+          }
+        }
       ]
     },
     {
       "id": "uniq",
       "nombre": "Integración UNIQ",
-      "descripcion": "API de paquetes para UNIQ. Todavía no hay adaptador que lea su actividad.",
+      "descripcion": "[DEMO] Paquetes de ofertas emitidos para UNIQ (solo se lee el registro; no se contacta a UNIQ).",
+      "indicadores": [
+        {
+          "etiqueta": "Última solicitud",
+          "valor": "ninguna"
+        }
+      ],
       "agentes": [
-        { "id": "enlace-uniq", "nombre": "Enlace", "rol": "Entrega paquetes de ofertas a UNIQ", "estado": "sin_datos" }
+        {
+          "id": "enlace-uniq",
+          "nombre": "Enlace",
+          "rol": "Entrega paquetes de ofertas a UNIQ",
+          "estado": "esperando",
+          "actividad": {
+            "descripcion": "[DEMO] No hay paquetes emitidos para UNIQ."
+          }
+        }
       ]
     }
   ],
   "alertas": [
-    { "id": "demo-c1", "nivel": "critica", "titulo": "[DEMO] Archivo de catálogo no analizado", "detalle": "lista-precios-oct.csv tiene encabezados repetidos", "departamento_id": "fuentes", "agente_id": "revisor-fuentes", "creada_en": "2026-11-03T15:10:02Z" },
-    { "id": "demo-c2", "nivel": "advertencia", "titulo": "[DEMO] Un lote falló esta semana", "detalle": "No se guardó ningún cambio", "departamento_id": "importacion", "creada_en": "2026-11-01T18:00:00Z" }
+    {
+      "id": "demo-fuentes-sin-analizar",
+      "nivel": "advertencia",
+      "departamento_id": "fuentes",
+      "titulo": "[DEMO] 1 archivo(s) de lista sin analizar",
+      "creada_en": "2026-11-03T16:29:00Z"
+    },
+    {
+      "id": "demo-importacion-fallidos-7d",
+      "nivel": "advertencia",
+      "departamento_id": "importacion",
+      "titulo": "[DEMO] 1 importación(es) fallida(s) en 7 días",
+      "detalle": "No se guardó ningún cambio de esos lotes.",
+      "creada_en": "2026-11-03T16:29:00Z"
+    },
+    {
+      "id": "demo-supervision-respaldo",
+      "nivel": "advertencia",
+      "departamento_id": "supervision",
+      "titulo": "[DEMO] No hay respaldos registrados.",
+      "creada_en": "2026-11-03T16:29:00Z"
+    }
   ],
-  "resultados": [
-    { "id": "demo-c-r1", "titulo": "[DEMO] Revisión de datos", "descripcion": "6 inconsistencias", "departamento_id": "auditoria", "creado_en": "2026-11-03T14:00:09Z", "enlace": "datos/demo/informes/ejemplo.html" }
-  ]
+  "resultados": []
 }
