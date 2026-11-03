@@ -1,0 +1,25 @@
+{
+  "contrato": "cauce.estado-proyecto",
+  "version": "1.0.0",
+  "proyecto": { "id": "ejemplo", "nombre": "Proyecto de ejemplo" },
+  "generado_en": "2026-11-03T16:00:00Z",
+  "vigencia_segundos": 900,
+  "es_demo": false,
+  "fuente": { "tipo": "adaptador", "nombre": "adaptador-ejemplo", "version": "0.1.0" },
+  "departamentos": [
+    {
+      "id": "datos",
+      "nombre": "Obtención de datos",
+      "agentes": [
+        {
+          "id": "descargador",
+          "nombre": "Descargador",
+          "rol": "Descarga datos",
+          "estado": "trabajando",
+          "actividad": { "descripcion": "Descargando", "inicio": "2026-11-03T15:58:00Z" },
+          "evidencia": { "origen": "tabla_de_registro", "referencia": "id=1" }
+        }
+      ]
+    }
+  ]
+}

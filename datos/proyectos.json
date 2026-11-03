@@ -1,0 +1,8 @@
+{
+  "descripcion": "Registro de proyectos (pisos). 'estado' es el archivo real que escribe el adaptador; si todavía no existe, se muestra 'demo'.",
+  "proyectos": [
+    { "id": "compago", "nombre": "Compago", "estado": "datos/reales/compago.json", "demo": "datos/demo/compago.json", "distribucion": "escena/compago.json" },
+    { "id": "ek-chuah", "nombre": "Ek Chuah", "estado": "datos/reales/ek-chuah.json", "demo": "datos/demo/ek-chuah.json", "distribucion": "escena/ek-chuah.json" },
+    { "id": "tezcatlipoca", "nombre": "Tezcatlipoca", "estado": "datos/reales/tezcatlipoca.json", "distribucion": null }
+  ]
+}

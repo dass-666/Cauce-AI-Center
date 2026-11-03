@@ -1,0 +1,8 @@
+# Datos reales generados por los adaptadores: nunca van a git.
+datos/reales/*
+datos/proyectos.local.json
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+!datos/reales/.gitkeep
