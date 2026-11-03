@@ -1,0 +1,8 @@
+{
+  "descripcion": "Registro de proyectos (pisos). Para datos reales, copia este archivo como proyectos.local.json y cambia las rutas de 'estado'.",
+  "proyectos": [
+    { "id": "ek-chuah", "nombre": "Ek Chuah", "estado": "datos/demo/ek-chuah.json", "distribucion": "escena/ek-chuah.json" },
+    { "id": "compago", "nombre": "Compago", "estado": "datos/demo/compago.json", "distribucion": "escena/compago.json" },
+    { "id": "tezcatlipoca", "nombre": "Tezcatlipoca", "estado": "datos/reales/tezcatlipoca.json", "distribucion": null }
+  ]
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cauce · Centro de operaciones</title>
+  <link rel="stylesheet" href="app/estilos.css">
+</head>
+<body>
+  <header class="cabecera">
+    <div class="marca">
+      <span class="marca-logo" aria-hidden="true">◈</span>
+      <div>
+        <h1>Centro de operaciones</h1>
+        <p class="marca-sub">Actividad real de nuestros sistemas, solo lectura</p>
+      </div>
+    </div>
+    <nav id="pisos" class="pisos" role="tablist" aria-label="Proyectos"></nav>
+    <div class="controles">
+      <label class="interruptor"><input type="checkbox" id="bajo-consumo"> Bajo consumo</label>
+      <button type="button" id="recargar" class="boton">Actualizar</button>
+    </div>
+  </header>
+
+  <div id="banda-demo" class="banda-demo" role="note" hidden><span id="banda-demo-texto"></span></div>
+  <div id="conexion" class="conexion" role="status" aria-live="polite"></div>
+  <details id="diagnostico" class="diagnostico" hidden>
+    <summary id="diagnostico-titulo"></summary>
+    <ul id="diagnostico-lista"></ul>
+  </details>
+
+  <main class="principal">
+    <div id="oficina" class="oficina"></div>
+    <aside id="panel" class="panel" hidden aria-label="Detalle"></aside>
+  </main>
+
+  <footer class="pie">
+    Un personaje solo aparece trabajando si su sistema dejó un registro que lo respalde.
+    <a href="pruebas.html">Pruebas</a>
+  </footer>
+
+  <script type="module" src="app/app.js"></script>
+  <noscript>Este visualizador necesita JavaScript.</noscript>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cauce · Pruebas</title>
+  <style>
+    body { font-family: system-ui, "Segoe UI", sans-serif; background: #0d1220; color: #e8ecf5; max-width: 860px; margin: 0 auto; padding: 16px; }
+    .ok { color: #43c47a; } .falla { color: #ff5d5d; } li { margin: 4px 0; } pre { white-space: pre-wrap; color: #ffb547; margin: 2px 0 0; }
+    #resumen { font-size: 20px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Pruebas del centro de operaciones</h1>
+  <p id="resumen">Ejecutando…</p>
+  <ol id="lista"></ol>
+  <p><a href="index.html" style="color:#ffd89a">Volver al centro de operaciones</a></p>
+  <script type="module">
+    import { registrarCasos } from "./pruebas/casos.js";
+    import { ejecutar } from "./pruebas/mini.js";
+    registrarCasos(async (ruta) => {
+      const r = await fetch(ruta, { cache: "no-store" });
+      if (!r.ok) throw new Error(`No se pudo leer ${ruta}`);
+      return r.text();
+    });
+    const r = await ejecutar();
+    const resumen = document.getElementById("resumen");
+    resumen.textContent = `${r.pasaron} pasaron, ${r.fallaron} fallaron`;
+    resumen.className = r.fallaron ? "falla" : "ok";
+    document.title = `Cauce · Pruebas: ${resumen.textContent}`;
+    for (const p of r.resultados) {
+      const li = document.createElement("li");
+      li.className = p.ok ? "ok" : "falla";
+      li.textContent = `${p.ok ? "✓" : "✗"} ${p.nombre}`;
+      if (!p.ok) { const pre = document.createElement("pre"); pre.textContent = p.error; li.append(pre); }
+      document.getElementById("lista").append(li);
+    }
+  </script>
+</body>
+</html>

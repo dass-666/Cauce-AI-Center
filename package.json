@@ -1,0 +1,9 @@
+{
+  "name": "cauce-ai-center",
+  "private": true,
+  "description": "Centro de operaciones visual. Sin dependencias: este archivo solo indica que el código usa módulos de JavaScript.",
+  "type": "module",
+  "scripts": {
+    "test": "node pruebas/ejecutar.mjs"
+  }
+}
