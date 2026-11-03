@@ -683,7 +683,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const r = lienzo.getBoundingClientRect();
     return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
   }
-  if (medir) window.__cauce3d = { metricas, proyectar };
+  // Solo con ?medir=1 (pruebas): qué hace cada personaje ahora mismo.
+  const personajesAhora = () => (escenario?.personajes() ?? []).map((p) => ({
+    id: p.id, estado: p.estado, accion: p.accion, cola: [...p.cola], bucle: p.bucle, postura: p.postura, visible: p.raiz.visible,
+  }));
+  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora };
 
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {

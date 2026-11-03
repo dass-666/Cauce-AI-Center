@@ -27,7 +27,7 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | Archivo | Qué hace | ¿Usa three.js? |
 |---|---|---|
 | `disposicion.js` | Tamaño del cuarto, lugar de cada escritorio, puerta y camino de la puerta a la silla | No (se prueba en Node) |
-| `maquina.js` | Máquina de estados: de `animacion3d` (de `estados.js`) a una cola de acciones (`entrar`, `sentarse`, `teclear`, `celebrar`, `salir`…) | No |
+| `maquina.js` | Máquina de estados: de `animacion3d` (de `estados.js`) a una cola de acciones. Gestos de transición (`entrar`, `celebrar`, `reaccion_error`, `llamar_atencion`, `salir`) **solo** ante un cambio observado entre dos lecturas; la primera lectura aparece en su postura. Variación determinista por id (`variacion`, `gestoOcasional`) | No |
 | `paleta.js` | Colores por estado (los mismos que la 2D) y aspecto estable de cada personaje | No |
 | `recursos.js` | Lleva la cuenta de geometrías, materiales y texturas para liberarlos de la tarjeta gráfica | No |
 | `personaje.js` | Controlador del personaje (cola de acciones, caminos) y cuerpo provisional hecho con código | Sí |
