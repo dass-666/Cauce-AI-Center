@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cauce · Centro de operaciones</title>
   <link rel="stylesheet" href="app/estilos.css">
+  <!-- three.js va copiado en vendor/ (sin CDN): funciona sin internet y sin servicios externos. -->
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }
+  </script>
 </head>
 <body>
   <header class="cabecera">
@@ -17,6 +21,10 @@
     </div>
     <nav id="pisos" class="pisos" role="tablist" aria-label="Proyectos"></nav>
     <div class="controles">
+      <div class="segmentado" role="group" aria-label="Tipo de vista">
+        <button type="button" class="boton" data-vista="3d" aria-pressed="false">3D</button>
+        <button type="button" class="boton" data-vista="2d" aria-pressed="false">Plano</button>
+      </div>
       <label class="interruptor"><input type="checkbox" id="bajo-consumo"> Bajo consumo</label>
       <button type="button" id="recargar" class="boton">Actualizar</button>
     </div>
@@ -24,6 +32,7 @@
 
   <div id="banda-demo" class="banda-demo" role="note" hidden><span id="banda-demo-texto"></span></div>
   <div id="conexion" class="conexion" role="status" aria-live="polite"></div>
+  <p id="aviso-vista" class="aviso-vista" role="status" hidden></p>
   <details id="diagnostico" class="diagnostico" hidden>
     <summary id="diagnostico-titulo"></summary>
     <ul id="diagnostico-lista"></ul>

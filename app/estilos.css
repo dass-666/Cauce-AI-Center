@@ -204,3 +204,56 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   .panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; max-height: 65vh; border-radius: 14px 14px 0 0; z-index: 10; }
   .controles { width: 100%; justify-content: space-between; }
 }
+
+/* Vista 3D (app/vistas/vista3d). El lienzo ocupa el área de la oficina; los controles flotan encima. */
+.segmentado { display: flex; }
+.segmentado .boton { border-radius: 0; }
+.segmentado .boton:first-child { border-radius: 8px 0 0 8px; }
+.segmentado .boton:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+.boton[aria-pressed="true"] { border-color: var(--brillo); color: var(--brillo); }
+.boton-chico { padding: 4px 10px; font-size: 13px; }
+.aviso-vista { margin: 0; padding: 8px 16px; background: #3a1f1f; color: #ffd0d0; font-size: 13px; }
+.oficina.modo-3d { position: relative; height: min(74vh, 760px); min-height: 360px; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
+.vista3d { position: absolute; inset: 0; }
+.vista3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.vista3d canvas:active { cursor: grabbing; }
+.vista3d-barra {
+  position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  pointer-events: none; font-size: 14px;
+}
+.vista3d-barra > * { pointer-events: auto; }
+.vista3d-selector {
+  background: var(--letrero); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px;
+  padding: 6px 10px; font: inherit; max-width: 60vw;
+}
+.vista3d-barra .interruptor { background: #0f1526cc; padding: 5px 9px; border-radius: 8px; }
+.vista3d-fuente { font-weight: 800; letter-spacing: .06em; padding: 5px 10px; border-radius: 8px; font-size: 13px; }
+.vista3d-fuente.es-demo { background: #ffb547; color: #1a1200; }
+.vista3d-fuente.es-real { background: #12361f; color: #7ff0a8; border: 1px solid #43c47a; }
+.vista3d-aviso {
+  position: absolute; left: 10px; right: 10px; bottom: 58px; margin: 0; padding: 8px 12px; border-radius: 8px;
+  background: #0f1526e6; border: 1px solid var(--borde); color: var(--texto-suave); font-size: 13px;
+}
+.vista3d[data-conexion="desactualizado"] .vista3d-aviso,
+.vista3d[data-conexion="desconectado"] .vista3d-aviso,
+.vista3d[data-conexion="invalido"] .vista3d-aviso { color: #ffd0d0; border-color: var(--c-error); }
+.vista3d-personajes { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; gap: 6px; overflow-x: auto; }
+.chip {
+  flex: none; background: #0f1526e6; color: var(--texto); border: 1px solid var(--borde); border-left: 4px solid var(--c-sin-datos);
+  border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; min-height: 36px;
+}
+.chip.estado-trabajando { border-left-color: var(--c-trabajando); }
+.chip.estado-esperando { border-left-color: var(--c-esperando); }
+.chip.estado-finalizado { border-left-color: var(--c-finalizado); }
+.chip.estado-error { border-left-color: var(--c-error); }
+.chip.estado-revision { border-left-color: var(--c-revision); }
+.chip[aria-pressed="true"] { border-color: var(--brillo); }
+.vista3d-medidas {
+  position: absolute; right: 10px; top: 54px; margin: 0; padding: 6px 8px; border-radius: 6px;
+  background: #000c; color: #9fe; font-size: 11px; max-width: min(460px, 70vw);
+}
+.vista3d-medidas pre { margin: 0 0 6px; white-space: pre-wrap; user-select: text; }
+@media (max-width: 760px) {
+  .oficina.modo-3d { height: 62vh; min-height: 320px; border-radius: 10px; }
+  .controles { flex-wrap: wrap; }
+}

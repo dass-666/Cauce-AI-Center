@@ -38,9 +38,10 @@ Para una sola exportación (sin repetir), en la carpeta de Compago: `python mana
 ## Cómo se usa
 
 - Arriba eliges el **piso** (proyecto). Tezcatlipoca aparece **sin conexión** a propósito: aún no tiene adaptador.
+- **3D / Plano**: la oficina 3D muestra un departamento a la vez (elígelo arriba a la izquierda). Arrastra para girar, rueda o pellizco para acercar, dos dedos o clic derecho para mover. *Centrar* regresa la cámara. El plano 2D muestra todos los departamentos y gasta menos.
 - Haz clic en el **letrero** de un departamento para ver sus indicadores, alertas y resultados.
 - Haz clic en un **personaje** para ver su función, tarea, inicio, fin, avance (si el sistema lo informa), evidencia y errores.
-- **Bajo consumo** apaga todas las animaciones (útil en celulares modestos). También se respeta la opción de Windows "reducir movimiento".
+- **Bajo consumo** usa el plano 2D sin animaciones y no descarga la 3D (útil en celulares modestos). También se respeta la opción de Windows "reducir movimiento".
 - La página relee los datos cada 30 segundos y al volver a la pestaña.
 
 La franja amarilla **DATOS DE DEMOSTRACIÓN** indica que nada de lo que ves es actividad real.
@@ -49,12 +50,12 @@ La franja amarilla **DATOS DE DEMOSTRACIÓN** indica que nada de lo que ves es a
 
 | Estado | Cómo se ve | Cuándo |
 |---|---|---|
-| Trabajando | Personaje tecleando, pantalla azul | Hay un registro en curso con hora de inicio |
-| Esperando | Personaje quieto, "…" | Conectado, sin tarea en curso |
-| Finalizado | Palomita verde | Su última tarea terminó bien |
-| Error | "!" rojo | Su última tarea falló (con el mensaje) |
-| Requiere revisión | "?" ámbar | Algo espera una decisión humana |
-| Sin información | Silla vacía en gris | No hay evidencia, o los datos están viejos o desconectados |
+| Trabajando | Personaje sentado tecleando, pantalla azul | Hay un registro en curso con hora de inicio |
+| Esperando | Sentado, recargado y mirando alrededor, "…" | Conectado, sin tarea en curso |
+| Finalizado | Palomita verde; en 3D se levanta, celebra y se vuelve a sentar | Su última tarea terminó bien |
+| Error | "!" rojo; en 3D de pie e inquieto junto a su escritorio | Su última tarea falló (con el mensaje) |
+| Requiere revisión | "?" ámbar; en 3D levanta la mano | Algo espera una decisión humana |
+| Sin información | Silla vacía y pantalla apagada (en 3D, si estaba, se levanta y sale) | No hay evidencia, o los datos están viejos o desconectados |
 
 ## Pruebas
 
@@ -69,7 +70,9 @@ Cubren el contrato (archivos válidos e inválidos), las reglas contra actividad
 |---|---|
 | `contrato/CONTRATO.md` | **El contrato de datos v1** (empieza aquí) y `contrato/ejemplos/` |
 | `app/nucleo/` | Validación, estados y modelo de vista (compartidos por 2D y 3D) |
-| `app/vistas/` | Vista 2D y panel de detalle |
+| `app/vistas/` | Vista 2D, vista 3D (`vista3d/`) y panel de detalle |
+| `vendor/three/` | three.js 0.187.0 copiado (MIT), sin CDN |
+| `vendor/kenney-mini-characters/` | Personajes de Kenney (CC0) |
 | `datos/proyectos.json` | Registro de pisos: archivo real (`estado`) y demostración (`demo`) de cada proyecto |
 | `datos/demo/` | Datos de demostración, marcados `[DEMO]` |
 | `datos/reales/` | Donde escriben los adaptadores (no va a git) |

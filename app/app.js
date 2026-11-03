@@ -1,5 +1,6 @@
 // Arranque del centro de operaciones: elige proyecto (piso), carga sus datos cada cierto
-// tiempo y se los pasa a la vista. La vista 3D se conectará aquí con la misma interfaz.
+// tiempo y se los pasa a la vista (3D o plano 2D; las dos usan el mismo modelo de vista).
+// La vista 3D y three.js solo se descargan si se usan; "Bajo consumo" fuerza el plano 2D.
 
 import { cargarJSON, cargarRegistro } from "./cargador.js";
 import { construirModeloVista, describirDuracion, elegirCarga } from "./nucleo/modelo.js";
@@ -25,19 +26,74 @@ function leerPreferencia(clave) {
   try { return localStorage.getItem(clave); } catch { return null; }
 }
 
-const vista = crearVista2D($("#oficina"), {
+let vista = null;
+let tipoVista = null;
+const opcionesVista = {
   alSeleccionar(sel) {
     estado.seleccion = sel;
     dibujar();
   },
-});
+  alFallar(motivo) {
+    // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos.
+    avisarVista(`${motivo} Se muestra el plano 2D.`);
+    cambiarVista("2d", { forzada: true });
+  },
+};
+
+function avisarVista(texto) {
+  const a = $("#aviso-vista");
+  a.hidden = !texto;
+  a.textContent = texto ?? "";
+}
+
+function vistaDeseada() {
+  if ($("#bajo-consumo").checked) return "2d";
+  return leerPreferencia("cauce.vista") === "2d" ? "2d" : "3d";
+}
+
+async function cambiarVista(tipo, { forzada = false } = {}) {
+  if (tipo === tipoVista && !forzada) return;
+  vista?.destruir();
+  vista = null;
+  tipoVista = tipo;
+  $("#oficina").classList.toggle("modo-3d", tipo === "3d");
+  for (const b of document.querySelectorAll("[data-vista]")) b.setAttribute("aria-pressed", b.dataset.vista === tipo ? "true" : "false");
+  if (tipo === "3d") {
+    try {
+      const { crearVista3D } = await import("./vistas/vista3d/escena3d.js");
+      if (tipoVista !== "3d") return; // el usuario cambió mientras cargaba
+      vista = crearVista3D($("#oficina"), opcionesVista);
+      avisarVista(null);
+    } catch (e) {
+      console.error(e);
+      avisarVista("Este navegador no pudo abrir la oficina 3D (WebGL no disponible). Se muestra el plano 2D.");
+      tipoVista = "2d";
+      $("#oficina").classList.remove("modo-3d");
+      for (const b of document.querySelectorAll("[data-vista]")) b.setAttribute("aria-pressed", b.dataset.vista === "2d" ? "true" : "false");
+      vista = crearVista2D($("#oficina"), opcionesVista);
+    }
+  } else {
+    vista = crearVista2D($("#oficina"), opcionesVista);
+  }
+  dibujar();
+}
 
 async function iniciar() {
   aplicarBajoConsumo(leerPreferencia("cauce.bajo-consumo") === "1");
   $("#bajo-consumo").addEventListener("change", (e) => {
     aplicarBajoConsumo(e.target.checked);
     guardarPreferencia("cauce.bajo-consumo", e.target.checked ? "1" : "0");
+    cambiarVista(vistaDeseada());
   });
+  for (const b of document.querySelectorAll("[data-vista]")) {
+    b.addEventListener("click", () => {
+      guardarPreferencia("cauce.vista", b.dataset.vista);
+      if (b.dataset.vista === "3d" && $("#bajo-consumo").checked) aplicarBajoConsumo(false);
+      if (b.dataset.vista === "2d") avisarVista(null);
+      cambiarVista(b.dataset.vista);
+    });
+  }
+  await cambiarVista(vistaDeseada());
   $("#recargar").addEventListener("click", () => actualizar());
 
   const registro = await cargarRegistro();
@@ -101,7 +157,7 @@ async function actualizar() {
 
 function dibujar() {
   const m = estado.modelo;
-  if (!m) return;
+  if (!m || !vista) return;
   vista.dibujar(m, estado.seleccion);
   dibujarPanel($("#panel"), m, estado.seleccion, () => { estado.seleccion = null; dibujar(); });
   dibujarEstado(m);

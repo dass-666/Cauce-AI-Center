@@ -73,3 +73,7 @@ En la carpeta de Compago no deben aparecer archivos modificados. El exportador n
 - Si pasaron las pruebas del paso 2.
 - Las cifras del paso 4.3.
 - Cualquier tabla del paso 5 que no se comportó como se esperaba, con una captura de pantalla.
+
+## 7. Oficina 3D
+
+Ver [`VALIDAR-3D-WINDOWS.md`](VALIDAR-3D-WINDOWS.md).
