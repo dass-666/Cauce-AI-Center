@@ -28,6 +28,7 @@ function guardar(clave, valor) { try { localStorage.setItem(clave, valor); } cat
 
 export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, tapan = () => [] }) {
   const movil = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+  const menosMovimiento = matchMedia("(prefers-reduced-motion: reduce)");
   const medir = new URLSearchParams(location.search).has("medir");
 
   // Si el navegador no tiene WebGL, three.js lanza un error aquí y app.js vuelve al plano 2D.
@@ -416,7 +417,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
 
   function moverCamara(dt) {
     if (!animCam) return;
-    animCam.t = Math.min(1, animCam.t + dt / 0.6);
+    animCam.t = menosMovimiento.matches ? 1 : Math.min(1, animCam.t + dt / 0.6); // "reducir movimiento" del sistema: sin viaje de cámara
     const k = animCam.t * animCam.t * (3 - 2 * animCam.t);
     const nuevo = animCam.desde.clone().lerp(animCam.hacia, k);
     camara.position.add(nuevo.clone().sub(controles.target));

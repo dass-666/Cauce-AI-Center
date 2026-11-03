@@ -155,6 +155,15 @@ export function registrarCasos(leerTexto) {
     }
   });
 
+  prueba("C4: enlaces que el navegador convertiría en javascript: se rechazan", () => {
+    // El navegador quita espacios iniciales y tabuladores/saltos dentro del esquema antes de interpretar el enlace.
+    for (const malo of [" javascript:alert(1)", "\tjavascript:alert(1)", "java\tscript:alert(1)", "java\nscript:alert(1)", "javascript\r:alert(1)",
+      "\u0000javascript:alert(1)", "/\\otro.sitio/x", "vbscript:x", "https://ejemplo.mx/a "]) {
+      verdadero(!esEnlaceSeguro(malo), `debió rechazar ${JSON.stringify(malo)}`);
+    }
+    for (const bueno of ["docs/mi informe.html", "./a/b?c=1", "https://ejemplo.mx/a?b=c#d"]) verdadero(esEnlaceSeguro(bueno), bueno);
+  });
+
   prueba("Un resultado con enlace peligroso conserva el título pero pierde el enlace", async () => {
     const d = await minimo();
     d.resultados = [{ id: "r1", titulo: "Informe", enlace: "javascript:alert(1)" }];

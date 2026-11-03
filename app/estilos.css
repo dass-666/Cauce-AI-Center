@@ -319,7 +319,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 /* Fase C2 — interfaz para celular: barra inferior ◀ [departamento ▾] ▶ ⋯ con lista y menú.
    En escritorio no existe (.vista3d-movil solo se crea en celular). */
 .vista3d-movil { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3; }
-.movil-barra { display: flex; gap: 6px; align-items: stretch; }
+.movil-barra { display: flex; gap: 6px; align-items: stretch; background: var(--fondo); padding: 4px; margin: -4px; border-radius: 14px; } /* opaca: lo de atrás no se transparenta */
 .movil-flecha, .movil-actual, .movil-fila, .movil-opcion {
   background: #0f1526f0; color: var(--texto); border: 1px solid var(--borde); border-radius: 10px; font: inherit; cursor: pointer;
 }
