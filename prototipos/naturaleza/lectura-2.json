@@ -1,0 +1,249 @@
+{
+ "contrato": "cauce.estado-proyecto",
+ "version": "1.0.0",
+ "proyecto": {
+  "id": "compago",
+  "nombre": "Compago"
+ },
+ "generado_en": "2026-11-03T02:41:00Z",
+ "vigencia_segundos": 900,
+ "es_demo": true,
+ "fuente": {
+  "tipo": "demo",
+  "nombre": "Prototipo naturaleza · DEMO con forma de exportar_cauce",
+  "version": "1.0.0"
+ },
+ "departamentos": [
+  {
+   "id": "importacion",
+   "nombre": "Importación de catálogos",
+   "descripcion": "[DEMO] Cola de importación de Compago (ImportJob). Cada lote se aplica completo en una sola transacción.",
+   "indicadores": [
+    {
+     "etiqueta": "En cola",
+     "valor": 1
+    },
+    {
+     "etiqueta": "Aplicados 7 días",
+     "valor": 67
+    },
+    {
+     "etiqueta": "Fallidos 7 días",
+     "valor": 60
+    },
+    {
+     "etiqueta": "Consumidor",
+     "valor": "sin latido reciente"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "importador",
+     "nombre": "Importador",
+     "rol": "Aplica los lotes aprobados en la vista previa",
+     "estado": "finalizado",
+     "actividad": {
+      "descripcion": "[DEMO] Aplicó el lote #1501 de productos y ofertas (2,000 filas).",
+      "inicio": "2026-11-03T02:32:41Z",
+      "fin": "2026-11-03T02:38:10Z"
+     },
+     "evidencia": {
+      "origen": "ImportJob",
+      "referencia": "id=1501 · estado=aplicado",
+      "observado_en": "2026-11-03T02:38:10Z"
+     }
+    }
+   ]
+  },
+  {
+   "id": "busqueda",
+   "nombre": "Búsqueda de proveedores",
+   "descripcion": "[DEMO] Consultas a fuentes públicas (DENUE, OpenStreetMap). No se exportan los términos buscados.",
+   "indicadores": [
+    {
+     "etiqueta": "Consultas hoy",
+     "valor": 5000
+    },
+    {
+     "etiqueta": "Resultados por revisar",
+     "valor": 0
+    }
+   ],
+   "agentes": [
+    {
+     "id": "buscador",
+     "nombre": "Buscadora",
+     "rol": "Consulta fuentes públicas de proveedores",
+     "estado": "finalizado",
+     "actividad": {
+      "descripcion": "[DEMO] Consulta a osm: 12 resultado(s), 2 nuevo(s).",
+      "inicio": "2026-11-03T02:40:05Z",
+      "fin": "2026-11-03T02:40:05Z"
+     },
+     "evidencia": {
+      "origen": "SearchRun",
+      "referencia": "id=5001 · resultado=ok",
+      "observado_en": "2026-11-03T02:40:05Z"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fuentes",
+   "nombre": "Revisión de listas",
+   "descripcion": "[DEMO] Comando revisar_fuentes: revisa archivos nuevos de listas de proveedores. No se exportan nombres de archivo ni de proveedor.",
+   "indicadores": [
+    {
+     "etiqueta": "Listas atrasadas",
+     "valor": 0
+    },
+    {
+     "etiqueta": "Sin analizar",
+     "valor": 0,
+     "nota": "últimas 200 revisiones"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "revisor-fuentes",
+     "nombre": "Revisor",
+     "rol": "Detecta archivos nuevos de listas y prepara la vista previa",
+     "estado": "esperando",
+     "actividad": {
+      "descripcion": "[DEMO] No hay archivos de listas revisados."
+     }
+    }
+   ]
+  },
+  {
+   "id": "oportunidades",
+   "nombre": "Evaluación de oportunidades",
+   "descripcion": "[DEMO] Cuántas oportunidades hay en cada estado del flujo.",
+   "indicadores": [
+    {
+     "etiqueta": "Oportunidades",
+     "valor": 0
+    }
+   ],
+   "agentes": [
+    {
+     "id": "evaluador",
+     "nombre": "Seguimiento",
+     "rol": "Muestra el avance del flujo de oportunidades",
+     "estado": "esperando",
+     "actividad": {
+      "descripcion": "[DEMO] Las decisiones sobre oportunidades las toma una persona en Compago."
+     }
+    }
+   ]
+  },
+  {
+   "id": "margenes",
+   "nombre": "Márgenes y rentabilidad",
+   "descripcion": "[DEMO] Los escenarios se calculan al abrirlos en Compago; no hay un proceso que registre ejecuciones.",
+   "indicadores": [
+    {
+     "etiqueta": "Escenarios guardados",
+     "valor": 0
+    }
+   ],
+   "agentes": [
+    {
+     "id": "analista-margenes",
+     "nombre": "Analista",
+     "rol": "Calcula márgenes y capital necesario",
+     "estado": "sin_datos"
+    }
+   ]
+  },
+  {
+   "id": "auditoria",
+   "nombre": "Auditoría de datos",
+   "descripcion": "[DEMO] revisar_datos calcula las inconsistencias al ejecutarlo y no guarda el resultado; repetirlo en cada ciclo sería costoso.",
+   "indicadores": [
+    {
+     "etiqueta": "Inconsistencias",
+     "valor": null,
+     "nota": "no registradas"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "auditor-datos",
+     "nombre": "Auditora",
+     "rol": "Revisa vínculos, fechas, identificadores y datos sin fuente",
+     "estado": "sin_datos"
+    }
+   ]
+  },
+  {
+   "id": "supervision",
+   "nombre": "Supervisión",
+   "descripcion": "[DEMO] Comprobaciones de la página de estado de Compago (solo nivel y resumen, sin detalles).",
+   "indicadores": [
+    {
+     "etiqueta": "Respaldo",
+     "valor": "Aviso"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "supervisor",
+     "nombre": "Supervisora",
+     "rol": "Vigila respaldos y salud general",
+     "estado": "requiere_revision",
+     "actividad": {
+      "descripcion": "[DEMO] Respaldo: No hay respaldos registrados."
+     },
+     "evidencia": {
+      "origen": "apps.core.estado.respaldo",
+      "referencia": "nivel=aviso"
+     }
+    }
+   ]
+  },
+  {
+   "id": "uniq",
+   "nombre": "Integración UNIQ",
+   "descripcion": "[DEMO] Paquetes de ofertas emitidos para UNIQ (solo se lee el registro; no se contacta a UNIQ).",
+   "indicadores": [
+    {
+     "etiqueta": "Última solicitud",
+     "valor": "ninguna"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "enlace-uniq",
+     "nombre": "Enlace",
+     "rol": "Entrega paquetes de ofertas a UNIQ",
+     "estado": "esperando",
+     "actividad": {
+      "descripcion": "[DEMO] No hay paquetes emitidos para UNIQ."
+     }
+    }
+   ]
+  }
+ ],
+ "alertas": [
+  {
+   "id": "importacion-fallidos-7d",
+   "nivel": "advertencia",
+   "departamento_id": "importacion",
+   "titulo": "[DEMO] 60 importación(es) fallida(s) en 7 días",
+   "detalle": "No se guardó ningún cambio de esos lotes.",
+   "creada_en": "2026-11-03T02:35:46Z"
+  },
+  {
+   "id": "supervision-respaldo",
+   "nivel": "advertencia",
+   "departamento_id": "supervision",
+   "titulo": "[DEMO] No hay respaldos registrados.",
+   "creada_en": "2026-11-03T02:35:46Z"
+  }
+ ],
+ "resultados": [],
+ "demo": {
+  "ahora_simulado": "2026-11-03T02:41:30Z"
+ }
+}
