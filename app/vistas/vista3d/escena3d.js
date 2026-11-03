@@ -39,7 +39,14 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   const centrar = el("button", { type: "button", clase: "boton boton-chico" }, "Centrar");
   const aviso = el("p", { clase: "vista3d-aviso", role: "status" });
   const personajesDom = el("div", { clase: "vista3d-personajes", role: "toolbar", "aria-label": "Personajes del departamento" });
-  const medidasDom = el("pre", { clase: "vista3d-medidas", hidden: !medir });
+  const medidasTexto = el("pre", {});
+  const copiar = el("button", { type: "button", clase: "boton boton-chico" }, "Copiar medición");
+  const medidasDom = el("div", { clase: "vista3d-medidas", hidden: !medir }, medidasTexto, copiar);
+  copiar.addEventListener("click", async () => {
+    const texto = `Cauce 3D · ${new Date().toISOString()} · ${navigator.userAgent}\n${textoMedicion(metricas())}`;
+    try { await navigator.clipboard.writeText(texto); copiar.textContent = "Copiada"; }
+    catch { copiar.textContent = "Selecciona el texto y cópialo"; }
+  });
   raiz.append(
     lienzo,
     el("div", { clase: "vista3d-barra" },
@@ -222,7 +229,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   let anterior = 0;
   let ultimoDibujo = 0;
   let reloj = 0;
-  const fps = { cuadros: 0, desde: 0, valor: 0, total: 0 };
+  const fps = { cuadros: 0, desde: 0, valor: 0, total: 0, ultimos: [] };
+  let brilloApagadoSolo = null;
 
   function cuadro(t) {
     idCuadro = requestAnimationFrame(cuadro);
@@ -257,23 +265,45 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
       fps.valor = Math.round((fps.cuadros * 1000) / (t - fps.desde));
       fps.cuadros = 0;
       fps.desde = t;
+      fps.ultimos.push(fps.valor);
+      if (fps.ultimos.length > 20) fps.ultimos.shift();
       // Si con brillo el equipo no sostiene 40 cuadros por segundo, se apaga solo (no se guarda:
-      // la próxima visita lo vuelve a intentar).
-      if (composer && t - brilloDesde > 3000 && fps.valor < 40) {
+      // la próxima visita lo vuelve a intentar). Con ?medir=1 no se apaga, para poder medir su costo.
+      if (composer && !medir && t - brilloDesde > 3000 && fps.valor < 40) {
         brillo.checked = false;
+        brilloApagadoSolo = fps.valor;
         brillo.parentElement.title = `Se apagó solo: el equipo iba a ${fps.valor} cuadros por segundo`;
         aplicarBrillo();
       }
       if (!medir) return;
       const i = metricas();
-      medidasDom.textContent =
-        `${i.fps} cps · ${i.llamadas} llamadas · ${i.triangulos} triángulos\n` +
-        `${i.geometrias} geometrías · ${i.texturas} texturas · px ${i.pixelRatio}${i.brillo ? " · brillo" : ""}`;
+      medidasTexto.textContent = textoMedicion(i);
     }
   }
+  function textoMedicion(i) {
+    return `${i.fps} cps (prom. ${i.fps_promedio_20s}, mín. ${i.fps_minimo_20s} en 20 s)\n` +
+      `${i.llamadas} llamadas · ${i.triangulos} triángulos · ${i.geometrias} geometrías · ${i.texturas} texturas\n` +
+      `px ${i.pixelRatio} · ${i.tamano.join("×")} · brillo ${i.brillo ? "encendido" : i.brillo_apagado_solo ? `apagado solo (${i.brillo_apagado_solo} cps)` : "apagado"}` +
+      `${i.movil ? " · modo celular" : ""}\nGPU: ${i.gpu}`;
+  }
+  let gpu = null;
+  function nombreGpu() {
+    if (gpu) return gpu;
+    try {
+      const gl = renderer.getContext();
+      const ext = gl.getExtension("WEBGL_debug_renderer_info");
+      gpu = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    } catch { gpu = "desconocida"; }
+    return gpu;
+  }
   function metricas() {
+    const u = fps.ultimos;
     return {
       fps: fps.valor,
+      fps_promedio_20s: u.length ? Math.round(u.reduce((a, b) => a + b, 0) / u.length) : 0,
+      fps_minimo_20s: u.length ? Math.min(...u) : 0,
+      brillo_apagado_solo: brilloApagadoSolo,
+      gpu: nombreGpu(),
       llamadas: renderer.info.render.calls,
       triangulos: renderer.info.render.triangles,
       geometrias: renderer.info.memory.geometries,

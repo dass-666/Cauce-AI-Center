@@ -250,8 +250,9 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 .chip[aria-pressed="true"] { border-color: var(--brillo); }
 .vista3d-medidas {
   position: absolute; right: 10px; top: 54px; margin: 0; padding: 6px 8px; border-radius: 6px;
-  background: #000a; color: #9fe; font-size: 11px; pointer-events: none;
+  background: #000c; color: #9fe; font-size: 11px; max-width: min(460px, 70vw);
 }
+.vista3d-medidas pre { margin: 0 0 6px; white-space: pre-wrap; user-select: text; }
 @media (max-width: 760px) {
   .oficina.modo-3d { height: 62vh; min-height: 320px; border-radius: 10px; }
   .controles { flex-wrap: wrap; }

@@ -74,15 +74,6 @@ En la carpeta de Compago no deben aparecer archivos modificados. El exportador n
 - Las cifras del paso 4.3.
 - Cualquier tabla del paso 5 que no se comportó como se esperaba, con una captura de pantalla.
 
-## 7. Oficina 3D (rama `fase-3d/compago-oficina`)
+## 7. Oficina 3D
 
-Esta rama todavía **no está en GitHub**; cuando autorices subirla, se descarga igual que en el paso 1 con `-b fase-3d/compago-oficina`.
-
-1. `iniciar.bat` y abre <http://127.0.0.1:8765/pruebas.html>. Esperado: `69 pasaron, 0 fallaron`.
-2. Abre <http://127.0.0.1:8765/?medir=1>. Esperado: botón **3D** activo, el cuarto *Importación de catálogos* con la etiqueta **DEMO** (o **REAL** si corre el exportador) y los personajes entrando por la puerta.
-3. Arrastra para girar, usa la rueda para acercar, toca un personaje: se abre su detalle. Prueba el selector de departamentos.
-4. **Anota la línea verde de arriba a la derecha** (cuadros por segundo, llamadas, triángulos), con *Brillo* encendido y apagado. Es la primera medición en una tarjeta gráfica real: en el servidor de desarrollo solo hubo gráficos por software.
-5. Versión de celular: por seguridad el servidor solo escucha en tu PC (127.0.0.1), así que tu teléfono no puede abrirla todavía. Revísala con el modo de dispositivo de Chrome (F12 → ícono de celular). Probar en un teléfono real requiere abrir el servidor a tu red local, y eso se decide aparte.
-6. Marca *Bajo consumo*: debe pasar al plano 2D.
-
-Qué reportar: las cifras del paso 4, si algo se ve cortado o lento, y una captura.
+Ver [`VALIDAR-3D-WINDOWS.md`](VALIDAR-3D-WINDOWS.md).
