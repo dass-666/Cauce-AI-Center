@@ -10,10 +10,11 @@ En PowerShell, dentro de tu carpeta `Cauce-AI-Center` de la fase 2:
 
 ```powershell
 git fetch origin
-git switch fase-3d/compago-oficina
+git switch fase-3d/edificio-compago
+git pull
 ```
 
-Si no tienes esa carpeta, ve a tu Escritorio y clónala con `git clone -b fase-3d/compago-oficina https://github.com/dass-666/Cauce-AI-Center.git`.
+Si no tienes esa carpeta, ve a tu Escritorio y clónala con `git clone -b fase-3d/edificio-compago https://github.com/dass-666/Cauce-AI-Center.git`.
 
 ## 2. Pruebas automáticas
 
