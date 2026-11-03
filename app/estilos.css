@@ -213,7 +213,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 .boton[aria-pressed="true"] { border-color: var(--brillo); color: var(--brillo); }
 .boton-chico { padding: 4px 10px; font-size: 13px; }
 .aviso-vista { margin: 0; padding: 8px 16px; background: #3a1f1f; color: #ffd0d0; font-size: 13px; }
-.oficina.modo-3d { position: relative; height: min(74vh, 760px); min-height: 360px; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
+.oficina.modo-3d { position: relative; height: clamp(360px, calc(100vh - 210px), 980px); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
 .vista3d { position: absolute; inset: 0; }
 .vista3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 .vista3d canvas:active { cursor: grabbing; }
@@ -274,17 +274,13 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 .etiqueta-dep.estado-revision .etiqueta-luz, .tablero-estado.estado-revision .etiqueta-luz { background: var(--c-revision); }
 .etiqueta-alertas { color: var(--c-revision); }
 @media (max-width: 760px) { .etiqueta-dep { font-size: 10px; padding: 3px 7px; } }
-@media (max-width: 760px) { .etiqueta-dep { max-width: 104px; overflow: hidden; text-overflow: ellipsis; display: block; } .etiqueta-luz { display: inline-block; margin-right: 4px; } }
+@media (max-width: 760px) { .etiqueta-dep { white-space: nowrap; } .etiqueta-luz { display: inline-block; margin-right: 4px; } }
 
 /* Minimapa del piso (abajo a la derecha). En celular no se muestra: la interfaz móvil nueva es otra fase. */
 .vista3d-minimapa { position: absolute; right: 10px; bottom: 10px; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; line-height: 0; }
 .vista3d-minimapa canvas { width: 180px; height: 120px; cursor: pointer; }
-.vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-aviso,
-.vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-personajes { right: 200px; }
 @media (max-width: 760px) {
   .vista3d-minimapa { display: none; }
-  .vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-aviso,
-  .vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-personajes { right: 10px; }
 }
 
 /* Tablero de operaciones */
@@ -313,3 +309,8 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   .tablero-fuente, .tablero-fecha { display: none; }
   .luz-fija { display: none; } /* en celular la luz de la hora ya garantiza un mínimo visible */
 }
+.etiqueta-dep[hidden] { display: none; }
+/* Avisos y botones de personajes solo ocupan lo que miden: deja más pantalla libre para el edificio. */
+.vista3d-aviso { right: auto; max-width: calc(100% - 230px); }
+.vista3d-personajes { right: auto; max-width: calc(100% - 230px); }
+@media (max-width: 760px) { .vista3d-aviso, .vista3d-personajes { max-width: calc(100% - 20px); } }

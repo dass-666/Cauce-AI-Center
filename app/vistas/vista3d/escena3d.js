@@ -12,6 +12,8 @@ import { crearBurbujas, crearGeometriasPersonaje } from "./personaje.js";
 import { OFICINA, COLOR_ESTADO } from "./paleta.js";
 import { luzSegunHora } from "./iluminacion.js";
 import { crearMinimapa } from "./minimapa.js";
+import { calcularEncuadre, aPixeles, dentro } from "./encuadre.js";
+import { acomodarEtiquetas, nombresCortos, prioridadEtiqueta } from "./etiquetas.js";
 import { crearCatalogoKenney } from "./kenney.js";
 import { Recursos } from "./recursos.js";
 import { crearMedidor, firmaMedicion } from "./medidor.js";
@@ -84,13 +86,19 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   let luzActual = null;
   function aplicarLuz() {
     const ahora = new Date();
-    luzActual = luzSegunHora(ahora.getHours() + ahora.getMinutes() / 60, luzFija.checked);
+    const horaPrueba = Number(new URLSearchParams(location.search).get("hora")); // ?hora=23 solo para capturas y pruebas
+    const horaLocal = Number.isFinite(horaPrueba) && new URLSearchParams(location.search).has("hora") ? horaPrueba : ahora.getHours() + ahora.getMinutes() / 60;
+    luzActual = luzSegunHora(horaLocal, luzFija.checked);
     hemi.color.setHex(luzActual.cielo);
     hemi.groundColor.setHex(luzActual.suelo);
     hemi.intensity = luzActual.hemi;
     sol.color.setHex(luzActual.sol);
     sol.intensity = luzActual.intensidadSol;
     escena.background.setHex(luzActual.fondo);
+    // De noche: las oficinas "con la luz encendida" (piso un poco más cálido que el pasillo) y anillos
+    // de estado más visibles. No se tocan los materiales de los personajes.
+    compartido.matPiso.emissive.setRGB(0.16 * luzActual.noche, 0.11 * luzActual.noche, 0.06 * luzActual.noche);
+    for (const m of compartido.anillosEstado.values()) m.opacity = 0.5 + 0.35 * luzActual.noche;
     escenario?.aplicarLuz(luzActual);
     luzFija.parentElement.title = luzFija.checked ? "Luz fija activada" : `Luz de la hora local (${luzActual.nombre}). Marca para dejarla fija.`;
   }
@@ -106,6 +114,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   controles.maxAzimuthAngle = ANGULO_BASE + 0.8;
   controles.minZoom = 0.7;
   controles.maxZoom = 3;
+  if (movil) {
+    // En celular la vista no gira: un dedo que se desliza a los lados cambia de departamento;
+    // dos dedos acercan, alejan y mueven. En escritorio el giro sigue libre.
+    controles.enableRotate = false;
+    controles.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_PAN };
+  }
 
   // Recursos que no dependen del departamento.
   const compartidos = new Recursos();
@@ -118,6 +132,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     burbujas: crearBurbujas(compartidos, ESTADOS),
     catalogo: crearCatalogoKenney(compartidos),
     matPiso: compartidos.agregar(new THREE.MeshLambertMaterial({ map: compartidos.agregar(texturaDuela()) })),
+    // Un material por estado para el anillo bajo cada personaje (opacidad según la hora).
+    anillosEstado: new Map(Object.entries(COLOR_ESTADO).map(([estado, color]) =>
+      [estado, compartidos.agregar(new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }))])),
   };
 
   let escenario = null;    // edificio completo o un solo cuarto (edificio.js)
@@ -127,6 +144,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   let animCam = null;      // movimiento suave de la cámara al enfocar
   let ultimoAnimados = 0;
   let ultimoAgente = null;
+  let recienConstruido = false;
   let ultimoMinimapa = 0;
   const etiquetas = new Map();
   let claveCargando = null;
@@ -191,45 +209,117 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     camara.bottom = -mitadAlto;
     camara.left = -mitadAlto * aspecto;
     camara.right = mitadAlto * aspecto;
-    // Los controles de arriba tapan parte del lienzo (dos renglones en celular): se baja la imagen
-    // para que el edificio quede centrado en el espacio libre. También corrige toques y etiquetas.
-    const barra = raiz.querySelector(".vista3d-barra");
-    const tapado = barra ? barra.offsetTop + barra.offsetHeight : 0;
-    const desplazar = Math.max(0, (tapado - 50) / 2);
-    if (desplazar > 0) camara.setViewOffset(w, h, 0, -desplazar, w, h);
-    else camara.clearViewOffset();
     camara.updateProjectionMatrix();
+    // Si el usuario no ha movido la cámara, se vuelve a encuadrar al cambiar el tamaño (abrir el panel, girar el celular).
+    if (escenario && !usuarioMovio && !enfocado && !animCam && (w !== ultimoTamano.w || h !== ultimoTamano.h)) {
+      ultimoTamano = { w, h };
+      encuadrar();
+    }
+  }
+  let ultimoTamano = { w: 0, h: 0 };
+  let usuarioMovio = false;
+
+  /** Zona del lienzo que no tapan la barra de arriba ni los avisos y botones de abajo (en píxeles). */
+  function zonaLibre() {
+    const w = Math.max(1, raiz.clientWidth), h = Math.max(1, raiz.clientHeight);
+    const barra = raiz.querySelector(".vista3d-barra");
+    let abajo = h - 8;
+    for (const n of [aviso, personajesDom]) if (!n.hidden && n.offsetHeight > 0 && n.childNodes.length) abajo = Math.min(abajo, n.offsetTop - 6);
+    const arriba = barra ? barra.offsetTop + barra.offsetHeight + 6 : 8;
+    return { w, h, arriba, abajo: Math.max(arriba + 60, abajo), izq: 8, der: w - 8 };
+  }
+  const derecha = new THREE.Vector3(), arribaV = new THREE.Vector3();
+  function ejesCamara() {
+    camara.updateMatrixWorld();
+    derecha.setFromMatrixColumn(camara.matrixWorld, 0);
+    arribaV.setFromMatrixColumn(camara.matrixWorld, 1);
+  }
+  /** Punto que debe mirar la cámara para que `p` quede al centro de la zona libre con ese zoom. */
+  function centrarEnZona(p, zoom) {
+    ejesCamara();
+    const z = zonaLibre();
+    const porPx = (2 * mitadAlto / zoom) / z.h;
+    const desX = (z.izq + z.der) / 2 - z.w / 2, desY = (z.arriba + z.abajo) / 2 - z.h / 2;
+    return p.clone().addScaledVector(derecha, -desX * porPx).addScaledVector(arribaV, desY * porPx);
   }
   const observador = new ResizeObserver(ajustarTamano);
   observador.observe(raiz);
 
-  /** Ajusta la cámara para ver todo el escenario (edificio o cuarto). */
+  /**
+   * Ajusta la cámara para que el escenario completo quepa lo más grande posible en la zona libre,
+   * sin quedar bajo la barra, los avisos ni el minimapa. suave = con movimiento y sin cambiar el giro.
+   */
   function encuadrar({ suave = false } = {}) {
     if (!escenario) return;
-    const { ancho, fondo, minX, maxX, minZ, maxZ } = escenario.limites;
-    const aspecto = Math.max(0.5, raiz.clientWidth / Math.max(1, raiz.clientHeight));
-    // Lo que ocupa visto en diagonal; en pantallas angostas se aleja más.
-    const mitadVertical = (ancho + fondo) * 0.707 * 0.58 / 2 + 1.1;   // + muros y controles flotantes
-    const mitadHorizontal = (ancho + fondo) * 0.707 / 2 + 0.4;
-    mitadAlto = Math.max(mitadVertical, mitadHorizontal / aspecto);
-    const d = 60;
+    const { minX, maxX, minZ, maxZ } = escenario.limites;
     const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
-    if (suave) { // regresa con movimiento, sin cambiar el giro que eligió el usuario
-      animCam = { t: 0, desde: controles.target.clone(), hacia: new THREE.Vector3(cx, 0.5, cz), zoomDesde: camara.zoom, zoomHacia: 1 };
+    if (!suave) {
+      const d = 60;
+      camara.position.set(
+        cx + Math.sin(ANGULO_BASE) * Math.sin(INCLINACION) * d,
+        Math.cos(INCLINACION) * d,
+        cz + Math.cos(ANGULO_BASE) * Math.sin(INCLINACION) * d,
+      );
+      camara.far = 200;
+      controles.target.set(cx, 0.5, cz);
+      camara.lookAt(controles.target);
+      controles.maxZoom = escenario.modo === "edificio" ? 6 : 3;
+      usuarioMovio = false;
+    }
+    // Esquinas del escenario (con muros exteriores y losa) en coordenadas de la cámara.
+    const m = escenario.modo === "edificio" ? 1.45 : 0.45;
+    ejesCamara();
+    const base = suave ? new THREE.Vector3(cx, 0.5, cz) : controles.target.clone();
+    const puntos = [];
+    for (const x of [minX - m, maxX + m]) for (const z of [minZ - m, maxZ + m]) for (const y of [-0.45, 2.35]) {
+      const v = new THREE.Vector3(x, y, z).sub(base);
+      puntos.push({ x: v.dot(derecha), y: v.dot(arribaV) });
+    }
+    // Ningún cuarto debe quedar debajo de los controles flotantes (aviso, botones de personajes,
+    // minimapa). La losa y la banqueta sí pueden quedar detrás: así el edificio usa más pantalla.
+    const z0 = zonaLibre();
+    const zona = { ...z0, abajo: z0.h - 8 };
+    const obstaculos = [aviso, personajesDom, minimapa.nodo]
+      .filter((n) => !n.hidden && n.offsetWidth > 0 && n.offsetHeight > 0 && (n !== personajesDom || n.childNodes.length))
+      .map((n) => ({ izq: n.offsetLeft - 4, der: n.offsetLeft + n.offsetWidth + 4, arriba: n.offsetTop - 4, abajo: n.offsetTop + n.offsetHeight + 4 }));
+    const esquinasCuartos = [];
+    for (const c of escenario.cuartos.values()) for (const sx of [-1, -0.5, 0, 0.5, 1]) for (const sz of [-1, -0.5, 0, 0.5, 1]) for (const y of [0, 1.2]) {
+      if (Math.abs(sx) < 1 && Math.abs(sz) < 1) continue; // solo el borde del cuarto
+      const v = new THREE.Vector3(c.x + sx * c.ancho / 2, y, c.z + sz * c.fondo / 2).sub(base);
+      esquinasCuartos.push({ x: v.dot(derecha), y: v.dot(arribaV) });
+    }
+    const libre = (e) => !esquinasCuartos.some((p) => { const q = aPixeles(p, e, zona); return obstaculos.some((o) => dentro(q, o)); });
+    // Zonas candidatas: el lienzo completo y el lienzo sin cada obstáculo (como franja o como columna).
+    const zonas = [zona];
+    for (const o of obstaculos) zonas.push({ ...zona, abajo: Math.min(zona.abajo, o.arriba) }, { ...zona, der: Math.min(zona.der, o.izq) });
+    zonas.push({ ...zona, abajo: Math.min(...obstaculos.map((o) => o.arriba), zona.abajo) });
+    let e = null;
+    for (const z of zonas) {
+      if (z.der - z.izq < 120 || z.abajo - z.arriba < 120) continue;
+      for (const llenado of [0.96, 0.9, 0.84]) {
+        const c = calcularEncuadre(puntos, z, llenado);
+        if (libre(c) && (!e || c.mitadAlto < e.mitadAlto)) e = c;
+      }
+    }
+    e ??= calcularEncuadre(puntos, zonas[zonas.length - 1], 0.8);
+    mitadAlto = e.mitadAlto;
+    const centro = base.clone().addScaledVector(derecha, e.centroX).addScaledVector(arribaV, e.centroY);
+    if (suave) {
+      animCam = { t: 0, desde: controles.target.clone(), hacia: centro, zoomDesde: camara.zoom, zoomHacia: 1 };
       return;
     }
-    camara.position.set(
-      cx + Math.sin(ANGULO_BASE) * Math.sin(INCLINACION) * d,
-      Math.cos(INCLINACION) * d,
-      cz + Math.cos(ANGULO_BASE) * Math.sin(INCLINACION) * d,
-    );
-    camara.far = 200;
+    camara.position.add(centro.clone().sub(controles.target));
+    controles.target.copy(centro);
     camara.zoom = 1;
-    controles.target.set(cx, 0.5, cz);
-    controles.maxZoom = escenario.modo === "edificio" ? 6 : 3;
     animCam = null;
     controles.update();
-    ajustarTamano();
+    ajustarTamanoCamara();
+  }
+  function ajustarTamanoCamara() {
+    const aspecto = Math.max(1, raiz.clientWidth) / Math.max(1, raiz.clientHeight);
+    camara.top = mitadAlto; camara.bottom = -mitadAlto;
+    camara.left = -mitadAlto * aspecto; camara.right = mitadAlto * aspecto;
+    camara.updateProjectionMatrix();
   }
 
   /** Acerca la cámara a un departamento del edificio (movimiento suave de 0.6 s). */
@@ -241,10 +331,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     animCam = {
       t: 0,
       desde: controles.target.clone(),
-      hacia: new THREE.Vector3(r.x, 0.5, r.z),
       zoomDesde: camara.zoom,
       zoomHacia: THREE.MathUtils.clamp(mitadAlto / mitad, 1, controles.maxZoom),
     };
+    animCam.hacia = centrarEnZona(new THREE.Vector3(r.x, 0.5, r.z), animCam.zoomHacia);
   }
   /** Acerca la cámara al escritorio de un agente. */
   function acercarAgente(id) {
@@ -253,15 +343,23 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     animCam = {
       t: 0,
       desde: controles.target.clone(),
-      hacia: new THREE.Vector3(p.x, 0.6, p.z),
       zoomDesde: camara.zoom,
       zoomHacia: THREE.MathUtils.clamp(mitadAlto / 3.6, 1, controles.maxZoom),
     };
+    animCam.hacia = centrarEnZona(new THREE.Vector3(p.x, 0.6, p.z), animCam.zoomHacia);
   }
   function volverAlPiso() {
     enfocado = null;
     encuadrar({ suave: true });
     alSeleccionar(null);
+  }
+
+  /** Departamento vecino del enfocado (o del mostrado), en el orden del archivo. */
+  function vecino(paso) {
+    const deps = modelo.departamentos;
+    const actual = deps.findIndex((d) => d.id === (modo === "edificio" ? enfocado : depMostrado));
+    if (actual < 0) return paso > 0 ? deps[0] : deps[deps.length - 1];
+    return deps[(actual + paso + deps.length) % deps.length];
   }
 
   // Teclado: 1–9 enfoca un departamento, ← → pasa al vecino, Esc regresa al piso completo.
@@ -272,8 +370,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     const actual = deps.findIndex((d) => d.id === (modo === "edificio" ? enfocado : depMostrado));
     let destino = null;
     if (/^[1-9]$/.test(e.key)) destino = deps[Number(e.key) - 1] ?? null;
-    else if (e.key === "ArrowRight") destino = deps[(actual + 1 + deps.length) % deps.length];
-    else if (e.key === "ArrowLeft") destino = deps[(Math.max(actual, 0) - 1 + deps.length) % deps.length];
+    else if (e.key === "ArrowRight") destino = vecino(1);
+    else if (e.key === "ArrowLeft") destino = vecino(-1);
     else if (e.key === "Escape" && !seleccion && modo === "edificio" && enfocado) { volverAlPiso(); e.preventDefault(); return; }
     if (!destino) return;
     e.preventDefault();
@@ -304,7 +402,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   }
 
   // No dejar que el usuario arrastre la oficina fuera de la pantalla.
-  controles.addEventListener("start", () => { animCam = null; }); // el usuario toma el control
+  controles.addEventListener("start", () => { animCam = null; usuarioMovio = true; }); // el usuario toma el control
   controles.addEventListener("change", () => {
     if (!escenario) return;
     const t = controles.target;
@@ -323,11 +421,25 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   const rayo = new THREE.Raycaster();
   const puntero = new THREE.Vector2();
   let inicio = null;
-  lienzo.addEventListener("pointerdown", (e) => { inicio = { x: e.clientX, y: e.clientY }; });
+  let dedos = 0;
+  lienzo.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch") dedos++;
+    inicio = dedos > 1 ? null : { x: e.clientX, y: e.clientY, t: performance.now() };
+  });
+  lienzo.addEventListener("pointercancel", (e) => { if (e.pointerType === "touch") dedos = Math.max(0, dedos - 1); inicio = null; });
   lienzo.addEventListener("pointerup", (e) => {
+    if (e.pointerType === "touch") dedos = Math.max(0, dedos - 1);
     if (!inicio || !escenario) return;
-    const movido = Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y);
+    const dx = e.clientX - inicio.x, dy = e.clientY - inicio.y;
+    const movido = Math.hypot(dx, dy);
+    const rapido = performance.now() - inicio.t < 700;
     inicio = null;
+    // Deslizar a los lados en celular: departamento vecino.
+    if (movil && modelo && rapido && Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) {
+      const destino = vecino(dx < 0 ? 1 : -1);
+      if (destino) alSeleccionar({ tipo: "departamento", id: destino.id });
+      return;
+    }
     if (movido > 6) return;
     const r = lienzo.getBoundingClientRect();
     puntero.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -401,13 +513,24 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     const verlas = camara.zoom < 1.9;
     etiquetasDom.hidden = !verlas;
     if (!verlas) return;
-    const r = lienzo.getBoundingClientRect();
-    const base = raiz.getBoundingClientRect();
+    // Se calcula dónde cae cada etiqueta y se ocultan las que chocarían con otra más importante.
+    const w = raiz.clientWidth, h = raiz.clientHeight;
+    const items = [];
+    const enPantalla = (x, y, z) => { proyectado.set(x, y, z).project(camara); return { x: (proyectado.x + 1) / 2 * w, y: (1 - proyectado.y) / 2 * h }; };
     for (const [id, nodo] of etiquetas) {
       const c = escenario.rectangulo(id);
       if (!c) continue;
-      proyectado.set(c.x, 2.4, c.z - c.fondo / 2).project(camara);
-      nodo.style.transform = `translate(${(r.left - base.left) + (proyectado.x + 1) / 2 * r.width}px, ${(r.top - base.top) + (1 - proyectado.y) / 2 * r.height}px) translate(-50%, -100%)`;
+      // Primero sobre el muro del fondo; si choca, al centro del cuarto; si no, junto a la puerta.
+      const opciones = [enPantalla(c.x, 2.4, c.z - c.fondo / 2), enPantalla(c.x, 1.3, c.z), enPantalla(c.x - c.ancho / 4, 1.0, c.z + c.fondo / 2)];
+      items.push({ id, opciones, w: Number(nodo.dataset.ancho) || 120, h: Number(nodo.dataset.alto) || 24, prioridad: Number(nodo.dataset.prioridad) || 0 });
+    }
+    const zona = zonaLibre();
+    const elegidas = acomodarEtiquetas(items, { w, h, arriba: zona.arriba });
+    for (const it of items) {
+      const nodo = etiquetas.get(it.id);
+      const k = elegidas.get(it.id);
+      if (nodo.hidden !== (k === undefined)) nodo.hidden = k === undefined;
+      if (k !== undefined) nodo.style.transform = `translate(${it.opciones[k].x}px, ${it.opciones[k].y}px) translate(-50%, -100%)`;
     }
   }
 
@@ -560,6 +683,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
         claveOficina = clave;
         crearEtiquetas(visibles);
         encuadrar();
+        recienConstruido = true;
         aplicarLuz();
         enfocado = null; // se vuelve a enfocar abajo, ya con la cámara en su lugar
       } else if (claveCargando !== clave) {
@@ -599,12 +723,16 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     aviso.textContent = textos.join(" ");
 
     const chips = modo === "edificio" && !enfocado ? [] : dep.agentes;
+    const reencuadrar = recienConstruido;
+    recienConstruido = false;
     personajesDom.replaceChildren(...chips.map((a) => el("button", {
       type: "button",
       clase: `chip ${a.apariencia.clase2d}`,
       "aria-pressed": sel?.tipo === "agente" && sel.id === a.id ? "true" : "false",
       onclick: () => alSeleccionar({ tipo: "agente", id: a.id }),
     }, el("span", { "aria-hidden": "true" }, a.apariencia.icono), ` ${a.nombre}`)));
+    // Ya con avisos y botones en su lugar, se ajusta el encuadre al espacio que de verdad queda libre.
+    if (reencuadrar && !enfocado && !usuarioMovio) encuadrar();
 
     arrancar();
   }
@@ -641,18 +769,33 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     }
   }
   function actualizarEtiquetas(visibles, sel) {
-    for (const d of visibles) {
+    const cortos = nombresCortos(visibles.map((d) => d.nombre));
+    visibles.forEach((d) => {
       const nodo = etiquetas.get(d.id);
-      if (!nodo) continue;
+      if (nodo) nodo.dataset.prioridad = prioridadEtiqueta({ enfocado: d.id === enfocado || (sel?.tipo === "departamento" && sel.id === d.id), estado: d.estado_resumen, alertas: d.alertas.length });
+    });
+    visibles.forEach((d, i) => { d = { ...d, corto: movil ? cortos[i] : d.nombre }; actualizarEtiqueta(d, sel); });
+  }
+  function actualizarEtiqueta(d, sel) {
+    {
+      const nodo = etiquetas.get(d.id);
+      if (!nodo) return;
       const ap = d.apariencia_resumen;
-      const clave = `${d.nombre}|${ap.clase2d}|${d.alertas.length}|${sel?.tipo === "departamento" && sel.id === d.id}`;
-      if (nodo.dataset.clave === clave) continue;
+      const clave = `${d.corto}|${d.nombre}|${ap.clase2d}|${d.alertas.length}|${sel?.tipo === "departamento" && sel.id === d.id}`;
+      if (nodo.dataset.clave === clave) return;
       nodo.dataset.clave = clave;
       nodo.className = `etiqueta-dep ${ap.clase2d}${sel?.tipo === "departamento" && sel.id === d.id ? " elegida" : ""}`;
-      nodo.replaceChildren(...[el("span", { clase: "etiqueta-luz", "aria-hidden": "true" }), d.nombre,
+      nodo.replaceChildren(...[el("span", { clase: "etiqueta-luz", "aria-hidden": "true" }), d.corto,
         el("span", { clase: "solo-lector" }, `, ${ap.etiqueta}`),
         d.alertas.length ? el("span", { clase: "etiqueta-alertas" }, ` ⚠ ${d.alertas.length}`) : null].filter(Boolean));
       nodo.title = `${d.nombre}: ${ap.etiqueta}`;
+      nodo.setAttribute("aria-label", `${d.nombre}: ${ap.etiqueta}${d.alertas.length ? `, ${d.alertas.length} alerta(s)` : ""}`);
+      // Tamaño medido una vez por cambio de contenido (no en cada cuadro).
+      const ocultaba = [etiquetasDom.hidden, nodo.hidden];
+      etiquetasDom.hidden = nodo.hidden = false;
+      nodo.dataset.ancho = nodo.offsetWidth;
+      nodo.dataset.alto = nodo.offsetHeight;
+      [etiquetasDom.hidden, nodo.hidden] = ocultaba;
     }
   }
 

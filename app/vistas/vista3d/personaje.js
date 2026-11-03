@@ -25,6 +25,7 @@ export function crearGeometriasPersonaje(recursos) {
     ojo: g(new THREE.SphereGeometry(0.025, 6, 4)),
     sombra: g(new THREE.CircleGeometry(0.28, 20).rotateX(-Math.PI / 2)),
     anillo: g(new THREE.RingGeometry(0.32, 0.4, 28).rotateX(-Math.PI / 2)),
+    anilloEstado: g(new THREE.RingGeometry(0.2, 0.3, 28).rotateX(-Math.PI / 2)),
   };
 }
 
@@ -109,7 +110,7 @@ function aplicarProvisional(c, { base, s, gesto, t, r }) {
  * (estados.js → animacion3d) y la convierte en una cola de acciones.
  */
 export class Personaje {
-  constructor({ agente, puesto, cuarto, geo, recursos, texturaSombra, burbujas, retraso = 0, fabricarCuerpo = null }) {
+  constructor({ agente, puesto, cuarto, geo, recursos, texturaSombra, burbujas, anillosEstado = null, retraso = 0, fabricarCuerpo = null }) {
     this.id = agente.id;
     // Cuerpo: el modelo de Kenney si se cargó; si no, el provisional hecho con código.
     this.cuerpo = fabricarCuerpo?.(agente.id) ?? crearCuerpo(geo, recursos, agente.id, texturaSombra);
@@ -126,6 +127,15 @@ export class Personaje {
     this.anillo.position.y = 0.02;
     this.anillo.visible = false;
     this.raiz.add(this.anillo);
+
+    // Anillo de estado en el piso (color del estado real; más visible de noche). Comparte material por estado.
+    this.anillosEstado = anillosEstado;
+    if (anillosEstado) {
+      this.anilloEstado = new THREE.Mesh(geo.anilloEstado, anillosEstado.get("sin_datos"));
+      this.anilloEstado.position.y = 0.012;
+      this.anilloEstado.renderOrder = 1;
+      this.raiz.add(this.anilloEstado);
+    }
 
     this.burbuja = new THREE.Sprite(burbujas.material("sin_datos"));
     this.burbuja.scale.set(0.34, 0.34, 1);
@@ -148,6 +158,7 @@ export class Personaje {
   actualizar(agente) {
     this.estado = agente.estado;
     this.burbuja.material = this.burbujas.material(agente.estado);
+    if (this.anilloEstado) this.anilloEstado.material = this.anillosEstado.get(agente.estado) ?? this.anillosEstado.get("sin_datos");
     const nueva = agente.apariencia.animacion3d;
     if (this.accion || this.cola.length) {
       this.pendiente = nueva;

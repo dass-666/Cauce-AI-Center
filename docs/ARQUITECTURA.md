@@ -40,6 +40,8 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `iconos.js` | Símbolos de cada tema dibujados en un lienzo | No (usa canvas) |
 | `iluminacion.js` | Luz según la hora local o fija; nunca baja de un mínimo visible | No (se prueba en Node) |
 | `minimapa.js` | Minimapa HTML con el color del estado real de cada departamento | No (canvas 2D) |
+| `encuadre.js` | Encuadre exacto: con las esquinas del escenario en coordenadas de cámara, calcula zoom y centro para llenar la zona libre; ningún cuarto queda bajo la barra, avisos o minimapa | No (se prueba en Node) |
+| `etiquetas.js` | Etiquetas sin encimarse (gana la más importante; prueba 3 lugares por cuarto) y nombres cortos para celular | No (se prueba en Node) |
 | `oficina.js` | Un departamento: piso, muros, mamparas, escritorios, computadoras, sillas, planta, letrero | Sí |
 | `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, brillo, ciclo de dibujo | Sí |
 
@@ -47,7 +49,9 @@ Reglas:
 
 - **Dos modos** (se recuerda la elección): *Edificio* muestra los 8 departamentos a la vez; tocar uno acerca la cámara (0.6 s) y el panel muestra sus agentes. *Un cuarto* es la vista individual original. Al cambiar de modo o de departamento se liberan los recursos (prueba: cambios repetidos sin crecer la memoria).
 - **Animación por distancia y enfoque:** el cuarto enfocado se anima en cada cuadro; los demás a 20 veces/s (12 si hay más de 12 personajes; 8 en celular) y los que quedan fuera de pantalla a 2. Lo estático de cada cuarto se fusiona en una geometría por material para hacer menos llamadas de dibujo. Los personajes no se simplifican.
-- Etiquetas con nombre y estado de cada departamento (HTML sobre el lienzo); se ocultan al acercarse.
+- Etiquetas con nombre y estado de cada departamento (HTML sobre el lienzo); nunca se enciman y se ocultan al acercarse. En celular, nombre corto.
+- Noche: ambiente mínimo 1.7, piso de los cuartos un poco más cálido y anillo de estado bajo cada personaje más visible. No se cambian los materiales de Kenney.
+- Celular: sin giro de cámara; un dedo a los lados cambia de departamento, dos dedos acercan y mueven.
 - `ausente` (= `sin_datos`) es **silla vacía con la pantalla apagada**. Si un personaje pierde la evidencia, se levanta y sale.
 - La primera vez que se dibuja, cada personaje con evidencia entra caminando desde la puerta (es una animación de llegada, no significa que la tarea acabe de empezar; la hora real está en el panel).
 - `app.js` carga la 3D con `import()` solo si se usa. *Bajo consumo* fuerza el plano 2D y no descarga three.js. Sin WebGL, o si la tarjeta gráfica deja de responder, vuelve sola al plano 2D con aviso.

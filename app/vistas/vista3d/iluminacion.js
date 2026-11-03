@@ -1,19 +1,20 @@
 // Luz ambiental según la hora local de la computadora, o fija. Solo decoración: no indica actividad.
 // Sin Three.js (se prueba en Node). Siempre deja la escena visible (intensidad mínima).
 
-export const LUZ_FIJA = Object.freeze({ cielo: 0xdfe8ff, suelo: 0x4a3a2a, hemi: 1.9, sol: 0xffe2b8, intensidadSol: 1.4, ventana: 0x9fc4ff, fondo: 0x0d1220 });
-export const HEMI_MINIMA = 1.35;
+export const LUZ_FIJA = Object.freeze({ cielo: 0xdfe8ff, suelo: 0x4a3a2a, hemi: 1.9, sol: 0xffe2b8, intensidadSol: 1.4, ventana: 0x9fc4ff, fondo: 0x0d1220, noche: 0 });
+// De noche la oficina tiene "las luces encendidas": el ambiente no baja de aquí (antes 1.35).
+export const HEMI_MINIMA = 1.7;
 
 // Puntos de la jornada (hora local). Entre dos puntos se mezcla.
 const PUNTOS = [
-  [0, { cielo: 0x9fb4e8, suelo: 0x2a2a3a, hemi: 1.4, sol: 0xaabbee, intensidadSol: 0.6, ventana: 0x1d2b4f, fondo: 0x080c18 }],
-  [5, { cielo: 0x9fb4e8, suelo: 0x2a2a3a, hemi: 1.4, sol: 0xaabbee, intensidadSol: 0.6, ventana: 0x1d2b4f, fondo: 0x080c18 }],
-  [6.5, { cielo: 0xc8c8f0, suelo: 0x3a3030, hemi: 1.55, sol: 0xffc8a0, intensidadSol: 0.9, ventana: 0xf0b890, fondo: 0x0b1020 }],
+  [0, { cielo: 0x9fb4e8, suelo: 0x2a2a3a, hemi: 1.75, sol: 0xc8d2f0, intensidadSol: 0.7, ventana: 0x1d2b4f, fondo: 0x080c18, noche: 1 }],
+  [5, { cielo: 0x9fb4e8, suelo: 0x2a2a3a, hemi: 1.75, sol: 0xc8d2f0, intensidadSol: 0.7, ventana: 0x1d2b4f, fondo: 0x080c18, noche: 1 }],
+  [6.5, { cielo: 0xc8c8f0, suelo: 0x3a3030, hemi: 1.75, sol: 0xffc8a0, intensidadSol: 0.9, ventana: 0xf0b890, fondo: 0x0b1020, noche: 0.4 }],
   [9, LUZ_FIJA],
   [16, LUZ_FIJA],
-  [18.5, { cielo: 0xf0d0b8, suelo: 0x4a3020, hemi: 1.7, sol: 0xffa86a, intensidadSol: 1.1, ventana: 0xf09a60, fondo: 0x0d1020 }],
-  [20.5, { cielo: 0xa8b8e8, suelo: 0x2a2a3a, hemi: 1.45, sol: 0xb0c0ee, intensidadSol: 0.65, ventana: 0x22335a, fondo: 0x080c18 }],
-  [24, { cielo: 0x9fb4e8, suelo: 0x2a2a3a, hemi: 1.4, sol: 0xaabbee, intensidadSol: 0.6, ventana: 0x1d2b4f, fondo: 0x080c18 }],
+  [18.5, { cielo: 0xf0d0b8, suelo: 0x4a3020, hemi: 1.8, sol: 0xffa86a, intensidadSol: 1.1, ventana: 0xf09a60, fondo: 0x0d1020, noche: 0.3 }],
+  [20.5, { cielo: 0xa8b8e8, suelo: 0x2a2a3a, hemi: 1.75, sol: 0xc8d2f0, intensidadSol: 0.7, ventana: 0x22335a, fondo: 0x080c18, noche: 1 }],
+  [24, { cielo: 0x9fb4e8, suelo: 0x2a2a3a, hemi: 1.75, sol: 0xc8d2f0, intensidadSol: 0.7, ventana: 0x1d2b4f, fondo: 0x080c18, noche: 1 }],
 ];
 
 /** @param {number} hora 0..24 (con decimales) @param {boolean} fija */
@@ -27,7 +28,7 @@ export function luzSegunHora(hora, fija = false) {
   const k = h1 > h0 ? (h - h0) / (h1 - h0) : 0;
   const luz = {};
   for (const clave of Object.keys(LUZ_FIJA)) {
-    luz[clave] = typeof a[clave] === "number" && clave !== "hemi" && clave !== "intensidadSol"
+    luz[clave] = !["hemi", "intensidadSol", "noche"].includes(clave)
       ? mezclarColor(a[clave], b[clave], k)
       : a[clave] + (b[clave] - a[clave]) * k;
   }
