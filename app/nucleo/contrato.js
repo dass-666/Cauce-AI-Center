@@ -32,9 +32,17 @@ export function esFecha(v) {
 /** Enlace seguro: relativo al visualizador o http(s). Nunca javascript:, data:, file:, etc. */
 export function esEnlaceSeguro(v) {
   if (typeof v !== "string" || v.length === 0 || v.length > 2000) return false;
-  if (/^https?:\/\//i.test(v)) return true;
-  // Relativo: sin esquema ("algo:") y sin "//" inicial (que apuntaría a otro sitio).
-  return !/^[a-z][a-z0-9+.-]*:/i.test(v) && !v.startsWith("//") && !v.startsWith("\\");
+  // Sin espacios ni caracteres de control: el navegador los quita al leer el enlace, así que
+  // " javascript:…" o "java\tscript:…" pasarían como relativos y se ejecutarían al tocarlos.
+  if (/[\u0000-\u001f\u007f]/.test(v) || v !== v.trim()) return false;
+  if (v.startsWith("//") || v.startsWith("\\") || v.startsWith("/\\")) return false; // apuntarían a otro sitio sin decirlo
+  // Se interpreta como lo haría el navegador y solo se aceptan http y https.
+  try {
+    const u = new URL(v, "http://relativo.invalid/");
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 /**
