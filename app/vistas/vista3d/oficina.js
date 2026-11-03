@@ -2,18 +2,27 @@
 // letrero y personajes. Todo el mobiliario se hace con código (sin modelos descargados).
 
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { tamanoCuarto, puestos, puerta } from "./disposicion.js";
 import { COLOR_ESTADO, OFICINA } from "./paleta.js";
 import { Personaje } from "./personaje.js";
 import { Recursos } from "./recursos.js";
 
 const ALTO_ESCRITORIO = 0.6;
-const ALTO_MURO = 1.5;
 
-export function crearOficina(dep, modelo, compartido) {
+/**
+ * @param opciones.cuarto   tamaño fijo {ancho, fondo} (en el edificio lo decide plano-edificio.js)
+ * @param opciones.altoMuro alto de los muros: 1.5 en la vista individual, más bajo en el edificio
+ * @param opciones.base     dibujar la base del diorama (solo en la vista individual)
+ * @param opciones.acento   color propio del departamento (alfombra, franja y letrero)
+ * @param opciones.detalle  0..2: mueble extra para distinguir cuartos (archivero, pizarrón, librero)
+ */
+export function crearOficina(dep, modelo, compartido, opciones = {}) {
+  const ALTO_MURO = opciones.altoMuro ?? 1.5;
   const recursos = new Recursos();
   const grupo = new THREE.Group();
-  const cuarto = tamanoCuarto(dep.posicion, modelo.cuadricula.metros_por_celda, Math.max(1, dep.agentes.length));
+  grupo.userData.seleccion = { tipo: "departamento", id: dep.id };
+  const cuarto = opciones.cuarto ?? tamanoCuarto(dep.posicion, modelo.cuadricula.metros_por_celda, Math.max(1, dep.agentes.length));
   const lugares = puestos(Math.max(1, dep.agentes.length), cuarto);
   const mat = (color, extra = {}) => recursos.agregar(new THREE.MeshLambertMaterial({ color, ...extra }));
   const caja = (w, h, d) => recursos.agregar(new THREE.BoxGeometry(w, h, d));
@@ -34,19 +43,25 @@ export function crearOficina(dep, modelo, compartido) {
 
   // Base del diorama y piso con duelas.
   const { ancho: W, fondo: F } = cuarto;
-  const base = new THREE.Mesh(caja(W + 0.6, 0.3, F + 0.6), m.base);
-  base.position.y = -0.19; // su cara superior queda bajo el piso (evita parpadeo entre superficies)
-  grupo.add(base);
-  const piso = new THREE.Mesh(caja(W, 0.04, F), m.piso);
+  if (opciones.base !== false) {
+    const base = new THREE.Mesh(caja(W + 0.6, 0.3, F + 0.6), m.base);
+    base.position.y = -0.19; // su cara superior queda bajo el piso (evita parpadeo entre superficies)
+    grupo.add(base);
+  }
+  // Piso de duela: una textura compartida que se repite según el tamaño del cuarto.
+  const geoPiso = caja(W, 0.04, F);
+  const uv = geoPiso.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * W / 2, uv.getY(i) * F / 2);
+  const piso = new THREE.Mesh(geoPiso, compartido.matPiso);
   piso.position.y = -0.02;
-  piso.userData.seleccion = { tipo: "departamento", id: dep.id };
   grupo.add(piso);
-  const duela = caja(W, 0.005, 0.02);
-  const matDuela = mat(OFICINA.pisoLinea);
-  for (let z = -F / 2 + 0.5; z < F / 2; z += 0.5) {
-    const l = new THREE.Mesh(duela, matDuela);
-    l.position.set(0, 0.001, z);
-    grupo.add(l);
+  const acento = opciones.acento ?? null;
+  if (acento !== null) {
+    // Alfombra del color del departamento bajo los escritorios.
+    const alfombra = new THREE.Mesh(recursos.agregar(new THREE.PlaneGeometry(W - 1.2, F - 1.6).rotateX(-Math.PI / 2)),
+      mat(acento, { transparent: true, opacity: 0.22, depthWrite: false }));
+    alfombra.position.set(0, 0.004, -0.3);
+    grupo.add(alfombra);
   }
 
   // Muros sólidos al fondo (-Z) y a la izquierda (-X); mamparas de vidrio al frente y a la derecha
@@ -56,6 +71,14 @@ export function crearOficina(dep, modelo, compartido) {
   const muroIzq = new THREE.Mesh(caja(0.12, ALTO_MURO, F), m.pared);
   muroIzq.position.set(-W / 2 - 0.06, ALTO_MURO / 2, 0);
   grupo.add(muroFondo, muroIzq);
+  if (acento !== null) {
+    const franja = mat(acento);
+    const f1 = new THREE.Mesh(caja(W + 0.12, 0.06, 0.14), franja);
+    f1.position.set(0, ALTO_MURO + 0.03, -F / 2 - 0.06);
+    const f2 = new THREE.Mesh(caja(0.14, 0.06, F + 0.12), franja);
+    f2.position.set(-W / 2 - 0.06, ALTO_MURO + 0.03, 0);
+    grupo.add(f1, f2);
+  }
 
   const p = puerta(cuarto);
   const huecoPuerta = 1.1;
@@ -99,8 +122,6 @@ export function crearOficina(dep, modelo, compartido) {
     const puesto = new THREE.Group();
     puesto.position.set(l.x, 0, l.z);
     const agente = dep.agentes[i] ?? null;
-    if (agente) puesto.userData.seleccion = { tipo: "agente", id: agente.id };
-    else puesto.userData.seleccion = { tipo: "departamento", id: dep.id };
 
     const cubierta = new THREE.Mesh(g.cubierta, m.madera);
     cubierta.position.y = ALTO_ESCRITORIO;
@@ -117,6 +138,8 @@ export function crearOficina(dep, modelo, compartido) {
     const matPantalla = recursos.agregar(new THREE.MeshBasicMaterial({ color: OFICINA.pantallaApagada }));
     const pantalla = new THREE.Mesh(g.pantalla, matPantalla);
     pantalla.position.set(0, ALTO_ESCRITORIO + 0.33, -0.157);
+    pantalla.userData.dinamico = true; // cambia de color: no se fusiona
+    if (agente) pantalla.userData.seleccion = { tipo: "agente", id: agente.id };
     const teclado = new THREE.Mesh(g.teclado, m.metal);
     teclado.position.set(0, ALTO_ESCRITORIO + 0.035, 0.1);
     const taza = new THREE.Mesh(g.taza, m.marco);
@@ -150,11 +173,17 @@ export function crearOficina(dep, modelo, compartido) {
   const follaje = new THREE.Mesh(recursos.agregar(new THREE.IcosahedronGeometry(0.34, 0)), m.planta);
   follaje.position.set(W / 2 - 0.45, 0.6, -F / 2 + 0.45);
   grupo.add(maceta, follaje);
+  agregarDetalle(grupo, opciones.detalle ?? -1, W, F, caja, mat, m, acento ?? OFICINA.brillo);
 
-  // Letrero en el muro del fondo.
-  const letrero = crearLetrero(recursos, dep, cuarto);
-  letrero.malla.position.set(0, ALTO_MURO - 0.5, -F / 2 + 0.01);
+  // Letrero en el muro del fondo (en el edificio, con muros bajos, se apoya encima del muro).
+  const letrero = crearLetrero(recursos, dep, cuarto, acento);
+  letrero.malla.userData.dinamico = true;
+  const altoLetrero = letrero.malla.geometry.parameters.height;
+  letrero.malla.position.set(0, ALTO_MURO >= 1.4 ? ALTO_MURO - 0.5 : ALTO_MURO + altoLetrero / 2 + 0.06, -F / 2 + 0.01);
   grupo.add(letrero.malla);
+
+  // Todo lo que no se mueve se junta en una malla por material: menos llamadas de dibujo.
+  fusionarEstaticos(grupo, recursos);
 
   // Personajes.
   const personajes = dep.agentes.map((agente, i) => new Personaje({
@@ -197,7 +226,7 @@ export function crearOficina(dep, modelo, compartido) {
 }
 
 /** Letrero con nombre, estado, tres indicadores y la marca DEMO. Se redibuja solo si cambia. */
-function crearLetrero(recursos, dep, cuarto) {
+function crearLetrero(recursos, dep, cuarto, acento) {
   const lienzo = document.createElement("canvas");
   lienzo.width = 1024;
   lienzo.height = 300;
@@ -222,7 +251,7 @@ function crearLetrero(recursos, dep, cuarto) {
     ctx.fillStyle = "#0f1526";
     ctx.fillRect(0, 0, lienzo.width, lienzo.height);
     ctx.lineWidth = 10;
-    ctx.strokeStyle = resaltado ? "#ffffff" : "#ffd89a";
+    ctx.strokeStyle = resaltado ? "#ffffff" : acento != null ? `#${acento.toString(16).padStart(6, "0")}` : "#ffd89a";
     ctx.strokeRect(5, 5, lienzo.width - 10, lienzo.height - 10);
     // Luz de estado
     ctx.fillStyle = color;
@@ -274,4 +303,61 @@ function recortar(ctx, texto, max) {
   let t = texto;
   while (t.length > 1 && ctx.measureText(t + "…").width > max) t = t.slice(0, -1);
   return t + "…";
+}
+
+/** Mueble extra por departamento para que los cuartos no se vean iguales (solo decoración). */
+function agregarDetalle(grupo, tipo, W, F, caja, mat, m, acento) {
+  if (tipo === 0) {
+    // Archivero junto al muro izquierdo
+    const archivero = new THREE.Mesh(caja(0.5, 0.9, 0.45), m.metal);
+    archivero.position.set(-W / 2 + 0.35, 0.45, -F / 2 + 0.5);
+    const cajones = new THREE.Mesh(caja(0.42, 0.02, 0.02), mat(acento));
+    cajones.position.set(-W / 2 + 0.35, 0.7, -F / 2 + 0.735);
+    grupo.add(archivero, cajones);
+  } else if (tipo === 1) {
+    // Pizarrón en el muro izquierdo
+    const tabla = new THREE.Mesh(caja(0.04, 0.6, 1.2), mat(0xe8ecf5));
+    tabla.position.set(-W / 2 + 0.03, 0.85, -0.2);
+    const marco = new THREE.Mesh(caja(0.05, 0.05, 1.25), mat(acento));
+    marco.position.set(-W / 2 + 0.04, 0.53, -0.2);
+    grupo.add(tabla, marco);
+  } else if (tipo === 2) {
+    // Librero bajo con libros de colores
+    const mueble = new THREE.Mesh(caja(1.0, 0.7, 0.32), m.maderaOscura);
+    mueble.position.set(-W / 2 + 0.75, 0.35, -F / 2 + 0.25);
+    grupo.add(mueble);
+    [acento, 0x4fb3ff, 0x43c47a, 0xe8ecf5].forEach((color, i) => {
+      const libro = new THREE.Mesh(caja(0.12, 0.24, 0.22), mat(color));
+      libro.position.set(-W / 2 + 0.4 + i * 0.16, 0.82, -F / 2 + 0.25);
+      grupo.add(libro);
+    });
+  }
+}
+
+/** Junta en una sola malla por material todo lo estático del cuarto (no personajes, pantallas ni letrero). */
+function fusionarEstaticos(grupo, recursos) {
+  grupo.updateMatrixWorld(true);
+  const inversa = grupo.matrixWorld.clone().invert();
+  const porMaterial = new Map();
+  const quitar = [];
+  grupo.traverse((o) => {
+    if (!o.isMesh || o.userData.dinamico || o.isSkinnedMesh) return;
+    for (let p = o.parent; p && p !== grupo; p = p.parent) if (p.userData.dinamico) return;
+    const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone());
+    for (const nombre of Object.keys(g.attributes)) if (!["position", "normal", "uv"].includes(nombre)) g.deleteAttribute(nombre);
+    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inversa, o.matrixWorld));
+    const lista = porMaterial.get(o.material) ?? [];
+    lista.push({ g, orden: o.renderOrder });
+    porMaterial.set(o.material, lista);
+    quitar.push(o);
+  });
+  for (const o of quitar) o.removeFromParent();
+  for (const [material, lista] of porMaterial) {
+    const fusion = mergeGeometries(lista.map((x) => x.g));
+    for (const x of lista) x.g.dispose();
+    if (!fusion) continue;
+    const malla = new THREE.Mesh(recursos.agregar(fusion), material);
+    malla.renderOrder = Math.max(...lista.map((x) => x.orden));
+    grupo.add(malla);
+  }
 }

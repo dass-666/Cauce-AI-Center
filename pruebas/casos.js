@@ -8,6 +8,7 @@ import { construirModeloVista, elegirCarga } from "../app/nucleo/modelo.js";
 import { ANIMACIONES_SOPORTADAS, ACCIONES, planDeTransicion } from "../app/vistas/vista3d/maquina.js";
 import { tamanoCuarto, puestos, puerta, camino, longitudCamino, puntoEnCamino, huella, MEDIDAS } from "../app/vistas/vista3d/disposicion.js";
 import { COLOR_ESTADO, aspecto } from "../app/vistas/vista3d/paleta.js";
+import { distribuirEdificio, seEnciman, fondoNecesario, EDIFICIO } from "../app/vistas/vista3d/plano-edificio.js";
 
 export function registrarCasos(leerTexto) {
   const leerJSON = async (ruta) => JSON.parse(await leerTexto(ruta));
@@ -430,5 +431,44 @@ export function registrarCasos(leerTexto) {
     await leerTexto("vendor/kenney-mini-characters/Textures/colormap.png");
     const k = await leerTexto("app/vistas/vista3d/kenney.js");
     for (const sexo of ["female", "male"]) for (const letra of "abcdef") verdadero(k.includes(`"character-${sexo}-${letra}"`), `kenney.js lista character-${sexo}-${letra}`);
+  });
+
+  // ---------- Vista 3D: edificio completo ----------
+  const edificioCompago = async () => {
+    const m = construirModeloVista({
+      proyecto: { id: "compago", nombre: "Compago" },
+      carga: { tipo: "ok", datos: await leerJSON("datos/demo/compago.json") },
+      distribucion: await leerJSON("escena/compago.json"),
+      ahora: new Date("2026-11-03T16:30:00Z"),
+    });
+    const deps = m.departamentos.map((d) => ({ id: d.id, posicion: d.posicion, puestos: Math.max(1, d.agentes.length) }));
+    return { deps, plano: distribuirEdificio(deps) };
+  };
+  prueba("Edificio: los 8 departamentos de Compago, sin encimarse y dentro del edificio", async () => {
+    const { deps, plano } = await edificioCompago();
+    igual(plano.cuartos.length, 8);
+    igual(plano.cuartos.map((c) => c.id), deps.map((d) => d.id));
+    for (let i = 0; i < plano.cuartos.length; i++) {
+      const a = plano.cuartos[i];
+      verdadero(Math.abs(a.x) + a.ancho / 2 <= plano.ancho / 2 + 1e-6 && Math.abs(a.z) + a.fondo / 2 <= plano.fondo / 2 + 1e-6, `${a.id} fuera del edificio`);
+      for (let j = i + 1; j < plano.cuartos.length; j++) verdadero(!seEnciman(a, plano.cuartos[j]), `${a.id} se encima con ${plano.cuartos[j].id}`);
+    }
+  });
+  prueba("Edificio: cada cuarto cabe sus escritorios y hay pasillo entre filas", async () => {
+    const { deps, plano } = await edificioCompago();
+    plano.cuartos.forEach((c, i) => verdadero(c.fondo + 1e-6 >= fondoNecesario(c.ancho, deps[i].puestos), `${c.id} sin espacio`));
+    verdadero(plano.pasillos.length >= 1, "sin pasillo principal");
+    for (const p of plano.pasillos) igual(p.fondo, EDIFICIO.pasilloFilas);
+  });
+  prueba("Edificio: un departamento con muchos personajes agranda su fila, no se enciman", () => {
+    const deps = [
+      { id: "a", posicion: { x: 0, y: 0, ancho: 1, alto: 1 }, puestos: 9 },
+      { id: "b", posicion: { x: 1, y: 0, ancho: 1, alto: 1 }, puestos: 1 },
+      { id: "c", posicion: { x: 0, y: 1, ancho: 2, alto: 1 }, puestos: 1 },
+    ];
+    const plano = distribuirEdificio(deps);
+    verdadero(plano.cuartos[0].fondo >= fondoNecesario(plano.cuartos[0].ancho, 9));
+    verdadero(!seEnciman(plano.cuartos[0], plano.cuartos[2]) && !seEnciman(plano.cuartos[1], plano.cuartos[2]));
+    igual(distribuirEdificio([]).cuartos, []);
   });
 }
