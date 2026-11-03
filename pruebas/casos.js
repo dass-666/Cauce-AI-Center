@@ -5,7 +5,7 @@ import { prueba, igual, verdadero } from "./mini.js";
 import { validarDocumento, esEnlaceSeguro } from "../app/nucleo/contrato.js";
 import { ESTADOS, NOMBRES_ESTADOS, estadoResumen } from "../app/nucleo/estados.js";
 import { construirModeloVista, elegirCarga } from "../app/nucleo/modelo.js";
-import { ANIMACIONES_SOPORTADAS, ACCIONES, planDeTransicion } from "../app/vistas/vista3d/maquina.js";
+import { ANIMACIONES_SOPORTADAS, ACCIONES, BUCLES, planDeTransicion, variacion, gestoOcasional } from "../app/vistas/vista3d/maquina.js";
 import { tamanoCuarto, puestos, puerta, camino, longitudCamino, puntoEnCamino, huella, MEDIDAS } from "../app/vistas/vista3d/disposicion.js";
 import { COLOR_ESTADO, aspecto } from "../app/vistas/vista3d/paleta.js";
 import { distribuirEdificio, seEnciman, fondoNecesario, EDIFICIO } from "../app/vistas/vista3d/plano-edificio.js";
@@ -350,21 +350,56 @@ export function registrarCasos(leerTexto) {
     }
   });
   prueba("3D: sin datos = silla vacía (el personaje no aparece)", () => {
-    igual(planDeTransicion(null, "ausente"), { pasos: [], bucle: null, presente: false });
+    igual(planDeTransicion(null, "ausente"), { pasos: [], bucle: null, presente: false, postura: "fuera" });
   });
-  prueba("3D: con actividad respaldada entra caminando, se sienta y teclea", () => {
-    igual(planDeTransicion(null, "sentado_tecleando"), { pasos: ["entrar", "sentarse"], bucle: "teclear", presente: true });
+  prueba("C3: la primera lectura no muestra gestos ni llegadas que no se observaron", () => {
+    for (const b of ANIMACIONES_SOPORTADAS) {
+      const plan = planDeTransicion(null, b);
+      igual(plan.pasos, [], `${b}: aparece ya en su postura`);
+    }
+    igual(planDeTransicion(null, "sentado_tecleando"), { pasos: [], bucle: "teclear", presente: true, postura: "sentado" });
+    igual(planDeTransicion(null, "estirarse").bucle, "relajado", "finalizado: relajado, sin celebrar");
+    igual(planDeTransicion(null, "de_pie_alerta").postura, "de_pie");
   });
-  prueba("3D: al terminar una tarea se levanta, celebra y vuelve a sentarse", () => {
+  prueba("C3: misma animación en dos lecturas = sin pasos", () => {
+    for (const b of ANIMACIONES_SOPORTADAS) igual(planDeTransicion(b, b).pasos, [], b);
+  });
+  prueba("C3: cambio observado a finalizado: se levanta, celebra y vuelve a sentarse", () => {
     igual(planDeTransicion("sentado_tecleando", "estirarse").pasos, ["levantarse", "celebrar", "sentarse"]);
   });
-  prueba("3D: al perder la evidencia se levanta y sale", () => {
-    igual(planDeTransicion("sentado_tecleando", "ausente"), { pasos: ["levantarse", "salir"], bucle: null, presente: false });
+  prueba("C3: cambio observado a error: reacciona y queda de pie; a revisión: llama la atención sentado", () => {
+    igual(planDeTransicion("sentado_tecleando", "de_pie_alerta"), { pasos: ["levantarse", "reaccion_error"], bucle: "alerta", presente: true, postura: "de_pie" });
+    igual(planDeTransicion("sentado_en_reposo", "levantar_mano").pasos, ["llamar_atencion"]);
+    igual(planDeTransicion("de_pie_alerta", "levantar_mano").pasos, ["sentarse", "llamar_atencion"]);
+    igual(planDeTransicion("sentado_tecleando", "sentado_en_reposo").pasos, [], "de trabajando a esperando no se levanta");
+  });
+  prueba("C3: llegada observada entra caminando sin celebrar lo que no vimos", () => {
+    igual(planDeTransicion("ausente", "estirarse").pasos, ["entrar", "sentarse"]);
+    igual(planDeTransicion("ausente", "de_pie_alerta").pasos, ["entrar"]);
+    igual(planDeTransicion("ausente", "sentado_tecleando").pasos, ["entrar", "sentarse"]);
+  });
+  prueba("C3: al perder la evidencia se levanta y sale", () => {
+    igual(planDeTransicion("sentado_tecleando", "ausente").pasos, ["levantarse", "salir"]);
     igual(planDeTransicion("de_pie_alerta", "ausente").pasos, ["salir"]);
   });
-  prueba("3D: error = de pie junto al escritorio; de trabajando a esperando no se levanta", () => {
-    igual(planDeTransicion("sentado_tecleando", "de_pie_alerta"), { pasos: ["levantarse"], bucle: "alerta", presente: true });
-    igual(planDeTransicion("sentado_tecleando", "sentado_en_reposo").pasos, []);
+  prueba("C3: los bucles no incluyen gestos de transición", () => {
+    for (const g of ["celebrar", "reaccion_error", "llamar_atencion", "entrar", "salir"]) verdadero(!BUCLES.includes(g), g);
+    for (const b of ANIMACIONES_SOPORTADAS) { const x = planDeTransicion(null, b).bucle; verdadero(x === null || BUCLES.includes(x), b); }
+  });
+  prueba("C3: variación determinista por id, sin moverse al unísono", () => {
+    const ids = ["importador", "importador-cola", "auditora", "buscador", "revisor", "evaluador", "margenes", "supervisor"];
+    const vs = ids.map((id) => variacion(huella(id)));
+    igual(variacion(huella("auditora")), variacion(huella("auditora")));
+    for (const v of vs) { verdadero(v.ritmo >= 0.85 && v.ritmo <= 1.15); verdadero(v.periodo >= 7 && v.periodo <= 13.1); }
+    verdadero(new Set(vs.map((v) => v.fase.toFixed(3))).size >= 6, "fases distintas");
+    // El gesto ocasional ocupa poco tiempo y no todos a la vez.
+    let activo = 0, simultaneo = 0;
+    for (let r = 0; r < 120; r += 0.1) {
+      const n = vs.filter((v) => gestoOcasional(r, v) > 0).length;
+      activo += n; if (n === vs.length) simultaneo++;
+    }
+    verdadero(activo / (1200 * vs.length) < 0.3, "ocasional, no continuo");
+    igual(simultaneo, 0, "nunca todos al mismo tiempo");
   });
   prueba("3D: todas las transiciones usan solo acciones conocidas y terminan en postura válida", () => {
     for (const a of [null, ...ANIMACIONES_SOPORTADAS]) {

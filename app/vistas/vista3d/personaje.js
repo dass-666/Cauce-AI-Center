@@ -3,12 +3,13 @@
 // (cola de acciones, caminos, posturas) queda igual.
 
 import * as THREE from "three";
-import { planDeTransicion } from "./maquina.js";
+import { planDeTransicion, variacion, gestoOcasional } from "./maquina.js";
 import { camino, longitudCamino, puntoEnCamino, huella } from "./disposicion.js";
 import { aspecto, COLOR_ESTADO } from "./paleta.js";
 
 const VELOCIDAD = 1.3; // m/s al caminar
-const DURACION = { sentarse: 0.55, levantarse: 0.55, celebrar: 1.8 };
+const DURACION = { sentarse: 0.55, levantarse: 0.55, celebrar: 1.8, reaccion_error: 1.4, llamar_atencion: 1.8 };
+const GESTOS = new Set(["celebrar", "reaccion_error", "llamar_atencion"]);
 const ALTURA_CADERA = 0.36;
 const ALTURA_SENTADO = 0.36; // el asiento está a 0.32 m
 
@@ -93,16 +94,19 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
 }
 
 /** Traduce la pose pedida por el controlador a las piezas del personaje provisional. */
-function aplicarProvisional(c, { base, s, gesto, t, r }) {
+function aplicarProvisional(c, { base, s, gesto, t, r, o = 0 }) {
   reposo(c);
   if (base === "caminar") return caminar(c, t);
   if (base === "sentandose") return sentar(c, suave(s));
   if (base === "sentado") sentar(c, 1);
   if (gesto === "celebrar") celebrar(c, t);
-  else if (gesto === "teclear") teclear(c, r);
+  else if (gesto === "teclear") { teclear(c, r); c.cabeza.rotation.x -= 0.2 * o; } // a veces levanta la vista a la pantalla
   else if (gesto === "reposo") respirar(c, r, base === "sentado");
-  else if (gesto === "alerta") alerta(c, r);
-  else if (gesto === "levantar_mano") levantarMano(c, r);
+  else if (gesto === "relajado") { respirar(c, r * 0.7, true); c.torso.rotation.x = -0.2; c.cabeza.rotation.x = -0.1; }
+  else if (gesto === "alerta") alerta(c, r, o);
+  else if (gesto === "reaccion_error") { alerta(c, r, 1); c.cabeza.rotation.y = Math.sin(t * 12) * 0.4 * Math.max(0, 1 - t / 1.4); }
+  else if (gesto === "llamar_atencion") levantarMano(c, t);
+  else if (gesto === "atencion") { c.brazoD.rotation.x = -0.4 - 2.4 * o; c.brazoD.rotation.z = 0.2 * o; c.cabeza.rotation.x = -0.1 * o; }
 }
 
 /**
@@ -121,7 +125,7 @@ export class Personaje {
     this.longitud = longitudCamino(this.camino);
     this.silla = this.camino[this.camino.length - 1];
     this.burbujas = burbujas;
-    this.fase = (huella(agente.id) % 1000) / 1000 * Math.PI * 2; // para que no se muevan al unísono
+    this.variacion = variacion(huella(agente.id)); // ritmo, fase y periodo propios: nadie se mueve al unísono
 
     this.anillo = new THREE.Mesh(geo.anillo, recursos.agregar(new THREE.MeshBasicMaterial({ color: 0xffd89a, transparent: true, opacity: 0.9 })));
     this.anillo.position.y = 0.02;
@@ -169,7 +173,15 @@ export class Personaje {
 
   planear(nueva) {
     if (nueva === this.animacion) return;
+    const primera = this.animacion === null;
     const plan = planDeTransicion(this.animacion, nueva);
+    if (primera) {
+      // Primera lectura (o escena recién construida): ya está en su lugar, sin caminar ni gestos.
+      this.postura = plan.postura;
+      this.raiz.visible = plan.presente;
+      this.retraso = 0;
+      if (plan.presente) this.colocarEnSilla();
+    }
     this.animacion = nueva;
     this.cola = plan.pasos.slice();
     this.bucleSiguiente = plan.bucle;
@@ -200,9 +212,9 @@ export class Personaje {
 
   /** Avanza la animación dt segundos; reloj = tiempo total (para bucles). */
   paso(dt, reloj) {
-    if (this.retraso > 0) {
+    if (this.retraso > 0 && this.accion === "entrar") { // varias llegadas observadas a la vez: no entran amontonados
       this.retraso -= dt;
-      if (this.accion === "entrar") this.raiz.visible = false;
+      this.raiz.visible = false;
       return;
     }
     if (this.accion === "entrar") this.raiz.visible = true;
@@ -210,7 +222,8 @@ export class Personaje {
     const a = this.accion;
     this.t += dt;
     let terminada = false;
-    const pose = { base: "de_pie", s: 0, gesto: null, t: this.t, r: reloj + this.fase };
+    const v = this.variacion;
+    const pose = { base: "de_pie", s: 0, gesto: null, t: this.t, r: reloj * v.ritmo + v.fase, o: 0 };
 
     if (a === "entrar" || a === "salir") {
       const d = a === "entrar" ? this.t * VELOCIDAD : this.longitud - this.t * VELOCIDAD;
@@ -231,15 +244,18 @@ export class Personaje {
       pose.s = a === "sentarse" ? k : 1 - k;
       terminada = k >= 1;
       if (terminada) this.postura = a === "sentarse" ? "sentado" : "de_pie";
-    } else if (a === "celebrar") {
+    } else if (GESTOS.has(a)) {
+      // Gesto de transición: solo llega aquí si se observó el cambio entre dos lecturas (maquina.js).
       this.colocarEnSilla();
-      pose.gesto = "celebrar";
-      terminada = this.t >= DURACION.celebrar;
+      pose.base = this.postura === "sentado" ? "sentado" : "de_pie";
+      pose.gesto = a;
+      terminada = this.t >= DURACION[a];
     } else {
-      // En bucle según la postura final.
+      // En bucle según la postura final, con un pequeño gesto ocasional propio de cada personaje.
       this.colocarEnSilla();
       pose.base = this.postura === "sentado" ? "sentado" : "de_pie";
       pose.gesto = this.bucle;
+      pose.o = gestoOcasional(reloj, v);
     }
     // De pie en su lugar (error, celebración) se hace a un lado de la silla, deslizándose.
     const objetivo = pose.base === "de_pie" && a !== "entrar" && a !== "salir" ? 1 : 0;
@@ -311,13 +327,14 @@ function celebrar(c, t) {
   c.cabeza.rotation.x = -0.2;
 }
 
-function alerta(c, r) {
-  c.torso.rotation.y = Math.sin(r * 2.2) * 0.25; // voltea inquieto
-  c.brazoD.rotation.x = -0.9;
-  c.brazoD.rotation.z = 0.3;
-  c.brazoI.rotation.z = -0.2;
-  c.cabeza.rotation.y = Math.sin(r * 2.2) * 0.3;
-  c.cadera.position.y = ALTURA_CADERA + Math.abs(Math.sin(r * 4.4)) * 0.015;
+function alerta(c, r, o = 0) {
+  // De pie junto al escritorio, mano en la cabeza, mirando la pantalla; de vez en cuando niega despacio.
+  c.torso.rotation.y = Math.sin(r * 0.6) * 0.08;
+  c.brazoD.rotation.x = -2.5;
+  c.brazoD.rotation.z = 0.5;
+  c.brazoI.rotation.z = -0.15;
+  c.cabeza.rotation.x = 0.2;
+  c.cabeza.rotation.y = Math.sin(r * 5) * 0.25 * o;
 }
 
 function levantarMano(c, r) {

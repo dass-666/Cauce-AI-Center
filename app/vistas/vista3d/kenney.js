@@ -1,5 +1,5 @@
 // Personajes de Kenney "Mini Characters" 1.0 (CC0, vendor/kenney-mini-characters/License.txt).
-// Usa las animaciones que traen los modelos (walk, idle, sit, emote-no) y encima mueve
+// Usa las animaciones que traen los modelos (walk, idle, sit, emote-yes, emote-no) y encima mueve
 // los huesos de los brazos con código para lo que no traen: teclear, levantar la mano y celebrar.
 // Solo se descargan los modelos que se van a ver; si alguno falla, el personaje usa el cuerpo provisional.
 
@@ -15,7 +15,9 @@ export const MODELOS_KENNEY = Object.freeze([
 ]);
 const ALTO = 1.15;              // alto de pie en la escena (m), como el personaje provisional
 const ALTO_ASIENTO = 0.26;      // cuánto se eleva el cuerpo al sentarse (el clip "sit" lo baja al piso)
-const CLIPS = ["idle", "walk", "sit", "emote-no"];
+const CLIPS = ["idle", "walk", "sit", "emote-yes", "emote-no"];
+// Gestos de transición que usan un clip de Kenney (se reinician al empezar).
+const CLIP_GESTO = { celebrar: "emote-yes", reaccion_error: "emote-no" };
 
 /** Modelo que le toca a un agente: siempre el mismo para el mismo id. */
 export function modeloDe(id) {
@@ -97,8 +99,13 @@ function crearCuerpoKenney(gltf, recursos) {
     for (const [n, a] of Object.entries(acciones)) a.setEffectiveWeight(objetivo[n] ?? 0);
   };
 
-  function aplicar({ base, s, gesto, t, r }, dt) {
+  let gestoAnterior = null;
+  function aplicar({ base, s, gesto, t, r, o = 0 }, dt) {
     modelo.position.y = 0;
+    if (gesto !== gestoAnterior) {
+      gestoAnterior = gesto;
+      if (CLIP_GESTO[gesto] && acciones[CLIP_GESTO[gesto]]) acciones[CLIP_GESTO[gesto]].time = 0; // empieza desde el inicio
+    }
     for (const [b, q, p] of inicial) { b.quaternion.copy(q); b.position.copy(p); }
     if (base === "caminar") pesos({ walk: 1 });
     else if (base === "sentandose") {
@@ -109,20 +116,37 @@ function crearCuerpoKenney(gltf, recursos) {
       pesos({ sit: 1 });
       modelo.position.y = ALTO_ASIENTO;
     } else {
-      pesos(gesto === "alerta" ? { "emote-no": 1 } : { idle: 1 });
+      pesos(CLIP_GESTO[gesto] ? { [CLIP_GESTO[gesto]]: 1 } : { idle: 1 });
     }
     mezclador.update(dt);
 
     // Gestos que el modelo no trae: se suman a la animación base moviendo huesos.
     if (gesto === "teclear") {
-      // brazos al frente, sobre el teclado, con un golpeteo alterno
-      h.brazoD.rotation.set(-1.25 + Math.sin(r * 14) * 0.1, 0, 0.12);
-      h.brazoI.rotation.set(-1.25 + Math.sin(r * 14 + 1.7) * 0.1, 0, -0.12);
-      h.cabeza.rotation.x += 0.12;
+      // brazos al frente, sobre el teclado, con un golpeteo alterno; a veces levanta la vista a la pantalla
+      h.brazoD.rotation.set(-1.25 + Math.sin(r * 14) * 0.1 * (1 - o), 0, 0.12);
+      h.brazoI.rotation.set(-1.25 + Math.sin(r * 14 + 1.7) * 0.1 * (1 - o), 0, -0.12);
+      h.cabeza.rotation.x += 0.12 - 0.22 * o;
     } else if (gesto === "reposo") {
       h.cabeza.rotation.y += Math.sin(r * 0.35) * 0.4; // mira alrededor, despacio
-    } else if (gesto === "levantar_mano") {
-      h.brazoD.rotation.set(-2.9, 0, 0.15 + Math.sin(r * 6) * 0.2); // saluda
+      h.torso.rotation.x -= 0.04 + Math.sin(r * 1.6) * 0.015; // respira
+    } else if (gesto === "relajado") {
+      // recargado en el respaldo, brazos sueltos, cabeza un poco atrás
+      h.torso.rotation.x -= 0.18;
+      h.cabeza.rotation.x -= 0.12 + Math.sin(r * 0.5) * 0.04;
+      h.brazoD.rotation.set(0, 0, 0.35);
+      h.brazoI.rotation.set(0, 0, -0.35);
+    } else if (gesto === "alerta") {
+      // de pie junto al escritorio, mano en la cabeza, mirando la pantalla; de vez en cuando niega despacio
+      h.brazoD.rotation.set(-2.5, 0, 0.6);
+      h.cabeza.rotation.x += 0.2;
+      h.cabeza.rotation.y += Math.sin(r * 5) * 0.25 * o;
+    } else if (gesto === "reaccion_error") {
+      h.brazoD.rotation.set(-2.5 * Math.min(1, t / 0.4), 0, 0.6);
+    } else if (gesto === "atencion") {
+      // sentado; de vez en cuando levanta un poco la mano (pide revisión) y la vuelve a bajar
+      h.brazoD.rotation.set(-0.3 - 2.4 * o, 0, 0.15 * o);
+    } else if (gesto === "llamar_atencion") {
+      h.brazoD.rotation.set(-2.9, 0, 0.15 + Math.sin(t * 6) * 0.2); // levanta la mano y saluda un momento
     } else if (gesto === "celebrar") {
       const salto = Math.max(0, Math.sin(t * 7));
       modelo.position.y += salto * 0.08;
