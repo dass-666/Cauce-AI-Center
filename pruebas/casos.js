@@ -5,6 +5,9 @@ import { prueba, igual, verdadero } from "./mini.js";
 import { validarDocumento, esEnlaceSeguro } from "../app/nucleo/contrato.js";
 import { ESTADOS, NOMBRES_ESTADOS, estadoResumen } from "../app/nucleo/estados.js";
 import { construirModeloVista, elegirCarga } from "../app/nucleo/modelo.js";
+import { ANIMACIONES_SOPORTADAS, ACCIONES, planDeTransicion } from "../app/vistas/vista3d/maquina.js";
+import { tamanoCuarto, puestos, puerta, camino, longitudCamino, puntoEnCamino, huella, MEDIDAS } from "../app/vistas/vista3d/disposicion.js";
+import { COLOR_ESTADO, aspecto } from "../app/vistas/vista3d/paleta.js";
 
 export function registrarCasos(leerTexto) {
   const leerJSON = async (ruta) => JSON.parse(await leerTexto(ruta));
@@ -329,5 +332,92 @@ export function registrarCasos(leerTexto) {
     igual(m.conexion, "desactualizado");
     verdadero(m.departamentos.every((x) => x.agentes.every((a) => a.estado_mostrado === "sin_datos")));
   });
-}
 
+  // ---------- Vista 3D: máquina de estados ----------
+  prueba("3D: cada estado tiene animación y color 3D", () => {
+    for (const n of NOMBRES_ESTADOS) {
+      verdadero(ANIMACIONES_SOPORTADAS.includes(ESTADOS[n].animacion3d), `${n} sin animación 3D soportada`);
+      verdadero(Number.isInteger(COLOR_ESTADO[n]), `${n} sin color 3D`);
+    }
+  });
+  prueba("3D: sin datos = silla vacía (el personaje no aparece)", () => {
+    igual(planDeTransicion(null, "ausente"), { pasos: [], bucle: null, presente: false });
+  });
+  prueba("3D: con actividad respaldada entra caminando, se sienta y teclea", () => {
+    igual(planDeTransicion(null, "sentado_tecleando"), { pasos: ["entrar", "sentarse"], bucle: "teclear", presente: true });
+  });
+  prueba("3D: al terminar una tarea se levanta, celebra y vuelve a sentarse", () => {
+    igual(planDeTransicion("sentado_tecleando", "estirarse").pasos, ["levantarse", "celebrar", "sentarse"]);
+  });
+  prueba("3D: al perder la evidencia se levanta y sale", () => {
+    igual(planDeTransicion("sentado_tecleando", "ausente"), { pasos: ["levantarse", "salir"], bucle: null, presente: false });
+    igual(planDeTransicion("de_pie_alerta", "ausente").pasos, ["salir"]);
+  });
+  prueba("3D: error = de pie junto al escritorio; de trabajando a esperando no se levanta", () => {
+    igual(planDeTransicion("sentado_tecleando", "de_pie_alerta"), { pasos: ["levantarse"], bucle: "alerta", presente: true });
+    igual(planDeTransicion("sentado_tecleando", "sentado_en_reposo").pasos, []);
+  });
+  prueba("3D: todas las transiciones usan solo acciones conocidas y terminan en postura válida", () => {
+    for (const a of [null, ...ANIMACIONES_SOPORTADAS]) {
+      for (const b of ANIMACIONES_SOPORTADAS) {
+        const plan = planDeTransicion(a, b);
+        for (const paso of plan.pasos) verdadero(ACCIONES.includes(paso), `${a}→${b}: ${paso}`);
+        igual(plan.presente, b !== "ausente", `${a}→${b}`);
+      }
+    }
+  });
+  prueba("3D: una animación desconocida es un error, no un personaje inventado", () => {
+    let lanzo = false;
+    try { planDeTransicion(null, "bailar"); } catch { lanzo = true; }
+    verdadero(lanzo);
+  });
+
+  // ---------- Vista 3D: distribución ----------
+  prueba("3D: los escritorios caben dentro del cuarto", () => {
+    for (const n of [1, 2, 5, 9]) {
+      const c = tamanoCuarto({ ancho: 1, alto: 1 }, 4, n);
+      const ps = puestos(n, c);
+      igual(ps.length, n);
+      for (const p of ps) {
+        verdadero(Math.abs(p.x) + 0.65 <= c.ancho / 2, `n=${n} x=${p.x} fuera (ancho ${c.ancho})`);
+        verdadero(p.z - 0.35 >= -c.fondo / 2 && p.z + 0.75 + 0.6 <= c.fondo / 2, `n=${n} z=${p.z} fuera (fondo ${c.fondo})`);
+      }
+    }
+  });
+  prueba("3D: el camino va de la puerta a la silla y puntoEnCamino respeta los extremos", () => {
+    const c = tamanoCuarto({ ancho: 2, alto: 1 }, 4, 2);
+    const p = puestos(2, c)[1];
+    const r = camino(c, p);
+    igual(r[0], puerta(c));
+    igual(r[r.length - 1], { x: p.x, z: Math.round((p.z + 0.75) * 1000) / 1000 });
+    const L = longitudCamino(r);
+    verdadero(L > 0);
+    const fin = puntoEnCamino(r, L + 5);
+    const cerca = (a, b) => Math.abs(a - b) < 1e-9;
+    verdadero(cerca(fin.x, r[r.length - 1].x) && cerca(fin.z, r[r.length - 1].z), "termina en la silla");
+    const ini = puntoEnCamino(r, -1);
+    igual([ini.x, ini.z], [r[0].x, r[0].z]);
+  });
+  prueba("3D: el cuarto respeta el tamaño mínimo", () => {
+    const c = tamanoCuarto(null, 1, 1);
+    verdadero(c.ancho >= MEDIDAS.minimoAncho && c.fondo >= MEDIDAS.minimoFondo);
+  });
+  prueba("3D: el mismo agente siempre se ve igual", () => {
+    igual(aspecto(huella("importador")), aspecto(huella("importador")));
+    verdadero(huella("importador") !== huella("importador-cola"));
+  });
+
+  // ---------- Vista 3D: three.js copiado y mapa de importación ----------
+  prueba("3D: three.js copiado es la versión 0.187.0 con licencia MIT", async () => {
+    verdadero((await leerTexto("vendor/three/build/three.core.js")).includes("const REVISION = '187';"), "REVISION 187");
+    verdadero((await leerTexto("vendor/three/LICENSE")).includes("The MIT License"), "licencia MIT");
+  });
+  prueba("3D: el mapa de importación de index.html apunta a archivos que existen", async () => {
+    const html = await leerTexto("index.html");
+    const mapa = JSON.parse(html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]).imports;
+    await leerTexto(mapa.three.replace("./", ""));
+    for (const f of ["controls/OrbitControls.js", "postprocessing/EffectComposer.js", "postprocessing/UnrealBloomPass.js", "postprocessing/OutputPass.js", "postprocessing/RenderPass.js"]) {
+      await leerTexto(mapa["three/addons/"].replace("./", "") + f);
+    }
+  });
+}

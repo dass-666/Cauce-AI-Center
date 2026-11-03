@@ -20,13 +20,30 @@ Compago   ──adaptador (solo lectura)──►  datos/reales/compago.json   �
 - **Costo cero:** sin servicios externos, sin bibliotecas en tiempo de ejecución, sin IA. `servir.py` usa solo la biblioteca estándar de Python y escucha únicamente en `127.0.0.1`.
 - **Un piso por proyecto:** cada proyecto es un piso del edificio; cada departamento, un cuarto. Agregar Tezcatlipoca o trading = un adaptador + una escena + una línea en `datos/proyectos.json`.
 
-## Preparado para la oficina 3D (fase 4)
+## Vista 3D (`app/vistas/vista3d/`)
 
-- `estados.js` ya define para cada estado la animación 3D (`sentado_tecleando`, `de_pie_alerta`, `levantar_mano`, `ausente`…). `ausente` = silla vacía: nunca un personaje animado sin evidencia.
-- `escena/*.json` ya da posiciones en celdas con `metros_por_celda`, `ancho`, `alto` y `piso`.
-- Los `indicadores` son los letreros luminosos del video.
-- `vista3d.js` implementará `crearVista3D(contenedor, { alSeleccionar })` → `{ dibujar(modelo, seleccion), destruir() }`, igual que la 2D. `app.js` elegirá una u otra; *Bajo consumo* volverá a la 2D.
-- Plan técnico previsto: Three.js (licencia MIT) copiado al repositorio en versión fija, cámara ortográfica, luces horneadas, sin sombras ni postprocesado en celular, dibujar solo cuando cambia algo, y recursos CC0 registrados en `docs/LICENCIAS.md`.
+Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })` → `{ dibujar(modelo, seleccion), destruir() }`. Consume el **mismo modelo de vista**; no decide estados.
+
+| Archivo | Qué hace | ¿Usa three.js? |
+|---|---|---|
+| `disposicion.js` | Tamaño del cuarto, lugar de cada escritorio, puerta y camino de la puerta a la silla | No (se prueba en Node) |
+| `maquina.js` | Máquina de estados: de `animacion3d` (de `estados.js`) a una cola de acciones (`entrar`, `sentarse`, `teclear`, `celebrar`, `salir`…) | No |
+| `paleta.js` | Colores por estado (los mismos que la 2D) y aspecto estable de cada personaje | No |
+| `recursos.js` | Lleva la cuenta de geometrías, materiales y texturas para liberarlos de la tarjeta gráfica | No |
+| `personaje.js` | Personaje provisional hecho con código y sus posturas | Sí |
+| `oficina.js` | Un departamento: piso, muros, mamparas, escritorios, computadoras, sillas, planta, letrero | Sí |
+| `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, brillo, ciclo de dibujo | Sí |
+
+Reglas:
+
+- **Un departamento a la vez** (selector arriba a la izquierda). Al cambiar, se liberan sus recursos (prueba: 20 cambios sin crecer la memoria).
+- `ausente` (= `sin_datos`) es **silla vacía con la pantalla apagada**. Si un personaje pierde la evidencia, se levanta y sale.
+- La primera vez que se dibuja, cada personaje con evidencia entra caminando desde la puerta (es una animación de llegada, no significa que la tarea acabe de empezar; la hora real está en el panel).
+- `app.js` carga la 3D con `import()` solo si se usa. *Bajo consumo* fuerza el plano 2D y no descarga three.js. Sin WebGL, o si la tarjeta gráfica deja de responder, vuelve sola al plano 2D con aviso.
+- Rendimiento: 60 cuadros/s máx. en escritorio y 30 en celular; resolución limitada (1.25× en celular); sin sombras reales (manchas suaves); sin antialiasing en celular; se detiene con la pestaña oculta.
+- Brillo (bloom): solo escritorio, se descarga aparte, se puede apagar y **se apaga solo** si el equipo no sostiene 40 cuadros/s.
+- `?medir=1` muestra cuadros por segundo, llamadas de dibujo, triángulos, geometrías y texturas.
+- Para cambiar a los modelos de Kenney/KayKit solo cambia `crearCuerpo()` en `personaje.js` (y las posturas por clips de animación); la máquina de estados y los caminos se quedan.
 
 ## Adaptadores
 
