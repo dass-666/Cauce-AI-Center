@@ -87,7 +87,21 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
   sombra.position.y = 0.012;
   raiz.add(sombra);
 
-  return { raiz, cadera, torso, cabeza, piernaI, piernaD, brazoI, brazoD };
+  const c = { raiz, cadera, torso, cabeza, piernaI, piernaD, brazoI, brazoD };
+  return { raiz, aplicar: (pose) => aplicarProvisional(c, pose) };
+}
+
+/** Traduce la pose pedida por el controlador a las piezas del personaje provisional. */
+function aplicarProvisional(c, { base, s, gesto, t, r }) {
+  reposo(c);
+  if (base === "caminar") return caminar(c, t);
+  if (base === "sentandose") return sentar(c, suave(s));
+  if (base === "sentado") sentar(c, 1);
+  if (gesto === "celebrar") celebrar(c, t);
+  else if (gesto === "teclear") teclear(c, r);
+  else if (gesto === "reposo") respirar(c, r, base === "sentado");
+  else if (gesto === "alerta") alerta(c, r);
+  else if (gesto === "levantar_mano") levantarMano(c, r);
 }
 
 /**
@@ -95,9 +109,10 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
  * (estados.js → animacion3d) y la convierte en una cola de acciones.
  */
 export class Personaje {
-  constructor({ agente, puesto, cuarto, geo, recursos, texturaSombra, burbujas, retraso = 0 }) {
+  constructor({ agente, puesto, cuarto, geo, recursos, texturaSombra, burbujas, retraso = 0, fabricarCuerpo = null }) {
     this.id = agente.id;
-    this.cuerpo = crearCuerpo(geo, recursos, agente.id, texturaSombra);
+    // Cuerpo: el modelo de Kenney si se cargó; si no, el provisional hecho con código.
+    this.cuerpo = fabricarCuerpo?.(agente.id) ?? crearCuerpo(geo, recursos, agente.id, texturaSombra);
     this.raiz = this.cuerpo.raiz;
     this.raiz.visible = false;
     this.raiz.userData.seleccion = { tipo: "agente", id: agente.id };
@@ -124,6 +139,7 @@ export class Personaje {
     this.t = 0;
     this.bucle = null;
     this.postura = "fuera";
+    this.lado = 0;
     this.retraso = retraso; // segundos antes de la primera acción: no entran todos amontonados
     this.actualizar(agente);
   }
@@ -180,11 +196,10 @@ export class Personaje {
     }
     if (this.accion === "entrar") this.raiz.visible = true;
     if (!this.raiz.visible) return;
-    const c = this.cuerpo;
-    reposo(c);
     const a = this.accion;
     this.t += dt;
     let terminada = false;
+    const pose = { base: "de_pie", s: 0, gesto: null, t: this.t, r: reloj + this.fase };
 
     if (a === "entrar" || a === "salir") {
       const d = a === "entrar" ? this.t * VELOCIDAD : this.longitud - this.t * VELOCIDAD;
@@ -193,32 +208,33 @@ export class Personaje {
       const angulo = a === "salir" ? p.angulo + Math.PI : p.angulo;
       this.raiz.position.set(p.x, 0, p.z);
       this.raiz.rotation.y = angulo;
-      caminar(c, this.t);
+      pose.base = "caminar";
       this.postura = "de_pie";
       terminada = this.t * VELOCIDAD >= this.longitud;
       if (terminada && a === "entrar") this.raiz.rotation.y = Math.PI;
       if (terminada && a === "salir") this.postura = "fuera";
     } else if (a === "sentarse" || a === "levantarse") {
       const k = Math.min(1, this.t / DURACION[a]);
-      const s = a === "sentarse" ? k : 1 - k;
       this.colocarEnSilla();
-      sentar(c, suave(s));
+      pose.base = "sentandose";
+      pose.s = a === "sentarse" ? k : 1 - k;
       terminada = k >= 1;
       if (terminada) this.postura = a === "sentarse" ? "sentado" : "de_pie";
     } else if (a === "celebrar") {
       this.colocarEnSilla();
-      celebrar(c, this.t);
+      pose.gesto = "celebrar";
       terminada = this.t >= DURACION.celebrar;
     } else {
       // En bucle según la postura final.
       this.colocarEnSilla();
-      if (this.postura === "sentado") sentar(c, 1);
-      const r = reloj + this.fase;
-      if (this.bucle === "teclear") teclear(c, r);
-      else if (this.bucle === "reposo") respirar(c, r, this.postura === "sentado");
-      else if (this.bucle === "alerta") alerta(c, r);
-      else if (this.bucle === "levantar_mano") levantarMano(c, r);
+      pose.base = this.postura === "sentado" ? "sentado" : "de_pie";
+      pose.gesto = this.bucle;
     }
+    // De pie en su lugar (error, celebración) se hace a un lado de la silla, deslizándose.
+    const objetivo = pose.base === "de_pie" && a !== "entrar" && a !== "salir" ? 1 : 0;
+    this.lado += (objetivo - this.lado) * Math.min(1, dt * 5);
+    if (a !== "entrar" && a !== "salir") this.raiz.position.x += this.lado * 0.55;
+    this.cuerpo.aplicar(pose, dt);
     if (terminada) this.siguiente();
   }
 

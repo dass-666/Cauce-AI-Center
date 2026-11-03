@@ -72,6 +72,7 @@ Cubren el contrato (archivos válidos e inválidos), las reglas contra actividad
 | `app/nucleo/` | Validación, estados y modelo de vista (compartidos por 2D y 3D) |
 | `app/vistas/` | Vista 2D, vista 3D (`vista3d/`) y panel de detalle |
 | `vendor/three/` | three.js 0.187.0 copiado (MIT), sin CDN |
+| `vendor/kenney-mini-characters/` | Personajes de Kenney (CC0) |
 | `datos/proyectos.json` | Registro de pisos: archivo real (`estado`) y demostración (`demo`) de cada proyecto |
 | `datos/demo/` | Datos de demostración, marcados `[DEMO]` |
 | `datos/reales/` | Donde escriben los adaptadores (no va a git) |

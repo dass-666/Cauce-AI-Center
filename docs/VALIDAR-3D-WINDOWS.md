@@ -20,7 +20,7 @@ Si no tienes esa carpeta, ve a tu Escritorio y clónala con `git clone -b fase-3
 1. Doble clic en `iniciar.bat` y deja la ventana abierta.
 2. Abre <http://127.0.0.1:8765/pruebas.html>.
 
-Esperado: `69 pasaron, 0 fallaron`.
+Esperado: `70 pasaron, 0 fallaron`.
 
 ## 3. Animaciones (con datos de demostración)
 
@@ -32,7 +32,7 @@ Abre <http://127.0.0.1:8765>. Arriba debe estar activo **3D**, y en la escena de
 |---|---|
 | Importación de catálogos | Dos personajes entran por la puerta, uno tras otro. *Importador* teclea con la pantalla azul. *En espera* se recarga y mira alrededor |
 | Búsqueda de proveedores | Entra, celebra con los brazos arriba y se sienta. Pantalla verde |
-| Revisión de fuentes | De pie junto a su escritorio, inquieto. Pantalla roja |
+| Revisión de fuentes | De pie junto a su silla, negando con la cabeza. Pantalla roja |
 | Márgenes y rentabilidad | Sentado, levanta la mano. Pantalla ámbar |
 | Integración UNIQ | Silla vacía y pantalla apagada (no hay evidencia) |
 

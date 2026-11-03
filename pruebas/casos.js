@@ -416,8 +416,19 @@ export function registrarCasos(leerTexto) {
     const html = await leerTexto("index.html");
     const mapa = JSON.parse(html.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]).imports;
     await leerTexto(mapa.three.replace("./", ""));
-    for (const f of ["controls/OrbitControls.js", "postprocessing/EffectComposer.js", "postprocessing/UnrealBloomPass.js", "postprocessing/OutputPass.js", "postprocessing/RenderPass.js"]) {
+    for (const f of ["loaders/GLTFLoader.js", "utils/SkeletonUtils.js", "utils/BufferGeometryUtils.js", "controls/OrbitControls.js", "postprocessing/EffectComposer.js", "postprocessing/UnrealBloomPass.js", "postprocessing/OutputPass.js", "postprocessing/RenderPass.js"]) {
       await leerTexto(mapa["three/addons/"].replace("./", "") + f);
     }
+  });
+
+  prueba("3D: personajes de Kenney presentes y con licencia CC0", async () => {
+    const lic = await leerTexto("vendor/kenney-mini-characters/License.txt");
+    verdadero(lic.includes("Mini Characters (1.0)") && lic.includes("Creative Commons Zero, CC0"), "License.txt CC0");
+    for (const sexo of ["female", "male"]) {
+      for (const letra of "abcdef") await leerTexto(`vendor/kenney-mini-characters/character-${sexo}-${letra}.glb`);
+    }
+    await leerTexto("vendor/kenney-mini-characters/Textures/colormap.png");
+    const k = await leerTexto("app/vistas/vista3d/kenney.js");
+    for (const sexo of ["female", "male"]) for (const letra of "abcdef") verdadero(k.includes(`"character-${sexo}-${letra}"`), `kenney.js lista character-${sexo}-${letra}`);
   });
 }

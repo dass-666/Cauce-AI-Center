@@ -30,7 +30,8 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `maquina.js` | Máquina de estados: de `animacion3d` (de `estados.js`) a una cola de acciones (`entrar`, `sentarse`, `teclear`, `celebrar`, `salir`…) | No |
 | `paleta.js` | Colores por estado (los mismos que la 2D) y aspecto estable de cada personaje | No |
 | `recursos.js` | Lleva la cuenta de geometrías, materiales y texturas para liberarlos de la tarjeta gráfica | No |
-| `personaje.js` | Personaje provisional hecho con código y sus posturas | Sí |
+| `personaje.js` | Controlador del personaje (cola de acciones, caminos) y cuerpo provisional hecho con código | Sí |
+| `kenney.js` | Personajes de Kenney (CC0): descarga solo los modelos que se ven, usa sus clips (walk, idle, sit, emote-no) y suma con código teclear, levantar la mano y celebrar. Si un modelo no carga, se usa el cuerpo provisional | Sí |
 | `oficina.js` | Un departamento: piso, muros, mamparas, escritorios, computadoras, sillas, planta, letrero | Sí |
 | `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, brillo, ciclo de dibujo | Sí |
 
@@ -43,7 +44,7 @@ Reglas:
 - Rendimiento: 60 cuadros/s máx. en escritorio y 30 en celular; resolución limitada (1.25× en celular); sin sombras reales (manchas suaves); sin antialiasing en celular; se detiene con la pestaña oculta.
 - Brillo (bloom): solo escritorio, se descarga aparte, se puede apagar y **se apaga solo** si el equipo no sostiene 40 cuadros/s.
 - `?medir=1` muestra cuadros por segundo, llamadas de dibujo, triángulos, geometrías y texturas.
-- Para cambiar a los modelos de Kenney/KayKit solo cambia `crearCuerpo()` en `personaje.js` (y las posturas por clips de animación); la máquina de estados y los caminos se quedan.
+- El controlador pide poses (`caminar`, `sentado`, `teclear`…) a un "cuerpo" con método `aplicar(pose, dt)`. Hay dos cuerpos: Kenney (`kenney.js`) y el provisional. Cambiar de personajes no toca la máquina de estados ni los caminos.
 
 ## Adaptadores
 

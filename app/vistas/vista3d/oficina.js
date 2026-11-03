@@ -89,7 +89,7 @@ export function crearOficina(dep, modelo, compartido) {
     pie: caja(0.06, 0.14, 0.06),
     teclado: caja(0.42, 0.02, 0.14),
     asiento: caja(0.42, 0.06, 0.4),
-    respaldo: caja(0.42, 0.42, 0.06),
+    respaldo: caja(0.42, 0.26, 0.06), // bajo, para no tapar al personaje sentado
     poste: recursos.agregar(new THREE.CylinderGeometry(0.03, 0.03, 0.26, 8)),
     ruedas: recursos.agregar(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 10)),
     taza: recursos.agregar(new THREE.CylinderGeometry(0.04, 0.035, 0.09, 10)),
@@ -130,7 +130,7 @@ export function crearOficina(dep, modelo, compartido) {
     const asiento = new THREE.Mesh(g.asiento, m.silla);
     asiento.position.y = 0.3;
     const respaldo = new THREE.Mesh(g.respaldo, m.silla);
-    respaldo.position.set(0, 0.54, 0.2);
+    respaldo.position.set(0, 0.46, 0.2);
     const poste = new THREE.Mesh(g.poste, m.metal);
     poste.position.y = 0.15;
     const ruedas = new THREE.Mesh(g.ruedas, m.metal);
@@ -159,6 +159,7 @@ export function crearOficina(dep, modelo, compartido) {
   // Personajes.
   const personajes = dep.agentes.map((agente, i) => new Personaje({
     agente, puesto: lugares[i], cuarto, retraso: i * 0.9,
+    fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(id, recursos) : null,
     geo: compartido.geoPersonaje, recursos, texturaSombra: compartido.texturaSombra, burbujas: compartido.burbujas,
   }));
   for (const per of personajes) grupo.add(per.raiz);

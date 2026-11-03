@@ -10,6 +10,7 @@ import { el } from "../dom.js";
 import { crearOficina } from "./oficina.js";
 import { crearBurbujas, crearGeometriasPersonaje } from "./personaje.js";
 import { OFICINA } from "./paleta.js";
+import { crearCatalogoKenney } from "./kenney.js";
 import { Recursos } from "./recursos.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
@@ -84,10 +85,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     matSombra: compartidos.agregar(new THREE.MeshBasicMaterial({ map: texturaSombra, transparent: true, depthWrite: false, opacity: 0.4 })),
     geoSombraEscritorio: compartidos.agregar(new THREE.PlaneGeometry(1.8, 1.4).rotateX(-Math.PI / 2)),
     burbujas: crearBurbujas(compartidos, ESTADOS),
+    catalogo: crearCatalogoKenney(compartidos),
   };
 
   let oficina = null;
   let claveOficina = "";
+  let claveCargando = null;
   let modelo = null;
   let seleccion = null;
   let depMostrado = null;
@@ -366,16 +369,27 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     selector.value = dep.id;
 
     const clave = `${m.proyecto.id}/${dep.id}/${dep.agentes.map((a) => a.id).join(",")}/${m.cuadricula.metros_por_celda}`;
+    const ids = dep.agentes.map((a) => a.id);
     if (clave !== claveOficina) {
-      quitarOficina();
-      oficina = crearOficina(dep, m, compartido);
-      escena.add(oficina.grupo);
-      claveOficina = clave;
-      encuadrar();
+      if (oficina) quitarOficina();
+      if (compartido.catalogo.listos(ids)) {
+        oficina = crearOficina(dep, m, compartido);
+        escena.add(oficina.grupo);
+        claveOficina = clave;
+        encuadrar();
+      } else if (claveCargando !== clave) {
+        // Primero se descargan los modelos de sus personajes (solo los que se van a ver).
+        claveCargando = clave;
+        compartido.catalogo.preparar(ids).then(() => {
+          if (destruida || claveCargando !== clave) return;
+          claveCargando = null;
+          dibujar(modelo, seleccion);
+        });
+      }
     } else {
       oficina.actualizar(dep, m);
     }
-    oficina.seleccionar(sel);
+    oficina?.seleccionar(sel);
 
     const vacios = dep.agentes.filter((a) => a.estado === "sin_datos").length;
     const textos = [];
