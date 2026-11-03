@@ -42,6 +42,8 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `minimapa.js` | Minimapa HTML con el color del estado real de cada departamento | No (canvas 2D) |
 | `encuadre.js` | Encuadre exacto: con las esquinas del escenario en coordenadas de cámara, calcula zoom y centro para llenar la zona libre; ningún cuarto queda bajo la barra, avisos o minimapa | No (se prueba en Node) |
 | `etiquetas.js` | Etiquetas sin encimarse (gana la más importante; prueba 3 lugares por cuarto) y nombres cortos para celular | No (se prueba en Node) |
+| `navegacion.js` | Regla única del departamento vecino (teclado ← →, flechas de la barra móvil y gesto de deslizar) y resumen por departamento (estado, personajes con evidencia, alertas) | No (se prueba en Node) |
+| `barra-movil.js` | Barra inferior de celular ◀ [departamento ▾] ▶ ⋯: lista de departamentos y menú (modo, centrar, volver al piso, luz fija). Solo DOM; no decide nada | No (DOM) |
 | `oficina.js` | Un departamento: piso, muros, mamparas, escritorios, computadoras, sillas, planta, letrero | Sí |
 | `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, brillo, ciclo de dibujo | Sí |
 

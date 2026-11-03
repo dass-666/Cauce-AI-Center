@@ -36,6 +36,8 @@ const opcionesVista = {
     estado.seleccion = sel;
     dibujar();
   },
+  /** Lo que tapa la vista desde fuera (el panel de detalle en celular): la cámara lo evita. */
+  tapan: () => [$("#panel")],
   alFallar(motivo) {
     // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos.
     avisarVista(`${motivo} Se muestra el plano 2D.`);
@@ -162,8 +164,9 @@ async function actualizar() {
 function dibujar() {
   const m = estado.modelo;
   if (!m || !vista) return;
-  vista.dibujar(m, estado.seleccion);
+  // Primero el panel: así la vista 3D ya sabe cuánto tapa (en celular se abre encima del edificio).
   dibujarPanel($("#panel"), m, estado.seleccion, () => { estado.seleccion = null; dibujar(); });
+  vista.dibujar(m, estado.seleccion);
   dibujarEstado(m);
 }
 

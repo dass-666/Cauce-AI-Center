@@ -11,6 +11,8 @@ import { crearEscenario } from "./edificio.js";
 import { crearBurbujas, crearGeometriasPersonaje } from "./personaje.js";
 import { OFICINA, COLOR_ESTADO } from "./paleta.js";
 import { luzSegunHora } from "./iluminacion.js";
+import { crearBarraMovil } from "./barra-movil.js";
+import { vecinoDe, resumenDepartamento } from "./navegacion.js";
 import { crearMinimapa } from "./minimapa.js";
 import { calcularEncuadre, aPixeles, dentro } from "./encuadre.js";
 import { acomodarEtiquetas, nombresCortos, prioridadEtiqueta } from "./etiquetas.js";
@@ -24,7 +26,7 @@ const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométric
 function leer(clave) { try { return localStorage.getItem(clave); } catch { return null; } }
 function guardar(clave, valor) { try { localStorage.setItem(clave, valor); } catch { /* sin almacenamiento */ } }
 
-export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} }) {
+export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, tapan = () => [] }) {
   const movil = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
   const medir = new URLSearchParams(location.search).has("medir");
 
@@ -50,6 +52,15 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   const modoDom = el("div", { clase: "segmentado", role: "group", "aria-label": "Vista 3D" },
     botonModo("edificio", "Edificio"), botonModo("individual", "Un cuarto"));
   const etiquetasDom = el("div", { clase: "vista3d-etiquetas" });
+  // Celular: barra inferior (◀ departamento ▶ ⋯). Usa las mismas acciones que el teclado y el gesto.
+  const barraMovil = movil ? crearBarraMovil({
+    alPaso: (paso) => irAVecino(paso),
+    alElegir: (id) => (id ? alSeleccionar({ tipo: "departamento", id }) : volverAlPiso()),
+    alModo: (valor) => cambiarModo(valor),
+    alLuzFija: (fija) => { luzFija.checked = fija; luzFija.dispatchEvent(new Event("change")); if (modelo) actualizarBarraMovil(); },
+    alCentrar: () => (modo === "edificio" && enfocado ? enfocar(enfocado) : encuadrar()),
+    alVolverPiso: () => volverAlPiso(),
+  }) : null;
   const aviso = el("p", { clase: "vista3d-aviso", role: "status" });
   const personajesDom = el("div", { clase: "vista3d-personajes", role: "toolbar", "aria-label": "Personajes del departamento" });
   const medidasTexto = el("pre", {});
@@ -68,7 +79,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
       movil ? null : el("label", { clase: "interruptor", title: "Resplandor de letreros y pantallas" }, brillo, "Brillo"),
       el("label", { clase: "interruptor luz-fija", title: "Sin luz de la hora: la escena siempre igual de iluminada" }, luzFija, "Luz fija"),
       centrar),
-    aviso, personajesDom, minimapa.nodo, medidasDom);
+    aviso, personajesDom, minimapa.nodo, barraMovil?.nodo ?? null, medidasDom);
+  if (movil) raiz.classList.add("es-movil");
   contenedor.append(raiz);
 
   // Escena, luces y cámara.
@@ -224,9 +236,21 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     const w = Math.max(1, raiz.clientWidth), h = Math.max(1, raiz.clientHeight);
     const barra = raiz.querySelector(".vista3d-barra");
     let abajo = h - 8;
-    for (const n of [aviso, personajesDom]) if (!n.hidden && n.offsetHeight > 0 && n.childNodes.length) abajo = Math.min(abajo, n.offsetTop - 6);
-    const arriba = barra ? barra.offsetTop + barra.offsetHeight + 6 : 8;
+    let arriba = barra ? barra.offsetTop + barra.offsetHeight + 6 : 8;
+    // Lo que flota abajo sube el límite inferior; lo que flota arriba (el aviso en celular) baja el superior.
+    for (const n of [aviso, personajesDom, barraMovil?.nodo, ...tapan()]) {
+      if (!n || n.hidden || n.offsetHeight === 0 || !n.childNodes.length) continue;
+      const c = cajaEnRaiz(n);
+      if (c.abajo <= 0 || c.arriba >= h || c.der <= 0 || c.izq >= w) continue; // fuera de la vista (p. ej. el panel a un lado en escritorio)
+      if ((c.arriba + c.abajo) / 2 < h / 2) arriba = Math.max(arriba, c.abajo + 6);
+      else abajo = Math.min(abajo, c.arriba - 6);
+    }
     return { w, h, arriba, abajo: Math.max(arriba + 60, abajo), izq: 8, der: w - 8 };
+  }
+  /** Caja de un control flotante en píxeles de la vista (sirve también para la barra móvil, que es fija). */
+  function cajaEnRaiz(n) {
+    const r = n.getBoundingClientRect(), b = raiz.getBoundingClientRect();
+    return { izq: r.left - b.left, der: r.right - b.left, arriba: r.top - b.top, abajo: r.bottom - b.top };
   }
   const derecha = new THREE.Vector3(), arribaV = new THREE.Vector3();
   function ejesCamara() {
@@ -279,9 +303,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     // minimapa). La losa y la banqueta sí pueden quedar detrás: así el edificio usa más pantalla.
     const z0 = zonaLibre();
     const zona = { ...z0, abajo: z0.h - 8 };
-    const obstaculos = [aviso, personajesDom, minimapa.nodo]
-      .filter((n) => !n.hidden && n.offsetWidth > 0 && n.offsetHeight > 0 && (n !== personajesDom || n.childNodes.length))
-      .map((n) => ({ izq: n.offsetLeft - 4, der: n.offsetLeft + n.offsetWidth + 4, arriba: n.offsetTop - 4, abajo: n.offsetTop + n.offsetHeight + 4 }));
+    const obstaculos = [aviso, personajesDom, minimapa.nodo, barraMovil?.nodo]
+      .filter((n) => n && !n.hidden && n.offsetWidth > 0 && n.offsetHeight > 0 && (n !== personajesDom || n.childNodes.length))
+      .map((n) => { const c = cajaEnRaiz(n); return { izq: c.izq - 4, der: c.der + 4, arriba: c.arriba - 4, abajo: c.abajo + 4 }; });
     const esquinasCuartos = [];
     for (const c of escenario.cuartos.values()) for (const sx of [-1, -0.5, 0, 0.5, 1]) for (const sz of [-1, -0.5, 0, 0.5, 1]) for (const y of [0, 1.2]) {
       if (Math.abs(sx) < 1 && Math.abs(sz) < 1) continue; // solo el borde del cuarto
@@ -291,7 +315,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     const libre = (e) => !esquinasCuartos.some((p) => { const q = aPixeles(p, e, zona); return obstaculos.some((o) => dentro(q, o)); });
     // Zonas candidatas: el lienzo completo y el lienzo sin cada obstáculo (como franja o como columna).
     const zonas = [zona];
-    for (const o of obstaculos) zonas.push({ ...zona, abajo: Math.min(zona.abajo, o.arriba) }, { ...zona, der: Math.min(zona.der, o.izq) });
+    for (const o of obstaculos) zonas.push({ ...zona, abajo: Math.min(zona.abajo, o.arriba) }, { ...zona, arriba: Math.max(zona.arriba, o.abajo) }, { ...zona, der: Math.min(zona.der, o.izq) });
     zonas.push({ ...zona, abajo: Math.min(...obstaculos.map((o) => o.arriba), zona.abajo) });
     let e = null;
     for (const z of zonas) {
@@ -326,8 +350,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   function enfocar(id) {
     const r = escenario?.rectangulo(id);
     if (!r || escenario.modo !== "edificio") return;
-    const aspecto = Math.max(0.5, raiz.clientWidth / Math.max(1, raiz.clientHeight));
-    const mitad = Math.max((r.ancho + r.fondo) * 0.707 * 0.58 / 2 + 1.2, ((r.ancho + r.fondo) * 0.707 / 2 + 0.6) / aspecto);
+    // El cuarto debe caber en la zona libre (en celular, entre la insignia y el panel o los botones).
+    const z = zonaLibre();
+    const aspecto = Math.max(0.5, z.w / z.h);
+    const altoLibre = Math.max(0.25, (z.abajo - z.arriba) / z.h), anchoLibre = Math.max(0.25, (z.der - z.izq) / z.w);
+    const mitad = Math.max(((r.ancho + r.fondo) * 0.707 * 0.58 / 2 + 1.2) / altoLibre, ((r.ancho + r.fondo) * 0.707 / 2 + 0.6) / aspecto / anchoLibre);
     animCam = {
       t: 0,
       desde: controles.target.clone(),
@@ -356,10 +383,20 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
 
   /** Departamento vecino del enfocado (o del mostrado), en el orden del archivo. */
   function vecino(paso) {
-    const deps = modelo.departamentos;
-    const actual = deps.findIndex((d) => d.id === (modo === "edificio" ? enfocado : depMostrado));
-    if (actual < 0) return paso > 0 ? deps[0] : deps[deps.length - 1];
-    return deps[(actual + paso + deps.length) % deps.length];
+    return vecinoDe(modelo.departamentos, modo === "edificio" ? enfocado : depMostrado, paso);
+  }
+  function irAVecino(paso) {
+    if (!modelo || !escenario) return;
+    const destino = vecino(paso);
+    if (destino) alSeleccionar({ tipo: "departamento", id: destino.id });
+  }
+  function actualizarBarraMovil() {
+    barraMovil?.actualizar({
+      resumenes: modelo.departamentos.map(resumenDepartamento),
+      actualId: modo === "edificio" ? enfocado : depMostrado,
+      modo,
+      luzFija: luzFija.checked,
+    });
   }
 
   // Teclado: 1–9 enfoca un departamento, ← → pasa al vecino, Esc regresa al piso completo.
@@ -367,11 +404,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     if (e.ctrlKey || e.metaKey || e.altKey || !modelo || !escenario) return;
     if (e.target instanceof HTMLElement && e.target.closest("input, select, textarea")) return;
     const deps = modelo.departamentos;
-    const actual = deps.findIndex((d) => d.id === (modo === "edificio" ? enfocado : depMostrado));
     let destino = null;
     if (/^[1-9]$/.test(e.key)) destino = deps[Number(e.key) - 1] ?? null;
-    else if (e.key === "ArrowRight") destino = vecino(1);
-    else if (e.key === "ArrowLeft") destino = vecino(-1);
+    else if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); irAVecino(e.key === "ArrowRight" ? 1 : -1); return; }
     else if (e.key === "Escape" && !seleccion && modo === "edificio" && enfocado) { volverAlPiso(); e.preventDefault(); return; }
     if (!destino) return;
     e.preventDefault();
@@ -393,12 +428,13 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   centrar.addEventListener("click", () => encuadrar());
   volverPiso.addEventListener("click", volverAlPiso);
   for (const b of modoDom.querySelectorAll("[data-modo3d]")) {
-    b.addEventListener("click", () => {
-      if (modo === b.dataset.modo3d) return;
-      modo = b.dataset.modo3d;
-      guardar("cauce.modo3d", modo);
-      if (modelo) dibujar(modelo, seleccion);
-    });
+    b.addEventListener("click", () => cambiarModo(b.dataset.modo3d));
+  }
+  function cambiarModo(valor) {
+    if (modo === valor) return;
+    modo = valor;
+    guardar("cauce.modo3d", modo);
+    if (modelo) dibujar(modelo, seleccion);
   }
 
   // No dejar que el usuario arrastre la oficina fuera de la pantalla.
@@ -449,6 +485,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   // así funciona aunque el dedo empiece sobre una etiqueta; no en la barra, el minimapa ni las medidas.
   let dedos = 0;
   let deslizar = null;
+  // Tocar fuera de la lista o del menú de la barra móvil los cierra.
+  if (barraMovil) raiz.addEventListener("pointerdown", (e) => {
+    if (barraMovil.estaAbierta() && !(e.target instanceof Element && e.target.closest(".vista3d-movil"))) barraMovil.cerrar();
+  }, true);
   raiz.addEventListener("pointerdown", (e) => {
     if (e.pointerType !== "touch") return;
     dedos++;
@@ -463,8 +503,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     if (!d || e.type === "pointercancel" && !movil) return;
     const dx = e.clientX - d.x, dy = e.clientY - d.y;
     if (movil && modelo && escenario && performance.now() - d.t < 700 && Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) {
-      const destino = vecino(dx < 0 ? 1 : -1);
-      if (destino) alSeleccionar({ tipo: "departamento", id: destino.id });
+      barraMovil?.cerrar();
+      irAVecino(dx < 0 ? 1 : -1);
     }
   };
   raiz.addEventListener("pointerup", soltar, true);
@@ -537,7 +577,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
       items.push({ id, opciones, w: Number(nodo.dataset.ancho) || 120, h: Number(nodo.dataset.alto) || 24, prioridad: Number(nodo.dataset.prioridad) || 0 });
     }
     const zona = zonaLibre();
-    const elegidas = acomodarEtiquetas(items, { w, h, arriba: zona.arriba });
+    // En celular la barra de abajo es fija: ninguna etiqueta debe quedar debajo de ella (ni al bajar la página).
+    const limite = barraMovil && !barraMovil.nodo.hidden ? Math.min(h, cajaEnRaiz(barraMovil.nodo.querySelector(".movil-barra")).arriba - 4) : h;
+    const elegidas = acomodarEtiquetas(items, { w, h: limite, arriba: zona.arriba });
     for (const it of items) {
       const nodo = etiquetas.get(it.id);
       const k = elegidas.get(it.id);
@@ -660,9 +702,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
       personajesDom.replaceChildren();
       aviso.hidden = false;
       aviso.textContent = m.motivo ?? "No hay datos de este proyecto.";
+      if (barraMovil) barraMovil.nodo.hidden = true;
       return;
     }
     selector.hidden = false;
+    if (barraMovil) barraMovil.nodo.hidden = false;
 
     // Qué departamento mostrar o enfocar: el elegido, el del personaje elegido o el último visto.
     let objetivo = null;
@@ -712,6 +756,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     }
     if (escenario && nuevoEnfoque !== enfocado) {
       enfocado = nuevoEnfoque;
+      // En celular, al elegir un departamento la vista 3D sube hasta quedar bajo la cabecera fija,
+      // así el cuarto tiene espacio entre la insignia y el detalle.
+      if (movil && enfocado && raiz.getBoundingClientRect().top > 120) contenedor.scrollIntoView({ block: "start" });
       if (modo === "edificio" && enfocado) enfocar(enfocado);
     }
     // Al elegir un agente, la cámara se acerca a su escritorio (una vez por elección).
@@ -721,6 +768,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     volverPiso.hidden = !(modo === "edificio" && enfocado);
     minimapa.nodo.hidden = modo !== "edificio";
     dibujarMinimapa();
+    actualizarBarraMovil();
     escenario?.seleccionar(sel);
     actualizarEtiquetas(visibles, sel);
 

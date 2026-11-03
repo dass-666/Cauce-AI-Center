@@ -16,6 +16,7 @@ import { calcularEncuadre, aPixeles, dentro } from "../app/vistas/vista3d/encuad
 import { acomodarEtiquetas, nombresCortos, prioridadEtiqueta } from "../app/vistas/vista3d/etiquetas.js";
 import { temaDe, acentoDe } from "../app/vistas/vista3d/identidad.js";
 import { luzSegunHora, LUZ_FIJA, HEMI_MINIMA } from "../app/vistas/vista3d/iluminacion.js";
+import { vecinoDe, resumenDepartamento } from "../app/vistas/vista3d/navegacion.js";
 
 export function registrarCasos(leerTexto) {
   const leerJSON = async (ruta) => JSON.parse(await leerTexto(ruta));
@@ -662,5 +663,39 @@ export function registrarCasos(leerTexto) {
     for (const c of cortos) verdadero(c.length <= 16, `largo: ${c}`);
     igual(nombresCortos(["Importación de catálogos"]), ["Importación"]);
     igual(nombresCortos(["Revisión de fuentes", "Revisión de listas"]), ["Revisión fuentes", "Revisión listas"]);
+  });
+
+  // ---------- Fase C2: navegación móvil ----------
+  prueba("Navegación: vecino recorre en círculo y sin actual empieza por un extremo", () => {
+    const deps = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    igual(vecinoDe(deps, "a", 1).id, "b");
+    igual(vecinoDe(deps, "c", 1).id, "a", "del último pasa al primero");
+    igual(vecinoDe(deps, "a", -1).id, "c", "del primero regresa al último");
+    igual(vecinoDe(deps, null, 1).id, "a");
+    igual(vecinoDe(deps, null, -1).id, "c");
+    igual(vecinoDe(deps, "no-existe", 1).id, "a");
+    igual(vecinoDe([], "a", 1), null);
+    igual(vecinoDe([{ id: "x" }], "x", 1).id, "x");
+  });
+  prueba("Navegación: el resumen cuenta evidencia y alertas sin inventar nada", async () => {
+    const { modelo } = await edificioCompago();
+    for (const d of modelo.departamentos) {
+      const r = resumenDepartamento(d);
+      igual(r.agentes, d.agentes.length);
+      igual(r.alertas, d.alertas.length);
+      igual(r.conEvidencia, d.agentes.filter((a) => a.estado_mostrado !== "sin_datos").length);
+      igual(r.estado, d.estado_resumen);
+      verdadero(r.conEvidencia <= r.agentes);
+    }
+    // Sin datos vigentes: nadie cuenta como "con evidencia".
+    const viejo = { ...modelo.departamentos[0], agentes: modelo.departamentos[0].agentes.map((a) => ({ ...a, estado_mostrado: "sin_datos" })) };
+    igual(resumenDepartamento(viejo).conEvidencia, 0);
+  });
+  prueba("Barra móvil: la escena usa vecinoDe para flechas, teclado y gesto (una sola regla)", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const src = await readFile(new URL("../app/vistas/vista3d/escena3d.js", import.meta.url), "utf8");
+    verdadero(src.includes("vecinoDe(modelo.departamentos"));
+    igual((src.match(/irAVecino\(/g) ?? []).length >= 4, true, "flechas, teclado y gesto pasan por irAVecino");
+    verdadero(!/findIndex\(\(d\) => d\.id === \(modo/.test(src), "no queda una segunda copia de la regla del vecino");
   });
 }
