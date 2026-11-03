@@ -25,3 +25,9 @@ const FORMATO = new Intl.DateTimeFormat("es-MX", {
 export function fecha(iso) {
   return iso ? FORMATO.format(new Date(iso)) : "No disponible";
 }
+
+const FORMATO_HORA = new Intl.DateTimeFormat("es-MX", { timeZone: "America/Mexico_City", hour: "numeric", minute: "2-digit" });
+
+export function hora(iso) {
+  return iso ? FORMATO_HORA.format(new Date(iso)) : "—";
+}

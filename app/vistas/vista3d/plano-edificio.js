@@ -20,18 +20,30 @@ export function fondoNecesario(ancho, numPuestos) {
 
 /**
  * @param {{id: string, posicion: {x:number,y:number,ancho:number,alto:number}, puestos: number}[]} deps
- * @returns {{cuartos: {id:string,x:number,z:number,ancho:number,fondo:number}[], ancho:number, fondo:number, pasillos:{x:number,z:number,ancho:number,fondo:number}[]}}
+ * @returns {{cuartos: {id:string,x:number,z:number,ancho:number,fondo:number}[], recepcion: {x:number,z:number,ancho:number,fondo:number}|null, ancho:number, fondo:number, pasillos:{x:number,z:number,ancho:number,fondo:number}[]}}
  *   x, z = centro de cada cuarto; el edificio queda centrado en el origen.
  */
 export function distribuirEdificio(deps) {
   const E = EDIFICIO;
-  if (deps.length === 0) return { cuartos: [], ancho: 0, fondo: 0, pasillos: [] };
+  if (deps.length === 0) return { cuartos: [], recepcion: null, ancho: 0, fondo: 0, pasillos: [] };
   const columnas = Math.max(...deps.map((d) => d.posicion.x + d.posicion.ancho));
   const filas = Math.max(...deps.map((d) => d.posicion.y + d.posicion.alto));
   const anchoDe = (celdas) => celdas * E.anchoCelda + (celdas - 1) * E.pasilloColumnas;
 
   // Fondo de cada fila: el mayor que pida alguno de sus cuartos (repartido si ocupa varias filas).
-  const fondoFila = Array(filas).fill(E.fondoMinimo);
+  // Recepción: el tramo libre más largo de la última fila; si no hay, una fila extra al frente.
+  const ocupada = (cx, cy) => deps.some((d) => cx >= d.posicion.x && cx < d.posicion.x + d.posicion.ancho && cy >= d.posicion.y && cy < d.posicion.y + d.posicion.alto);
+  let libre = null;
+  for (let cx = 0, inicio = -1; cx <= columnas; cx++) {
+    if (cx < columnas && !ocupada(cx, filas - 1)) { if (inicio < 0) inicio = cx; continue; }
+    if (inicio >= 0 && (!libre || cx - inicio > libre.ancho)) libre = { x: inicio, ancho: cx - inicio };
+    inicio = -1;
+  }
+  const filaRecepcion = libre ? filas - 1 : filas;
+  if (!libre) libre = { x: 0, ancho: columnas };
+  const totalFilas = filaRecepcion + 1;
+
+  const fondoFila = Array(totalFilas).fill(E.fondoMinimo);
   for (const d of deps) {
     const p = d.posicion;
     const porFila = (fondoNecesario(anchoDe(p.ancho), d.puestos) - (p.alto - 1) * E.pasilloFilas) / p.alto;
@@ -39,9 +51,9 @@ export function distribuirEdificio(deps) {
   }
   const inicioFila = [];
   let z = 0;
-  for (let f = 0; f < filas; f++) {
+  for (let f = 0; f < totalFilas; f++) {
     inicioFila.push(z);
-    z += fondoFila[f] + (f < filas - 1 ? E.pasilloFilas : 0);
+    z += fondoFila[f] + (f < totalFilas - 1 ? E.pasilloFilas : 0);
   }
   const fondoTotal = z;
   const anchoTotal = anchoDe(columnas);
@@ -58,11 +70,18 @@ export function distribuirEdificio(deps) {
 
   // Pasillos principales entre filas (para el piso y la decoración).
   const pasillos = [];
-  for (let f = 0; f < filas - 1; f++) {
+  for (let f = 0; f < totalFilas - 1; f++) {
     const zc = inicioFila[f] + fondoFila[f] + E.pasilloFilas / 2 - fondoTotal / 2;
     pasillos.push({ x: 0, z: redondear(zc), ancho: redondear(anchoTotal), fondo: E.pasilloFilas });
   }
-  return { cuartos, ancho: redondear(anchoTotal), fondo: redondear(fondoTotal), pasillos };
+  const anchoRecepcion = anchoDe(libre.ancho);
+  const recepcion = {
+    x: redondear(libre.x * (E.anchoCelda + E.pasilloColumnas) + anchoRecepcion / 2 - anchoTotal / 2),
+    z: redondear(inicioFila[filaRecepcion] + fondoFila[filaRecepcion] / 2 - fondoTotal / 2),
+    ancho: redondear(anchoRecepcion),
+    fondo: redondear(fondoFila[filaRecepcion]),
+  };
+  return { cuartos, recepcion, ancho: redondear(anchoTotal), fondo: redondear(fondoTotal), pasillos };
 }
 
 /** ¿Se enciman dos cuartos? (lo usan las pruebas y sirve para detectar escenas mal escritas). */

@@ -10,6 +10,10 @@ import { tamanoCuarto, puestos, puerta, camino, longitudCamino, puntoEnCamino, h
 import { COLOR_ESTADO, aspecto } from "../app/vistas/vista3d/paleta.js";
 import { distribuirEdificio, seEnciman, fondoNecesario, EDIFICIO } from "../app/vistas/vista3d/plano-edificio.js";
 import { crearMedidor, firmaMedicion } from "../app/vistas/vista3d/medidor.js";
+import { fotografia, compararLecturas, crearRegistroCambios } from "../app/nucleo/cambios.js";
+import { textoCambio } from "../app/vistas/tablero.js";
+import { temaDe, acentoDe } from "../app/vistas/vista3d/identidad.js";
+import { luzSegunHora, LUZ_FIJA, HEMI_MINIMA } from "../app/vistas/vista3d/iluminacion.js";
 
 export function registrarCasos(leerTexto) {
   const leerJSON = async (ruta) => JSON.parse(await leerTexto(ruta));
@@ -443,7 +447,7 @@ export function registrarCasos(leerTexto) {
       ahora: new Date("2026-11-03T16:30:00Z"),
     });
     const deps = m.departamentos.map((d) => ({ id: d.id, posicion: d.posicion, puestos: Math.max(1, d.agentes.length) }));
-    return { deps, plano: distribuirEdificio(deps) };
+    return { deps, plano: distribuirEdificio(deps), modelo: m };
   };
   prueba("Edificio: los 8 departamentos de Compago, sin encimarse y dentro del edificio", async () => {
     const { deps, plano } = await edificioCompago();
@@ -528,5 +532,74 @@ export function registrarCasos(leerTexto) {
     if (!readFile) return; // en el navegador se comprueba en la prueba con Playwright
     const src = await readFile(new URL("../app/vistas/vista3d/escena3d.js", import.meta.url), "utf8");
     verdadero(src.includes('leer("cauce.brillo3d") === "1"'), "el brillo debe encenderse solo si el usuario lo eligió");
+  });
+
+  // --- Recepción, identidad y luz ---
+  prueba("Edificio: la recepción ocupa el espacio libre y no se encima con ningún cuarto", async () => {
+    const { plano } = await edificioCompago();
+    const r = plano.recepcion;
+    verdadero(r && r.ancho > 0 && r.fondo > 0, "sin recepción");
+    verdadero(Math.abs(r.x) + r.ancho / 2 <= plano.ancho / 2 + 1e-6 && Math.abs(r.z) + r.fondo / 2 <= plano.fondo / 2 + 1e-6, "recepción fuera del edificio");
+    for (const c of plano.cuartos) verdadero(!seEnciman(r, c), `recepción encima de ${c.id}`);
+    // Sin huecos en la última fila, la recepción va en una fila nueva al frente.
+    const lleno = distribuirEdificio([{ id: "a", posicion: { x: 0, y: 0, ancho: 2, alto: 1 }, puestos: 1 }]);
+    verdadero(lleno.recepcion.z > lleno.cuartos[0].z && !seEnciman(lleno.recepcion, lleno.cuartos[0]));
+  });
+  prueba("Identidad: cada departamento de Compago tiene tema y acento propios", async () => {
+    const { deps, modelo } = await edificioCompago();
+    const reales = modelo.departamentos;
+    igual(new Set(reales.map(temaDe)).size, reales.length, "temas repetidos");
+    igual(new Set(reales.map(acentoDe)).size, reales.length, "acentos repetidos");
+    igual(temaDe({ id: "importacion", nombre: "Importación de catálogos" }), "importacion");
+    verdadero(deps.length >= 7);
+  });
+  prueba("Luz: según la hora nunca baja del mínimo visible; la fija no cambia", () => {
+    for (let h = 0; h < 24; h += 0.5) {
+      const l = luzSegunHora(h);
+      verdadero(l.hemi >= HEMI_MINIMA, `muy oscuro a las ${h}`);
+      verdadero(Number.isInteger(l.cielo) && l.cielo >= 0 && l.cielo <= 0xffffff);
+    }
+    igual(luzSegunHora(3, true).hemi, LUZ_FIJA.hemi);
+    igual(luzSegunHora(12).nombre, "día");
+    igual(luzSegunHora(23).nombre, "noche");
+  });
+
+  // --- Cambios observados entre lecturas ---
+  const lectura = (generado, estados, { conexion = "en_linea", alertas = [], proyecto = "compago" } = {}) => ({
+    proyecto: { id: proyecto }, generado_en: generado, conexion, conexion_etiqueta: conexion, es_demo: false,
+    departamentos: [{ id: "d", nombre: "Dep", agentes: Object.entries(estados).map(([id, estado]) => ({ id, nombre: id, estado })) }],
+    alertas: alertas.map((id) => ({ id, titulo: id, nivel: "advertencia", departamento_id: "d" })),
+  });
+  prueba("Cambios: detecta un cambio de estado y dice entre qué datos se observó", () => {
+    const c = compararLecturas(fotografia(lectura("T1", { a: "esperando" })), fotografia(lectura("T2", { a: "trabajando" })));
+    igual(c.length, 1);
+    igual(c[0].tipo, "estado");
+    igual([c[0].de, c[0].a], ["esperando", "trabajando"]);
+    igual(c[0].entre, ["T1", "T2"]);
+  });
+  prueba("Cambios: la misma lectura no produce actividad; no se inventan pasos intermedios", () => {
+    igual(compararLecturas(fotografia(lectura("T1", { a: "esperando" })), fotografia(lectura("T1", { a: "esperando" }))), []);
+    const c = compararLecturas(fotografia(lectura("T1", { a: "esperando" })), fotografia(lectura("T3", { a: "finalizado" })));
+    igual(c.length, 1, "de esperando a finalizado es un solo cambio observado");
+  });
+  prueba("Cambios: alertas nuevas y quitadas; agentes nuevos y quitados", () => {
+    const c = compararLecturas(fotografia(lectura("T1", { a: "esperando" }, { alertas: ["x"] })), fotografia(lectura("T2", { b: "esperando" }, { alertas: ["y"] })));
+    igual(c.map((x) => x.tipo).sort(), ["agente_nuevo", "agente_quitado", "alerta_nueva", "alerta_quitada"]);
+  });
+  prueba("Cambios: sin archivo válido solo se informa la conexión; otro proyecto empieza de cero", () => {
+    const sinArchivo = { ...lectura(null, {}), departamentos: [], alertas: [], conexion: "desconectado", conexion_etiqueta: "Sin conexión" };
+    const c = compararLecturas(fotografia(lectura("T1", { a: "trabajando" })), fotografia(sinArchivo));
+    igual(c.map((x) => x.tipo), ["conexion"]);
+    const r = crearRegistroCambios();
+    r.leer(lectura("T1", { a: "esperando" }));
+    r.leer(lectura("T2", { a: "trabajando" }));
+    igual(r.cambios.length, 1);
+    r.leer(lectura("T3", { a: "error" }, { proyecto: "ek-chuah" }));
+    igual(r.cambios.length, 0, "cambiar de proyecto no compara contra el anterior");
+  });
+  prueba("Tablero: el texto de un cambio usa los nombres de estado y no inventa la hora", () => {
+    const [c] = compararLecturas(fotografia(lectura("2026-11-03T10:00:00Z", { a: "esperando" })), fotografia(lectura("2026-11-03T10:15:00Z", { a: "trabajando" })));
+    igual(textoCambio(c), "a (Dep) pasó de Esperando a Trabajando.");
+    igual(c.entre, ["2026-11-03T10:00:00Z", "2026-11-03T10:15:00Z"]);
   });
 }

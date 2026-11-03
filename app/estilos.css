@@ -267,11 +267,49 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 }
 .etiqueta-dep.elegida { border-color: var(--brillo); color: var(--brillo); }
 .etiqueta-luz { width: 9px; height: 9px; border-radius: 50%; background: var(--c-sin-datos); flex: none; }
-.etiqueta-dep.estado-trabajando .etiqueta-luz { background: var(--c-trabajando); }
-.etiqueta-dep.estado-esperando .etiqueta-luz { background: var(--c-esperando); }
-.etiqueta-dep.estado-finalizado .etiqueta-luz { background: var(--c-finalizado); }
-.etiqueta-dep.estado-error .etiqueta-luz { background: var(--c-error); }
-.etiqueta-dep.estado-revision .etiqueta-luz { background: var(--c-revision); }
+.etiqueta-dep.estado-trabajando .etiqueta-luz, .tablero-estado.estado-trabajando .etiqueta-luz { background: var(--c-trabajando); }
+.etiqueta-dep.estado-esperando .etiqueta-luz, .tablero-estado.estado-esperando .etiqueta-luz { background: var(--c-esperando); }
+.etiqueta-dep.estado-finalizado .etiqueta-luz, .tablero-estado.estado-finalizado .etiqueta-luz { background: var(--c-finalizado); }
+.etiqueta-dep.estado-error .etiqueta-luz, .tablero-estado.estado-error .etiqueta-luz { background: var(--c-error); }
+.etiqueta-dep.estado-revision .etiqueta-luz, .tablero-estado.estado-revision .etiqueta-luz { background: var(--c-revision); }
 .etiqueta-alertas { color: var(--c-revision); }
 @media (max-width: 760px) { .etiqueta-dep { font-size: 10px; padding: 3px 7px; } }
 @media (max-width: 760px) { .etiqueta-dep { max-width: 104px; overflow: hidden; text-overflow: ellipsis; display: block; } .etiqueta-luz { display: inline-block; margin-right: 4px; } }
+
+/* Minimapa del piso (abajo a la derecha). En celular no se muestra: la interfaz móvil nueva es otra fase. */
+.vista3d-minimapa { position: absolute; right: 10px; bottom: 10px; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; line-height: 0; }
+.vista3d-minimapa canvas { width: 180px; height: 120px; cursor: pointer; }
+.vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-aviso,
+.vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-personajes { right: 200px; }
+@media (max-width: 760px) {
+  .vista3d-minimapa { display: none; }
+  .vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-aviso,
+  .vista3d:has(.vista3d-minimapa:not([hidden])) .vista3d-personajes { right: 10px; }
+}
+
+/* Tablero de operaciones */
+.tablero-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.tablero-insignia { font-weight: 800; letter-spacing: .06em; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+.tablero-insignia.es-demo { background: #ffb547; color: #1a1200; }
+.tablero-insignia.es-real { background: #12361f; color: #7ff0a8; border: 1px solid #43c47a; }
+.tablero-suave { color: var(--texto-suave); font-size: 13px; }
+.tablero-estados { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.tablero-estado { white-space: nowrap; flex: none; font-size: 13px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--borde); }
+.tablero-desplegable { position: relative; font-size: 13px; }
+.tablero-desplegable summary { cursor: pointer; padding: 2px 8px; border: 1px solid var(--borde); border-radius: 6px; list-style: none; }
+.tablero-desplegable[open] summary { border-color: var(--texto-suave); }
+.tablero-lista { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; width: min(460px, 90vw); max-height: 50vh; overflow: auto;
+  background: #0f1526f2; border: 1px solid var(--borde); border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
+.tablero-lista p { margin: 0; }
+.tablero-alerta, .tablero-cambio { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.tablero-nivel { font-weight: 700; font-size: 12px; padding: 0 6px; border-radius: 4px; background: #2a3150; }
+.nivel-critica .tablero-nivel { background: var(--c-error); color: #1a0000; }
+.nivel-advertencia .tablero-nivel { background: var(--c-revision); color: #1a1200; }
+.enlace { background: none; border: 0; padding: 0; color: #ffd89a; text-decoration: underline; cursor: pointer; font: inherit; }
+@media (max-width: 760px) { .tablero-lista { left: 0; right: auto; } }
+.tablero-estado .etiqueta-luz { display: inline-block; margin-right: 5px; }
+@media (max-width: 760px) {
+  .tablero-estados { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+  .tablero-fuente, .tablero-fecha { display: none; }
+  .luz-fija { display: none; } /* en celular la luz de la hora ya garantiza un mínimo visible */
+}
