@@ -21,7 +21,7 @@ Si no tienes esa carpeta, ve a tu Escritorio y clónala con `git clone -b fase-3
 1. Doble clic en `iniciar.bat` y deja la ventana abierta.
 2. Abre <http://127.0.0.1:8765/pruebas.html>.
 
-Esperado: `73 pasaron, 0 fallaron`.
+Esperado: `81 pasaron, 0 fallaron`.
 
 ## 3. Animaciones (con datos de demostración)
 
@@ -48,6 +48,8 @@ Después revisa la interacción:
 Cierra juegos, videos y programas pesados. Abre <http://127.0.0.1:8765/?medir=1> con la ventana **maximizada**, en *Importación de catálogos*.
 
 Arriba aparece **Edificio | Un cuarto**. Por omisión se abre *Edificio* con *Todo el piso* (los 8 departamentos). Toca un departamento (o elígelo en el selector) para acercarte; *Todo el piso* regresa a la vista completa.
+
+El *Brillo* viene **apagado** por defecto. La línea de medición empieza de nuevo cada vez que cambias el brillo, el modo, el departamento enfocado o el tamaño (por ejemplo, al abrirse el panel). Dice cuántos segundos lleva (`en N s`, máximo 20), el **peor cuadro** en milisegundos (16.7 ms = 60 cps), cuántos segundos bajaron de 50 cps y qué lo reinició.
 
 Haz estas mediciones. En cada una, **no toques nada durante 30 segundos**; después pulsa **Copiar medición** (arriba a la derecha) y pega el texto en un Bloc de notas.
 

@@ -12,6 +12,7 @@ import { crearBurbujas, crearGeometriasPersonaje } from "./personaje.js";
 import { OFICINA } from "./paleta.js";
 import { crearCatalogoKenney } from "./kenney.js";
 import { Recursos } from "./recursos.js";
+import { crearMedidor, firmaMedicion } from "./medidor.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
 const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométrica clásica)
@@ -113,7 +114,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   let bloom = null;
   let cargandoBrillo = false;
   let brilloDesde = 0;
-  brillo.checked = !movil && leer("cauce.brillo3d") !== "0";
+  brillo.checked = !movil && leer("cauce.brillo3d") === "1"; // apagado por defecto: se enciende a mano
   brillo.addEventListener("change", () => {
     guardar("cauce.brillo3d", brillo.checked ? "1" : "0");
     aplicarBrillo();
@@ -296,7 +297,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   let anterior = 0;
   let ultimoDibujo = 0;
   let reloj = 0;
-  const fps = { cuadros: 0, desde: 0, valor: 0, total: 0, ultimos: [] };
+  const medidor = crearMedidor({ ventana: 20 });
   let brilloApagadoSolo = null;
 
   function cuadro(t) {
@@ -348,6 +349,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   function arrancar() {
     if (destruida || idCuadro || document.hidden) return;
     anterior = 0;
+    medidor.pausa();
     idCuadro = requestAnimationFrame(cuadro);
   }
   function detener() {
@@ -358,29 +360,31 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
   document.addEventListener("visibilitychange", alCambiarVisibilidad);
 
   function contarCuadro(t) {
-    fps.cuadros++;
-    fps.total++;
-    if (t - fps.desde >= 1000) {
-      fps.valor = Math.round((fps.cuadros * 1000) / (t - fps.desde));
-      fps.cuadros = 0;
-      fps.desde = t;
-      fps.ultimos.push(fps.valor);
-      if (fps.ultimos.length > 20) fps.ultimos.shift();
-      // Si con brillo el equipo no sostiene 40 cuadros por segundo, se apaga solo (no se guarda:
-      // la próxima visita lo vuelve a intentar). Con ?medir=1 no se apaga, para poder medir su costo.
-      if (composer && !medir && t - brilloDesde > 3000 && fps.valor < 40) {
-        brillo.checked = false;
-        brilloApagadoSolo = fps.valor;
-        brillo.parentElement.title = `Se apagó solo: el equipo iba a ${fps.valor} cuadros por segundo`;
-        aplicarBrillo();
-      }
-      if (!medir) return;
-      const i = metricas();
-      medidasTexto.textContent = textoMedicion(i);
+    // Cada medición es de una sola configuración: si cambia el brillo, el modo, el enfoque o el
+    // tamaño del lienzo, la ventana de 20 s empieza de nuevo.
+    medidor.vigilar(firmaMedicion({
+      brillo: brillo.checked ? "brillo" : "sin brillo",
+      modo: escenario?.modo ?? modo,
+      enfoque: escenario?.modo === "edificio" ? (enfocado ?? "") : "",
+      tamano: `${lienzo.width}x${lienzo.height}`,
+    }), t);
+    if (!medidor.cuadro(t)) return;
+    const cps = medidor.valor;
+    // Si con brillo el equipo no sostiene 40 cuadros por segundo, se apaga solo (no se guarda:
+    // la próxima visita lo vuelve a intentar). Con ?medir=1 no se apaga, para poder medir su costo.
+    if (composer && !medir && t - brilloDesde > 3000 && cps < 40) {
+      brillo.checked = false;
+      brilloApagadoSolo = cps;
+      brillo.parentElement.title = `Se apagó solo: el equipo iba a ${cps} cuadros por segundo`;
+      aplicarBrillo();
     }
+    if (!medir) return;
+    medidasTexto.textContent = textoMedicion(metricas());
   }
   function textoMedicion(i) {
-    return `${i.fps} cps (prom. ${i.fps_promedio_20s}, mín. ${i.fps_minimo_20s} en 20 s) · ${i.modo === "edificio" ? "edificio completo" : "un cuarto"}, ${i.personajes} personajes\n` +
+    const vista = i.modo !== "edificio" ? `un cuarto (${i.departamento_nombre})` : i.enfocado ? `edificio, enfocado: ${i.enfocado_nombre}` : "edificio completo";
+    return `${i.fps} cps (prom. ${i.fps_promedio}, mín. ${i.fps_minimo} en ${i.segundos_medidos} s) · peor cuadro ${i.peor_cuadro_ms} ms · ${i.segundos_bajo_50} s bajo 50 cps\n` +
+      `${vista}, ${i.personajes} personajes · ventana reiniciada por: ${i.reiniciado_por}\n` +
       `${i.llamadas} llamadas · ${i.triangulos} triángulos · ${i.geometrias} geometrías · ${i.texturas} texturas\n` +
       `px ${i.pixelRatio} · ${i.tamano.join("×")} · brillo ${i.brillo ? "encendido" : i.brillo_apagado_solo ? `apagado solo (${i.brillo_apagado_solo} cps)` : "apagado"}` +
       `${i.movil ? " · modo celular" : ""}\nGPU: ${i.gpu}`;
@@ -396,11 +400,16 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
     return gpu;
   }
   function metricas() {
-    const u = fps.ultimos;
+    const r = medidor.resumen();
+    const nombre = (id) => modelo?.departamentos.find((d) => d.id === id)?.nombre ?? id;
     return {
-      fps: fps.valor,
-      fps_promedio_20s: u.length ? Math.round(u.reduce((a, b) => a + b, 0) / u.length) : 0,
-      fps_minimo_20s: u.length ? Math.min(...u) : 0,
+      fps: r.cps,
+      fps_promedio: r.promedio,
+      fps_minimo: r.minimo,
+      peor_cuadro_ms: r.peor_cuadro_ms,
+      segundos_bajo_50: r.segundos_bajo_50,
+      segundos_medidos: r.segundos,
+      reiniciado_por: r.reiniciado_por,
       brillo_apagado_solo: brilloApagadoSolo,
       gpu: nombreGpu(),
       llamadas: renderer.info.render.calls,
@@ -411,8 +420,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {} })
       movil,
       brillo: Boolean(composer),
       tamano: [lienzo.width, lienzo.height],
-      cuadros_totales: fps.total,
+      cuadros_totales: r.cuadros_totales,
       departamento: depMostrado,
+      departamento_nombre: nombre(depMostrado),
+      enfocado: escenario?.modo === "edificio" ? enfocado : null,
+      enfocado_nombre: enfocado ? nombre(enfocado) : null,
       modo: escenario?.modo ?? modo,
       personajes: escenario ? escenario.personajes().length : 0,
       animados_ultimo_cuadro: ultimoAnimados,
