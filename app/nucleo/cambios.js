@@ -29,6 +29,10 @@ export function compararLecturas(antes, ahora) {
   if (!antes || !ahora || antes.proyecto !== ahora.proyecto) return [];
   const base = { entre: [antes.generado_en, ahora.generado_en], es_demo: ahora.es_demo };
   const cambios = [];
+  // De DEMO a REAL (o al revés) cambian los datos, no la actividad: no se comparan agentes ni alertas.
+  if (antes.es_demo !== ahora.es_demo) {
+    return [{ ...base, tipo: "fuente", de: antes.es_demo ? "DEMO" : "REAL", a: ahora.es_demo ? "DEMO" : "REAL" }];
+  }
   if (antes.conexion !== ahora.conexion) {
     cambios.push({ ...base, tipo: "conexion", de: antes.conexion_etiqueta, a: ahora.conexion_etiqueta });
   }

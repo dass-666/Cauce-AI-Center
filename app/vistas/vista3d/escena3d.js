@@ -733,7 +733,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     selector.value = modo === "edificio" ? (nuevoEnfoque ?? "") : dep.id;
 
     const visibles = modo === "edificio" ? deps : [dep];
-    const clave = `${modo}/${m.proyecto.id}/${m.cuadricula.metros_por_celda}/` +
+    // es_demo en la clave: al pasar de DEMO a REAL la escena se reconstruye y nadie "reacciona" a la diferencia.
+    const clave = `${modo}/${m.proyecto.id}/${m.es_demo ? "demo" : "real"}/${m.cuadricula.metros_por_celda}/` +
       visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => a.id).join(",")}`).join("|");
     const ids = visibles.flatMap((d) => d.agentes.map((a) => a.id));
     if (clave !== claveOficina) {

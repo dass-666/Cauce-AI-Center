@@ -5,6 +5,7 @@ import { prueba, igual, verdadero } from "./mini.js";
 import { validarDocumento, esEnlaceSeguro } from "../app/nucleo/contrato.js";
 import { ESTADOS, NOMBRES_ESTADOS, estadoResumen } from "../app/nucleo/estados.js";
 import { construirModeloVista, elegirCarga } from "../app/nucleo/modelo.js";
+import { validarRegistro } from "../app/nucleo/registro.js";
 import { ANIMACIONES_SOPORTADAS, ACCIONES, BUCLES, planDeTransicion, variacion, gestoOcasional } from "../app/vistas/vista3d/maquina.js";
 import { tamanoCuarto, puestos, puerta, camino, longitudCamino, puntoEnCamino, huella, MEDIDAS } from "../app/vistas/vista3d/disposicion.js";
 import { COLOR_ESTADO, aspecto } from "../app/vistas/vista3d/paleta.js";
@@ -310,11 +311,51 @@ export function registrarCasos(leerTexto) {
   });
 
   // ---------- Fase 2: cambio de DEMO a REAL ----------
-  const demoOk = { tipo: "ok", datos: { demo: true } };
+  const demoOk = { tipo: "ok", datos: { es_demo: true } };
   prueba("Sin archivo real se muestra la demostración, con una nota", () => {
     const e = elegirCarga({ tipo: "no_encontrado" }, demoOk);
     igual(e.origen, "demo");
     verdadero(e.nota.includes("demostración"));
+  });
+  prueba("D1: un archivo en el lugar de la demostración que no dice es_demo: true no se muestra", () => {
+    const e = elegirCarga({ tipo: "no_encontrado" }, { tipo: "ok", datos: { es_demo: false } });
+    igual(e.carga.tipo, "json_invalido");
+    const m = construirModeloVista({ proyecto: { id: "x", nombre: "X" }, carga: e.carga, ahora: new Date() });
+    igual(m.conexion, "invalido");
+    igual(m.departamentos.length, 0);
+  });
+  prueba("D4: el registro solo apunta a archivos de esta carpeta, cada uno en su lugar", () => {
+    const { proyectos, avisos } = validarRegistro({ proyectos: [
+      { id: "compago", nombre: "Compago", estado: "datos/reales/compago.json", demo: "datos/demo/compago.json", distribucion: "escena/compago.json" },
+      { id: "compago", nombre: "Repetido", estado: "datos/reales/otro.json" },
+      { id: "fuera", nombre: "Fuera", estado: "../.git/config" },
+      { id: "remoto", nombre: "Remoto", estado: "https://otro.sitio/x.json" },
+      { id: "mezcla", nombre: "Mezcla", estado: "datos/demo/compago.json" },
+      { id: "demo-mal", nombre: "Demo mal", estado: "datos/reales/demo-mal.json", demo: "datos/reales/compago.json" },
+      { id: "Mal Id", nombre: "x", estado: "datos/reales/x.json" },
+      null,
+    ] });
+    igual(proyectos.map((p) => p.id), ["compago", "demo-mal"]);
+    igual(proyectos[1].demo, null, "una demo que apunta a datos reales se ignora");
+    igual(avisos.length, 7);
+    igual(validarRegistro({}).proyectos, []);
+  });
+  prueba("D4: herramientas/validar-estado.mjs acepta la demo y rechaza un archivo de otro proyecto", async () => {
+    const { execFileSync } = await import("node:child_process").catch(() => ({}));
+    if (!execFileSync) return; // en el navegador no se pueden correr programas: solo cuenta en Node
+    const correr = (...args) => { try { return { codigo: 0, salida: execFileSync(process.execPath, ["herramientas/validar-estado.mjs", ...args], { encoding: "utf8" }) }; } catch (e) { return { codigo: e.status, salida: e.stdout }; } };
+    const bien = correr("datos/demo/compago.json", "--demo");
+    igual(bien.codigo, 0, bien.salida);
+    verdadero(/Fuente: DEMO/.test(bien.salida));
+    const mal = correr("datos/demo/ek-chuah.json", "--demo", "--proyecto=compago");
+    igual(mal.codigo, 1);
+    verdadero(/no determinada/.test(mal.salida));
+    igual(correr("no-existe.json").codigo, 1);
+  });
+  prueba("D4: el registro del repositorio es válido", async () => {
+    const r = validarRegistro(await leerJSON("datos/proyectos.json"));
+    igual(r.avisos, []);
+    igual(r.proyectos.map((p) => p.id), ["compago", "ek-chuah", "tezcatlipoca"]);
   });
   prueba("Con archivo real válido se muestran los datos reales", () => {
     const real = { tipo: "ok", datos: { real: true } };
@@ -575,9 +616,7 @@ export function registrarCasos(leerTexto) {
     verdadero(r.peor_cuadro_ms < 17.5, `peor ${r.peor_cuadro_ms}`);
   });
   prueba("Medidor: el brillo viene apagado por defecto en la escena 3D", async () => {
-    const { readFile } = await import("node:fs/promises").catch(() => ({}));
-    if (!readFile) return; // en el navegador se comprueba en la prueba con Playwright
-    const src = await readFile(new URL("../app/vistas/vista3d/escena3d.js", import.meta.url), "utf8");
+    const src = await leerTexto("app/vistas/vista3d/escena3d.js");
     verdadero(src.includes('leer("cauce.brillo3d") === "1"'), "el brillo debe encenderse solo si el usuario lo eligió");
   });
 
@@ -616,6 +655,22 @@ export function registrarCasos(leerTexto) {
     proyecto: { id: proyecto }, generado_en: generado, conexion, conexion_etiqueta: conexion, es_demo: false,
     departamentos: [{ id: "d", nombre: "Dep", agentes: Object.entries(estados).map(([id, estado]) => ({ id, nombre: id, estado })) }],
     alertas: alertas.map((id) => ({ id, titulo: id, nivel: "advertencia", departamento_id: "d" })),
+  });
+  prueba("D1: pasar de DEMO a REAL no se reporta como cambios de actividad", () => {
+    const demo = { ...lectura("T1", { a: "esperando", b: "trabajando" }, { alertas: ["x"] }), es_demo: true };
+    const real = lectura("T2", { a: "error", c: "trabajando" });
+    const c = compararLecturas(fotografia(demo), fotografia(real));
+    igual(c.length, 1);
+    igual(c[0].tipo, "fuente");
+    igual([c[0].de, c[0].a], ["DEMO", "REAL"]);
+    verdadero(/no se comparan/.test(textoCambio(c[0])));
+    igual(compararLecturas(fotografia(real), fotografia(demo))[0].a, "DEMO");
+  });
+  prueba("D1: lecturas cruzadas: solo cuenta la más reciente; la escena se reconstruye al cambiar de fuente", async () => {
+    const app = await leerTexto("app/app.js");
+    verdadero(/numero !== lecturaNumero/.test(app), "app.js descarta lecturas viejas");
+    const esc = await leerTexto("app/vistas/vista3d/escena3d.js");
+    verdadero(/m\.es_demo \? "demo" : "real"/.test(esc), "la clave de la escena incluye la fuente");
   });
   prueba("Cambios: detecta un cambio de estado y dice entre qué datos se observó", () => {
     const c = compararLecturas(fotografia(lectura("T1", { a: "esperando" })), fotografia(lectura("T2", { a: "trabajando" })));
@@ -736,8 +791,7 @@ export function registrarCasos(leerTexto) {
     igual(resumenDepartamento(viejo).conEvidencia, 0);
   });
   prueba("Barra móvil: la escena usa vecinoDe para flechas, teclado y gesto (una sola regla)", async () => {
-    const { readFile } = await import("node:fs/promises");
-    const src = await readFile(new URL("../app/vistas/vista3d/escena3d.js", import.meta.url), "utf8");
+    const src = await leerTexto("app/vistas/vista3d/escena3d.js");
     verdadero(src.includes("vecinoDe(modelo.departamentos"));
     igual((src.match(/irAVecino\(/g) ?? []).length >= 4, true, "flechas, teclado y gesto pasan por irAVecino");
     verdadero(!/findIndex\(\(d\) => d\.id === \(modo/.test(src), "no queda una segunda copia de la regla del vecino");

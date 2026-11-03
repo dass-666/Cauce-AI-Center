@@ -140,15 +140,19 @@ function dibujarPestanas() {
     }, p.nombre)));
 }
 
+let lecturaNumero = 0;
 async function actualizar() {
   const p = estado.actual;
+  // Varias lecturas pueden cruzarse (cada 30 s, al volver a la pestaña, el botón Actualizar):
+  // solo cuenta la más reciente, así nunca se compara una lectura vieja como si fuera nueva.
+  const numero = ++lecturaNumero;
   const [real, dist] = await Promise.all([
     cargarJSON(p.estado),
     p.distribucion ? cargarJSON(p.distribucion) : Promise.resolve({ tipo: "no_encontrado" }),
   ]);
   // La demostración solo se pide si no existe el archivo real.
   const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
-  if (p !== estado.actual) return; // el usuario cambió de piso mientras cargaba
+  if (p !== estado.actual || numero !== lecturaNumero) return; // cambió de piso o llegó una lectura más nueva
   const eleccion = elegirCarga(real, demo);
   estado.modelo = construirModeloVista({
     proyecto: p,
