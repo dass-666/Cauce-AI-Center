@@ -20,6 +20,18 @@ export async function cargarJSON(url) {
   }
 }
 
+/**
+ * Archivo de estado de un adaptador. Si llega cortado (el adaptador lo estaba reemplazando, o un volumen de
+ * Docker en Windows tardó en sincronizarse), se vuelve a leer UNA vez antes de declararlo inválido.
+ * Un archivo que sigue dañado se muestra como «Archivo inválido», igual que antes.
+ */
+export async function cargarEstado(url, { espera = 700 } = {}) {
+  const r = await cargarJSON(url);
+  if (r.tipo !== "json_invalido") return r;
+  await new Promise((listo) => setTimeout(listo, espera));
+  return cargarJSON(url);
+}
+
 /** Registro de proyectos: primero el local (datos reales, fuera de git); si no existe, el de demostración. */
 export async function cargarRegistro() {
   for (const url of ["datos/proyectos.local.json", "datos/proyectos.json"]) {

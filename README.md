@@ -35,6 +35,10 @@ Qué pasa si algo falla:
 
 Para una sola exportación (sin repetir), en la carpeta de Compago: `python manage.py exportar_cauce --salida <ruta>\datos\reales\compago.json --medir`.
 
+## Conectar Compago desde el piloto Docker local
+
+La interfaz que espera Cauce (un solo archivo, sin red ni credenciales) está en `docs/PUENTE-COMPAGO-DOCKER.md`.
+
 ## Conectar Ek Chuah (datos reales, fase G)
 
 Requiere la rama `claude/exportador-cauce` de Ek Chuah (PR #2; agrega `exportar-cauce`, de solo lectura). Guía completa y pendientes: `docs/EK-CHUAH-INTEGRACION.md`.

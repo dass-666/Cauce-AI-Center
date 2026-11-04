@@ -28,7 +28,7 @@ const r = eleccion.carga.tipo === "ok" ? validarDocumento(eleccion.carga.datos) 
 // El proyecto se toma de --proyecto=<id> o, si no se da, del propio archivo.
 const idPedido = banderas.find((b) => b.startsWith("--proyecto="))?.slice(11);
 const idProyecto = idPedido ?? (typeof carga.datos?.proyecto?.id === "string" ? carga.datos.proyecto.id : "desconocido");
-const m = construirModeloVista({ proyecto: { id: idProyecto, nombre: ruta }, carga: eleccion.carga, ahora: new Date() });
+const m = construirModeloVista({ proyecto: { id: idProyecto, nombre: ruta }, carga: eleccion.carga, origen: eleccion.origen, ahora: new Date() });
 
 console.log(`Archivo: ${ruta}${comoDemo ? " (como demostración)" : ""}`);
 console.log(`Fuente: ${!m.generado_en ? "no determinada" : m.es_demo ? "DEMO" : "REAL"} · Conexión: ${m.conexion_etiqueta}${m.motivo ? ` · ${m.motivo}` : ""}`);
@@ -41,6 +41,6 @@ if (agentes.length) {
 }
 for (const e of r?.errores ?? m.errores) console.log(`  ERROR  ${e}`);
 for (const a of [...(r?.avisos ?? []), ...m.avisos]) console.log(`  AVISO  ${a}`);
-const bien = m.conexion === "en_linea" || (m.es_demo && m.conexion !== "invalido");
+const bien = m.conexion === "en_linea" || (comoDemo && m.es_demo && m.conexion !== "invalido");
 console.log(bien ? "Resultado: válido." : "Resultado: el visualizador NO mostrará actividad con este archivo.");
 process.exit(bien ? 0 : 1);

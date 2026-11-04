@@ -31,7 +31,7 @@ export const TOLERANCIA_FUTURO_SEGUNDOS = 300;
  * @param {object|null} p.distribucion            Distribución de la escena (opcional).
  * @param {Date} p.ahora                           Hora real de la computadora.
  */
-export function construirModeloVista({ proyecto, carga, distribucion = null, ahora, nota_origen = null }) {
+export function construirModeloVista({ proyecto, carga, distribucion = null, ahora, nota_origen = null, origen = "demo" }) {
   const base = {
     nota_origen,
     proyecto: { id: proyecto.id, nombre: proyecto.nombre },
@@ -74,7 +74,11 @@ export function construirModeloVista({ proyecto, carga, distribucion = null, aho
 
   // En demostración, el reloj es el simulado del archivo (para que el ejemplo no "caduque").
   const referencia = doc.es_demo ? new Date(doc.demo.ahora_simulado) : ahora;
-  const edad = Math.round((referencia - new Date(doc.generado_en)) / 1000);
+  // Una DEMO que un adaptador escribe en datos/reales/ (por ejemplo, un piloto local con datos sintéticos) se
+  // juzga con el reloj real: si el adaptador se detiene, se ve «Datos desactualizados» en vez de quedar
+  // «En línea» para siempre. Las demos fijas de datos/demo/ siguen usando su hora simulada.
+  const reloj = doc.es_demo && origen === "real" ? ahora : referencia;
+  const edad = Math.round((reloj - new Date(doc.generado_en)) / 1000);
 
   let conexion = "en_linea";
   let motivo = null;
@@ -166,7 +170,8 @@ export function conEstructura(m, dist) {
 
 /** Resumen de un piso para el selector: "real", "demo", "desactualizado", "invalido" o "desconectado". */
 export function resumenDe(m) {
-  if (m.es_demo) return m.conexion === "invalido" ? "invalido" : "demo";
+  // Una DEMO vencida (adaptador de piloto detenido) se marca como vencida, no como DEMO vigente.
+  if (m.es_demo) return m.conexion === "invalido" || m.conexion === "desactualizado" ? m.conexion : "demo";
   if (m.conexion === "en_linea") return "real";
   return ["desactualizado", "invalido"].includes(m.conexion) ? m.conexion : "desconectado";
 }
