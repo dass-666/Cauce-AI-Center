@@ -2,7 +2,7 @@
 // tiempo y se los pasa a la vista (3D o plano 2D; las dos usan el mismo modelo de vista).
 // La vista 3D y three.js solo se descargan si se usan; "Bajo consumo" fuerza el plano 2D.
 
-import { cargarJSON, cargarRegistro } from "./cargador.js";
+import { cargarJSON, cargarEstado, cargarRegistro } from "./cargador.js";
 import { construirModeloVista, elegirCarga, resumenDe } from "./nucleo/modelo.js";
 import { crearVista2D } from "./vistas/vista2d.js";
 import { dibujarPanel } from "./vistas/panel.js";
@@ -196,10 +196,10 @@ function insigniaPiso(id) {
 async function revisarOtrosPisos() {
   const otros = estado.proyectos.filter((p) => p !== estado.actual);
   const resultados = await Promise.all(otros.map(async (p) => {
-    const real = await cargarJSON(p.estado);
+    const real = await cargarEstado(p.estado);
     const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
     const e = elegirCarga(real, demo);
-    return [p.id, resumenDe(construirModeloVista({ proyecto: p, carga: e.carga, ahora: new Date() }))];
+    return [p.id, resumenDe(construirModeloVista({ proyecto: p, carga: e.carga, origen: e.origen, ahora: new Date() }))];
   }));
   let cambio = false;
   for (const [id, k] of resultados) if (resumenPisos.get(id) !== k) { resumenPisos.set(id, k); cambio = true; }
@@ -213,7 +213,7 @@ async function actualizar() {
   // solo cuenta la más reciente, así nunca se compara una lectura vieja como si fuera nueva.
   const numero = ++lecturaNumero;
   const [real, dist] = await Promise.all([
-    cargarJSON(p.estado),
+    cargarEstado(p.estado),
     p.distribucion ? cargarJSON(p.distribucion) : Promise.resolve({ tipo: "no_encontrado" }),
   ]);
   // La demostración solo se pide si no existe el archivo real.
@@ -225,6 +225,7 @@ async function actualizar() {
     proyecto: p,
     carga: eleccion.carga,
     nota_origen: eleccion.nota,
+    origen: eleccion.origen,
     distribucion: dist.tipo === "ok" ? dist.datos : null,
     ahora: new Date(),
   });

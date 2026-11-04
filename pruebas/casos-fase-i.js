@@ -62,7 +62,7 @@ export function registrarCasosFaseI(leerTexto) {
   prueba("I · insignia de cada piso: REAL, DEMO, Vencido, Error y Sin conexión", () => {
     const base = { es_demo: false };
     igual(["en_linea", "desactualizado", "invalido", "desconectado"].map((c) => resumenDe({ ...base, conexion: c })), ["real", "desactualizado", "invalido", "desconectado"]);
-    igual([resumenDe({ es_demo: true, conexion: "en_linea" }), resumenDe({ es_demo: true, conexion: "desactualizado" }), resumenDe({ es_demo: true, conexion: "invalido" })], ["demo", "demo", "invalido"]);
+    igual([resumenDe({ es_demo: true, conexion: "en_linea" }), resumenDe({ es_demo: true, conexion: "desactualizado" }), resumenDe({ es_demo: true, conexion: "invalido" })], ["demo", "desactualizado", "invalido"]);
   });
 
   prueba("I · insignia de los pisos del repositorio sin datos reales: Compago y Ek Chuah DEMO, Tezcatlipoca y Montambre sin conexión", async () => {
