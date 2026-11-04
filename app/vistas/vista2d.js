@@ -73,6 +73,7 @@ function personaje(a, seleccion, alSeleccionar) {
   // Con clasificación (naturaleza.js): módulos, humanos y reactivos sin registro nuevo no muestran figura.
   const nat = a.naturaleza ? NATURALEZAS[a.naturaleza] : null;
   const sinFigura = nat && a.animacion_mostrada === "ausente";
+  const sinConfirmar = a.presentacion?.programacion === "sin_confirmar"; // programado sin ejecución reciente
   return el("button", {
     clase: `personaje ${ap.clase2d}${elegido ? " elegido" : ""}${nat ? ` puesto-${nat.puesto}` : ""}${sinFigura ? " sin-figura" : ""}`,
     type: "button",
@@ -91,6 +92,6 @@ function personaje(a, seleccion, alSeleccionar) {
       el("span", { clase: "escritorio" })),
     el("span", { clase: "gafete" }, a.nombre),
     el("span", { clase: "estado-texto" }, ap.etiqueta),
-    nat ? el("span", { clase: "naturaleza-texto" }, nat.corta) : null,
+    nat ? el("span", { clase: "naturaleza-texto" }, `${nat.corta}${sinConfirmar ? " · sin confirmar" : ""}`) : null,
   );
 }
