@@ -4,9 +4,10 @@ rem Requiere la rama claude/exportador-cauce de Ek Chuah (PR #2), que agrega el 
 rem NO instala ni activa tareas programadas de Windows: solo corre mientras esta ventana siga abierta.
 rem 1) Cambia EKCHUAH_DIR por la carpeta de Ek Chuah (la que tiene pyproject.toml).
 rem 2) CADA = segundos entre exportaciones (minimo 60). CADA=0 exporta una sola vez (para la primera prueba).
-rem    La vigencia del archivo es 3 ciclos: si cierras esta ventana, Cauce lo muestra "Datos desactualizados".
+rem    Recomendado: CADA=900 (15 min), vigencia 2700 s = 3 ciclos (tolera 2 exportaciones perdidas).
+rem    La vigencia es 3 ciclos: si cierras esta ventana, Cauce lo muestra "Datos desactualizados".
 set "EKCHUAH_DIR=C:\ruta\a\EK_CHUAH"
-set "CADA=300"
+set "CADA=900"
 cd /d "%~dp0"
 set "SALIDA=%CD%\datos\reales\ek-chuah.json"
 if not exist "%CD%\datos\reales\" (echo No existe la carpeta datos\reales de Cauce. & pause & exit /b 1)

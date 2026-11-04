@@ -1,6 +1,6 @@
 # Fase G: integración del exportador de Ek Chuah
 
-Rama `fase-g/integracion-ek-chuah`, apilada sobre `fase-f/multiproyecto` (PR #14). No había ninguna rama de una fase G visual: la última rama de Cauce era la F, así que no hay cambios duplicados. Nada está fusionado ni desplegado. **Ek Chuah y Compago no se modificaron**: Ek Chuah se leyó en su PR #2 (rama `claude/exportador-cauce`, commit `a23e06c`) y Compago no se tocó. El contrato v1 tampoco cambió (`contrato/` y `app/nucleo/contrato.js` quedan igual).
+Rama `fase-g/integracion-ek-chuah` (PR #15). En la fase H se unió encima del PR #16 y este archivo cambió de nombre (antes `docs/VALIDAR-FASE-G.md`). Apilada sobre `fase-f/multiproyecto` (PR #14). No había ninguna rama de una fase G visual: la última rama de Cauce era la F, así que no hay cambios duplicados. Nada está fusionado ni desplegado. **Ek Chuah y Compago no se modificaron**: Ek Chuah se leyó en su PR #2 (rama `claude/exportador-cauce`, commit `a23e06c`) y Compago no se tocó. El contrato v1 tampoco cambió (`contrato/` y `app/nucleo/contrato.js` quedan igual).
 
 Uso tres etiquetas: **[verificado]** (probado aquí, con prueba o registro), **[inferido]** (deducción razonable sin prueba) y **[sin verificar]** (requiere tu PC con Windows).
 
@@ -97,7 +97,7 @@ Además, un REAL puesto en `datos/demo/` Cauce no lo muestra (ya ocurría desde 
 3. Primera conexión, una sola vez. Ek Chuah debe estar en la rama del PR #2 (`git checkout claude/exportador-cauce`). Abre `conectar_ek_chuah.bat` con el Bloc de notas, cambia `EKCHUAH_DIR` por tu carpeta de Ek Chuah y pon `CADA=0`. Haz doble clic. Debe terminar con «Código de salida: 0» (o 1 si falta la base; en ese caso igual escribe el aviso).
 4. Vuelve a Cauce y pulsa **Actualizar**. El piso pasa a **REAL**, sin franja. Revisa la tarjeta «Tarea diaria»: si dice «Programado · sin confirmar», el log no tiene una corrida de las últimas 26 h, o la tarea de Windows no está instalada.
 5. Haz clic en cada personaje y en cada oficina. No debe aparecer ningún monto, ruta, token ni texto de tu bitácora.
-6. Si quieres que se actualice solo, pon `CADA=300` y deja la ventana abierta. Al cerrarla, en unos 15 min el piso pasa a «Datos desactualizados». **No crees una tarea programada todavía.**
+6. Si quieres que se actualice solo, deja `CADA=900` (15 min, fase H) y la ventana abierta. Al cerrarla, en unos 45 min el piso pasa a «Datos desactualizados». **No crees una tarea programada todavía.**
 7. Compago: repite tu validación de la fase E3 (`docs/VALIDAR-FASE-E3.md`). Debe comportarse igual.
 
 [sin verificar] `conectar_ek_chuah.bat` no se pudo ejecutar aquí (no hay Windows). Está escrito igual que `conectar_compago.bat`.

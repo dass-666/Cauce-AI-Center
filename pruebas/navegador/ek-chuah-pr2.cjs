@@ -93,8 +93,11 @@ const DEPTOS = ['Obtención de datos', 'Supervisión y alertas', 'Informes', 'Si
   ok('corrida nueva y reciente de la tarea diaria: entra (sin celebrar)', pasos(de(ps, 'tarea-diaria')).includes('entrar') && !pasos(de(ps, 'tarea-diaria')).includes('celebrar'), pasos(de(ps, 'tarea-diaria')).join(','));
   ok('los demás no se mueven', ps.filter((x) => x.id !== 'tarea-diaria').every((x) => !x.visible && pasos(x).length === 0));
   if (SAL) { await p.waitForTimeout(2500); await p.screenshot({ path: `${SAL}/g-tarea-breve.png` }); }
-  await p.waitForTimeout(11000); ps = await pers();
-  ok('~8 s después la tarea diaria ya salió', !de(ps, 'tarea-diaria').visible);
+  // Se queda ~8 s y luego camina a la salida; caminar tarda unos 5 s con GPU por software. Antes se esperaban
+  // 11 s fijos y la prueba fallaba aquí por tiempo (fase H). Ahora espera hasta 20 s a que salga.
+  const t0 = Date.now();
+  do { await p.waitForTimeout(1000); ps = await pers(); } while (de(ps, 'tarea-diaria').visible && Date.now() - t0 < 20000);
+  ok('después de su aparición breve, la tarea diaria sale sola', !de(ps, 'tarea-diaria').visible, `${Math.round((Date.now() - t0) / 1000)} s`);
   cuerpo = conCorrida(Date.now() - 3 * 86400e3, 'corrida atrasada de hace 3 días');
   ps = await recargar();
   ok('registro nuevo pero de hace 3 días: nadie entra (defecto corregido)', ps.every((x) => !x.visible && pasos(x).length === 0), pasos(de(ps, 'tarea-diaria')).join(','));

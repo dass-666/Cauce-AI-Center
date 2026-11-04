@@ -39,7 +39,7 @@ Para una sola exportación (sin repetir), en la carpeta de Compago: `python mana
 
 Requiere la rama `claude/exportador-cauce` de Ek Chuah (PR #2; agrega `exportar-cauce`, de solo lectura). Guía completa y pendientes: `docs/EK-CHUAH-INTEGRACION.md`.
 
-1. Abre `conectar_ek_chuah.bat` con el Bloc de notas y cambia `EKCHUAH_DIR` por la carpeta de Ek Chuah (la que tiene `pyproject.toml`). `CADA=0` exporta una vez; `CADA=300`, cada 5 minutos mientras la ventana siga abierta.
+1. Abre `conectar_ek_chuah.bat` con el Bloc de notas y cambia `EKCHUAH_DIR` por la carpeta de Ek Chuah (la que tiene `pyproject.toml`). `CADA=0` exporta una vez; `CADA=900` (lo recomendado), cada 15 minutos mientras la ventana siga abierta, con vigencia de 45 min. La tarea programada recomendada (sin instalar) está en `docs/TAREA-EK-CHUAH.md`.
 2. Escribe `datos\reales\ek-chuah.json`. **No instala ni activa ninguna tarea programada de Windows.**
 3. La «Tarea diaria» se muestra como *Programado · sin confirmar* si su log no registra una ejecución en las últimas 26 h.
 
