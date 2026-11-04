@@ -430,3 +430,95 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   .vista3d.es-movil .vista3d-movil { left: 8px; right: 8px; }
   body:has(.vista3d-movil) { padding-bottom: 70px; }
 }
+
+/* ===== Fase G: experiencia visual (medida con pruebas/navegador/auditoria-visual.cjs) ===== */
+.ocultar-movil { display: inline; }
+.boton-inmersivo[hidden] { display: none; }
+.salir-inmersivo[hidden] { display: none; }
+.vista3d-aviso .aviso-corto { display: none; }
+.boton:hover, .piso:hover { border-color: #46557c; }
+.boton, .piso, .tablero-desplegable summary { transition: border-color .15s, background-color .15s; }
+.tablero-desplegable summary:hover { border-color: #46557c; }
+
+@media (max-width: 760px) {
+  .ocultar-movil { display: none; }
+  /* Pestañas y controles con objetivo táctil de 36 px; la cabecera en dos filas bajas. */
+  .cabecera { padding: 6px 8px; gap: 6px; }
+  .pisos .piso, .cabecera .boton { min-height: 36px; padding: 4px 10px; font-size: 14px; }
+  .controles { gap: 8px; width: 100%; flex-wrap: nowrap; }
+  .controles .segmentado { flex: none; }
+  .controles .interruptor { flex: 1; min-height: 36px; }
+  .texto-control { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .icono-control { font-size: 18px; line-height: 1; }
+  #recargar, .boton-inmersivo { min-width: 40px; }
+  /* Franja DEMO completa (sin "...") en una línea corta. */
+  .banda-demo { white-space: normal; padding: 3px 10px; }
+  /* Estados con su nombre (sin símbolos que interpretar): punto de color + número + palabra. */
+  .conexion { font-size: 12px; padding-left: 8px; padding-right: 8px; }
+  .tablero-fila { gap: 4px 5px; }
+  .tablero-desplegable summary { padding: 2px 5px; }
+  .tablero-estado { padding: 0 6px; font-size: 11px; }
+  .tablero-estados { gap: 4px; }
+  .tablero-estado .etiqueta-luz { display: inline-block; width: 8px; height: 8px; margin-right: 4px; }
+  .tablero-estado-icono { display: none; }
+  .tablero-estado-texto { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+  .tablero-estados { flex-wrap: wrap; overflow: visible; }
+  /* Con datos en línea, el motivo repite lo que ya dicen la franja y la insignia; un error sí se muestra. */
+  .conexion-en_linea .conexion-motivo { display: none; }
+  /* El aviso informativo es una pastilla de una línea arriba a la derecha, en la fila de la insignia. */
+  .vista3d.es-movil .vista3d-aviso.aviso-info { top: 10px; left: auto; right: 10px; bottom: auto; max-width: calc(100% - 110px);
+    padding: 4px 10px; border-radius: 999px; white-space: nowrap; font-size: 12px; }
+  /* El texto completo queda para lectores de pantalla (la forma corta está oculta para ellos). */
+  .vista3d-aviso.aviso-info .aviso-largo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .vista3d-aviso.aviso-info .aviso-corto { display: inline; }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  .tablero-estados { flex: 1 0 100%; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Horizontal: una sola fila. Estados como punto de color + número (el mismo color que las etiquetas
+     del edificio); el nombre completo queda en el título y para lectores de pantalla. */
+  .tablero-estados { flex: none; flex-wrap: nowrap; }
+  .tablero-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cabecera .boton, .cabecera .piso { min-height: 0; }
+  .pisos { flex: 1 1 auto; }
+  .controles { width: auto; flex: none; }
+  .controles .interruptor { flex: none; min-height: 0; }
+  /* La insignia REAL/DEMO del tablero queda justo encima: la de la escena se quita para dar alto al edificio. */
+  .vista3d.es-movil .vista3d-fuente { display: none; }
+  .vista3d.es-movil .vista3d-aviso.aviso-info { top: 8px; }
+}
+
+/* Modo inmersivo: el edificio ocupa la ventana; arriba queda una franja con REAL/DEMO, conexión,
+   edad del dato y alertas (los errores de conexión siguen completos). No es pantalla completa del navegador. */
+html.inmersivo body { overflow: hidden; padding-bottom: 0; }
+html.inmersivo .cabecera, html.inmersivo .banda-demo, html.inmersivo .pie, html.inmersivo .vista3d-minimapa { display: none; }
+html.inmersivo .principal { padding: 0; }
+html.inmersivo .oficina.modo-3d { position: fixed; inset: 0; height: 100svh; max-height: none; min-height: 0; border-radius: 0; border: 0; z-index: 1; }
+html.inmersivo .conexion {
+  position: fixed; top: 8px; left: 8px; right: auto; max-width: calc(100% - 70px); z-index: 13;
+  background: #0b1020e8; border: 1px solid var(--borde); border-radius: 10px; padding: 5px 10px; font-size: 13px;
+}
+html.inmersivo .conexion .tablero-fila { flex-wrap: nowrap; gap: 8px; }
+html.inmersivo .tablero-estados, html.inmersivo [data-k="cambios"], html.inmersivo .tablero-fuente, html.inmersivo .tablero-fecha { display: none; }
+html.inmersivo .conexion-en_linea .conexion-motivo { display: none; }
+html.inmersivo .salir-inmersivo { position: fixed; top: 8px; right: 8px; z-index: 13; min-height: 36px; background: #0b1020e8; }
+html.inmersivo .vista3d-barra { top: 56px; }
+html.inmersivo .vista3d-fuente { display: none; }
+/* Errores o datos corregidos del archivo: siguen a la vista, debajo de la franja de estado. */
+html.inmersivo #diagnostico:not([hidden]) { position: fixed; top: 52px; left: 8px; z-index: 13; max-width: calc(100% - 16px);
+  background: #0b1020f0; border: 1px solid var(--borde); border-radius: 10px; padding: 4px 10px; margin: 0; }
+html.inmersivo body:has(#diagnostico:not([hidden])) .vista3d-barra,
+html.inmersivo body:has(#diagnostico:not([hidden])) .vista3d.es-movil .vista3d-aviso.aviso-info { top: 92px; } /* REAL/DEMO ya está en la franja fija de arriba */
+html.inmersivo .vista3d.es-movil .vista3d-aviso.aviso-info { top: 56px; }
+html.inmersivo .panel { position: fixed; top: 56px; right: 8px; bottom: 8px; left: auto; width: min(380px, 42vw); max-height: none; overflow: auto; z-index: 14; }
+@media (max-width: 760px) {
+  html.inmersivo .salir-inmersivo { font-size: 0; width: 40px; padding: 0; }
+  html.inmersivo .salir-inmersivo::before { content: "✕"; font-size: 18px; }
+  html.inmersivo .conexion { font-size: 12px; padding: 4px 8px; }
+  html.inmersivo body:has(.vista3d-movil) .panel { top: auto; left: 6px; right: 6px; width: auto; bottom: calc(106px + env(safe-area-inset-bottom, 0px)); max-height: 32vh; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  html.inmersivo body:has(.vista3d-movil) .panel { top: 48px; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); left: auto; right: 6px; width: min(38vw, 340px); max-height: none; }
+  html.inmersivo .vista3d-barra, html.inmersivo .vista3d.es-movil .vista3d-aviso.aviso-info { top: 46px; }
+}

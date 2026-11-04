@@ -42,7 +42,7 @@ const opcionesVista = {
     dibujar();
   },
   /** Lo que tapa la vista desde fuera (el panel de detalle en celular): la cámara lo evita. */
-  tapan: () => [$("#panel")],
+  tapan: () => [$("#panel"), ...(enInmersivo() ? [$("#conexion"), $("#salir-inmersivo"), $("#diagnostico")] : [])],
   alFallar(motivo) {
     // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos.
     avisarVista(`${motivo} Se muestra el plano 2D.`);
@@ -61,12 +61,29 @@ function vistaDeseada() {
   return leerPreferencia("cauce.vista") === "2d" ? "2d" : "3d";
 }
 
+/**
+ * Modo inmersivo (solo 3D): el edificio ocupa toda la ventana. Quedan siempre a la vista la insignia
+ * REAL/DEMO, la conexión, la edad del dato, las alertas y cualquier error. No usa la pantalla completa
+ * del navegador. Se sale con el botón «Salir», con Esc o al pasar al plano.
+ */
+function ponerInmersivo(activo) {
+  activo = activo && tipoVista === "3d";
+  document.documentElement.classList.toggle("inmersivo", activo);
+  $("#salir-inmersivo").hidden = !activo;
+  $(".boton-inmersivo").setAttribute("aria-pressed", activo ? "true" : "false");
+  if (!activo && document.activeElement === $("#salir-inmersivo")) $(".boton-inmersivo").focus();
+  if (activo) $("#salir-inmersivo").focus({ preventScroll: true });
+}
+const enInmersivo = () => document.documentElement.classList.contains("inmersivo");
+
 async function cambiarVista(tipo, { forzada = false } = {}) {
   if (tipo === tipoVista && !forzada) return;
+  if (tipo !== "3d") ponerInmersivo(false);
   vista?.destruir();
   vista = null;
   tipoVista = tipo;
   $("#oficina").classList.toggle("modo-3d", tipo === "3d");
+  $(".boton-inmersivo").hidden = tipo !== "3d";
   for (const b of document.querySelectorAll("[data-vista]")) b.setAttribute("aria-pressed", b.dataset.vista === tipo ? "true" : "false");
   if (tipo === "3d") {
     try {
@@ -78,6 +95,8 @@ async function cambiarVista(tipo, { forzada = false } = {}) {
       console.error(e);
       avisarVista("Este navegador no pudo abrir la oficina 3D (WebGL no disponible). Se muestra el plano 2D.");
       tipoVista = "2d";
+      ponerInmersivo(false);
+      $(".boton-inmersivo").hidden = true;
       $("#oficina").classList.remove("modo-3d");
       for (const b of document.querySelectorAll("[data-vista]")) b.setAttribute("aria-pressed", b.dataset.vista === "2d" ? "true" : "false");
       vista = crearVista2D($("#oficina"), opcionesVista);
@@ -103,6 +122,7 @@ async function iniciar() {
       cambiarVista(b.dataset.vista);
     });
   }
+  for (const b of document.querySelectorAll("[data-inmersivo]")) b.addEventListener("click", () => ponerInmersivo(!enInmersivo()));
   await cambiarVista(vistaDeseada());
   $("#recargar").addEventListener("click", () => actualizar());
 
@@ -118,8 +138,12 @@ async function iniciar() {
   await actualizar();
   estado.temporizador = setInterval(() => { if (!document.hidden) actualizar(); }, INTERVALO_MS);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) actualizar(); });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && estado.seleccion) { estado.seleccion = null; dibujar(); }
+  // En window (no en document): así corre después de la vista 3D, que usa Esc para volver al piso.
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || e.defaultPrevented) return;
+    // Esc primero cierra el detalle; con el detalle cerrado, sale del modo inmersivo.
+    if (estado.seleccion) { estado.seleccion = null; dibujar(); }
+    else if (enInmersivo()) ponerInmersivo(false);
   });
 }
 
@@ -211,8 +235,11 @@ function dibujar() {
 function dibujarEstado(m) {
   $("#banda-demo").hidden = !m.es_demo;
   if (m.es_demo) {
-    $("#banda-demo-texto").textContent =
-      `DATOS DE DEMOSTRACIÓN · No reflejan actividad real de ${m.proyecto.nombre}. Hora simulada: ${fecha(m.ahora_referencia)}`;
+    // En celular se ocultan "DATOS DE" y la hora (sigue en el tablero) para que la franja no quede cortada.
+    $("#banda-demo-texto").replaceChildren(
+      el("span", { clase: "ocultar-movil" }, "DATOS DE "), "DEMOSTRACIÓN",
+      ` · No reflejan actividad real de ${m.proyecto.nombre}.`,
+      el("span", { clase: "ocultar-movil" }, ` Hora simulada: ${fecha(m.ahora_referencia)}`));
   }
   dibujarTablero($("#conexion"), m, registroCambios.cambios, {
     alElegirDepartamento(id) { estado.seleccion = { tipo: "departamento", id }; dibujar(); },
