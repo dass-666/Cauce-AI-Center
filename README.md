@@ -2,7 +2,7 @@
 
 Oficina virtual para observar el trabajo real de nuestros sistemas (Ek Chuah, Compago y, después, Tezcatlipoca y trading). Cada proyecto es un piso, cada área un departamento y cada proceso un personaje que cambia de estado **solo cuando hay un registro que lo respalda**.
 
-**Estado: fase 2.** Compago ya puede mostrar datos reales (ver abajo). Ek Chuah sigue con datos de demostración. La oficina 3D es la fase siguiente.
+**Estado: fase G (sin fusionar).** Compago puede mostrar datos reales. Ek Chuah ya tiene la configuración para conectar su exportador de solo lectura (ver abajo), pero todavía no está conectado a datos reales.
 
 - Costo: $0. Sin servicios externos, sin bibliotecas en tiempo de ejecución, sin IA.
 - Funciona solo en tu computadora (`127.0.0.1`); no se publica en internet ni en el servidor compartido.
@@ -34,6 +34,14 @@ Qué pasa si algo falla:
 - Si el archivo está dañado, se muestra **Archivo inválido** (no se tapa con la demostración).
 
 Para una sola exportación (sin repetir), en la carpeta de Compago: `python manage.py exportar_cauce --salida <ruta>\datos\reales\compago.json --medir`.
+
+## Conectar Ek Chuah (datos reales, fase G)
+
+Requiere la rama `claude/exportador-cauce` de Ek Chuah (PR #2; agrega `exportar-cauce`, de solo lectura). Guía completa y pendientes: `docs/VALIDAR-FASE-G.md`.
+
+1. Abre `conectar_ek_chuah.bat` con el Bloc de notas y cambia `EKCHUAH_DIR` por la carpeta de Ek Chuah (la que tiene `pyproject.toml`). `CADA=0` exporta una vez; `CADA=300`, cada 5 minutos mientras la ventana siga abierta.
+2. Escribe `datos\reales\ek-chuah.json`. **No instala ni activa ninguna tarea programada de Windows.**
+3. La «Tarea diaria» se muestra como *Programado · sin confirmar* si su log no registra una ejecución en las últimas 26 h.
 
 ## Cómo se usa
 

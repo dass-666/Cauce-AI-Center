@@ -430,13 +430,14 @@ export function registrarCasosNaturaleza(leerTexto) {
 
   // ---------- Fase F: Ek Chuah no tiene exportador; su DEMO no debe mostrar personajes sin evidencia
 
-  prueba("F · clasificación provisional de Ek Chuah: válida, sin automáticos ni programados y cubre todo su DEMO", async () => {
+  // Fase G: la clasificación provisional se reemplazó por la definitiva (pruebas/casos-ek-chuah.js). Se conserva lo esencial:
+  prueba("F→G · clasificación de Ek Chuah: válida, cubre todo su DEMO y no tiene procesos automáticos", async () => {
     const r = validarNaturalezas(await leerJSON("escena/ek-chuah-naturaleza.json"));
     igual(r.avisos, []);
     const demo = await leerJSON("datos/demo/ek-chuah.json");
-    const ids = demo.departamentos.flatMap((d) => d.agentes.map((a) => a.id)).sort();
-    igual([r.valido, [...r.mapa.keys()].sort()], [true, ids]);
-    verdadero([...r.mapa.values()].every((c) => !["automatico", "programado"].includes(c.naturaleza)));
+    const ids = demo.departamentos.flatMap((d) => d.agentes.map((a) => a.id));
+    verdadero(r.valido && ids.every((id) => r.mapa.has(id)));
+    verdadero([...r.mapa.values()].every((c) => c.naturaleza !== "automatico"));
   });
 
   prueba("F · DEMO de Ek Chuah con su clasificación: ningún personaje al cargar (no hay evidencia nueva)", async () => {

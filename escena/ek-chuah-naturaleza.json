@@ -1,36 +1,46 @@
 {
-  "descripcion": "Clasificación PROVISIONAL de los puestos del DEMO de Ek Chuah. Ek Chuah todavía NO tiene exportador hacia Cauce: esto solo evita que el DEMO muestre personajes sin evidencia. Revisado en solo lectura contra Ek Chuah main 05eca04 el 2026-11-03. Ek Chuah es investigación y simulación: no opera dinero real. Nada aquí es 'automatico' ni 'programado' porque Cauce aún no recibe ninguna evidencia de ejecución.",
+  "descripcion": "Clasificación de los puestos de Ek Chuah para su exportador de solo lectura (Ek Chuah PR #2, rama claude/exportador-cauce, commit a23e06c, comando exportar-cauce). Revisada en solo lectura contra ese commit el 2026-11-04. Ek Chuah es investigación y simulación: no opera dinero real y no tiene agentes autónomos. 'REAL' en Cauce significa datos auténticos del sistema, no dinero real. Solo 'tarea-diaria' es programado, y solo se da por confirmado si su log registra una ejecución en las últimas 26 h; la instalación de la tarea de Windows EkChuah-Alertas NO está verificada.",
   "proyecto_id": "ek-chuah",
+  "hora_del_registro": "actividad",
+  "nota_hora_del_registro": "El exportador de Ek Chuah pone en evidencia.observado_en la hora de exportación, no la del registro. Para decidir si un registro es reciente, Cauce usa actividad.fin (salvo si el puesto está trabajando).",
   "agentes": {
     "descargador": {
       "naturaleza": "reactivo",
-      "proceso": "Comando fetch-macro (también lo corre la tarea de Windows EkChuah-Alertas a las 9:00, según la bitácora del 2026-10-13; no confirmado que siga instalada). Pasará a 'programado' solo con programacion.evidencia.",
-      "evidencia": "fetch_log (status, started_at, finished_at) — aún no exportado"
+      "proceso": "Comando fetch-macro (Banxico, INEGI, FRED). Lo corre la tarea diaria o una persona a mano; fetch_log no distingue quién lo lanzó, así que no se marca como programado.",
+      "evidencia": "fetch_log (status, started_at, finished_at); el exportador no lee request ni error"
     },
     "vigia": {
       "naturaleza": "reactivo",
-      "proceso": "Comando alertas (reglas fijas, sin IA), corrido por la misma tarea diaria.",
-      "evidencia": "alerts_sent — aún no exportado"
+      "proceso": "Comando alertas (reglas fijas, sin IA), por la tarea diaria o a mano (también registra corridas por consola).",
+      "evidencia": "alerts_sent (tipo, nivel, canal, hora); el exportador no lee títulos ni contenido"
+    },
+    "tarea-diaria": {
+      "naturaleza": "programado",
+      "proceso": "Tarea de Windows EkChuah-Alertas (9:00): scripts/alertas_diarias.ps1 corre fetch-macro y alertas --discord. Su instalación no está verificada desde Cauce.",
+      "programacion": {
+        "evidencia": "logs/alertas_diarias.log: líneas fijas 'Inicio' y 'Fin (código N)' que escribe la propia tarea",
+        "reciente_horas": 26
+      }
     },
     "redactor": {
       "naturaleza": "reactivo",
-      "proceso": "Análisis semanal escrito por una tarea de la app de Claude (domingo 8 pm); su salida queda en data/analisis, fuera de git.",
-      "evidencia": "ninguna que Cauce pueda leer todavía"
+      "proceso": "Análisis semanal escrito por una tarea externa de la app de Claude (domingo 20:00); Cauce solo ve el nombre del archivo, no si se ejecutó a tiempo.",
+      "evidencia": "data/analisis/AAAA-MM-DD.md (solo nombres y fecha)"
     },
     "simulador": {
       "naturaleza": "modulo",
-      "proceso": "Comando portfolio-sim: simulación con dinero imaginario que alguien lanza a mano; no registra ejecuciones.",
+      "proceso": "portfolio-sim, practice-report, historia: simulación con dinero imaginario lanzada a mano; no registra ejecuciones.",
       "evidencia": "ninguna"
     },
     "evaluador-riesgo": {
       "naturaleza": "modulo",
-      "proceso": "Comando risk-menu: cálculo al pedirlo; no registra ejecuciones.",
+      "proceso": "risk-menu y pruebas de crisis: cálculo al pedirlo; no registra ejecuciones.",
       "evidencia": "ninguna"
     },
     "auditor": {
       "naturaleza": "humano",
-      "proceso": "Revisión mensual (día 15) que una persona registra en su bitácora.",
-      "evidencia": "ninguna que Cauce pueda leer todavía"
+      "proceso": "Calificación mensual (día 15) y revisión por reglas; la decisión la toma una persona.",
+      "evidencia": "alerts_sent de tipo calificacion o revision"
     }
   }
 }
