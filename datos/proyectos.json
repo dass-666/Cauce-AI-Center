@@ -3,6 +3,7 @@
   "proyectos": [
     { "id": "compago", "nombre": "Compago", "estado": "datos/reales/compago.json", "demo": "datos/demo/compago.json", "distribucion": "escena/compago.json" },
     { "id": "ek-chuah", "nombre": "Ek Chuah", "estado": "datos/reales/ek-chuah.json", "demo": "datos/demo/ek-chuah.json", "distribucion": "escena/ek-chuah.json" },
-    { "id": "tezcatlipoca", "nombre": "Tezcatlipoca", "estado": "datos/reales/tezcatlipoca.json", "distribucion": null }
+    { "id": "tezcatlipoca", "nombre": "Tezcatlipoca", "estado": "datos/reales/tezcatlipoca.json", "distribucion": null },
+    { "id": "montambre", "nombre": "Montambre", "estado": "datos/reales/montambre.json", "distribucion": "escena/montambre.json" }
   ]
 }

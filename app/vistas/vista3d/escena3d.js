@@ -651,9 +651,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     seleccion = sel;
     const deps = m.departamentos;
     raiz.dataset.conexion = m.conexion;
-    fuente.textContent = m.es_demo ? "DEMO" : "REAL";
-    fuente.className = `vista3d-fuente ${m.es_demo ? "es-demo" : "es-real"}`;
-    fuente.title = m.es_demo ? "Datos de demostración: no es actividad real" : "Datos reales del sistema";
+    // Sin archivo leído no hay origen que mostrar: "REAL" solo cuando de verdad llegó un archivo real.
+    const origen = m.es_demo ? "demo" : m.generado_en ? "real" : "sin";
+    fuente.textContent = { demo: "DEMO", real: "REAL", sin: "SIN DATOS" }[origen];
+    fuente.className = `vista3d-fuente es-${origen}`;
+    fuente.title = { demo: "Datos de demostración: no es actividad real", real: "Datos reales del sistema", sin: "No hay archivo de estado de este proyecto" }[origen];
 
     if (deps.length === 0) {
       quitarOficina();
@@ -743,7 +745,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     // Un aviso de conexión se muestra completo; el informativo (puestos sin personaje) tiene además
     // una forma corta que en celular ocupa una sola línea y deja el edificio a la vista.
     let largo = null, corto = null;
-    if (m.conexion !== "en_linea") largo = `${m.conexion_etiqueta}: sin evidencia vigente, los personajes salen de la oficina.`;
+    if (m.solo_estructura) largo = `${m.conexion_etiqueta}: solo se conocen sus departamentos; no hay datos ni personajes.`;
+    else if (m.conexion !== "en_linea") largo = `${m.conexion_etiqueta}: sin evidencia vigente, los personajes salen de la oficina.`;
     else if (agentesAviso.length === 0) largo = "Este departamento no tiene personajes.";
     else if (vacios && clasificado) { largo = `${vacios} puesto(s) sin personaje (módulos, humanos o sin registro nuevo).`; corto = `${vacios} sin personaje`; }
     else if (vacios) { largo = `${vacios} silla(s) vacía(s): sin registro que respalde actividad.`; corto = `${vacios} silla(s) vacía(s)`; }

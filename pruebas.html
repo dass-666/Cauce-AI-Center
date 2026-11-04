@@ -19,6 +19,7 @@
     import { registrarCasos } from "./pruebas/casos.js";
     import { registrarCasosNaturaleza } from "./pruebas/casos-naturaleza.js";
     import { registrarCasosEkChuah } from "./pruebas/casos-ek-chuah.js";
+    import { registrarCasosFaseI } from "./pruebas/casos-fase-i.js";
     import { ejecutar } from "./pruebas/mini.js";
     const leer = async (ruta) => {
       const r = await fetch(ruta, { cache: "no-store" });
@@ -28,6 +29,7 @@
     registrarCasos(leer);
     registrarCasosNaturaleza(leer);
     registrarCasosEkChuah(leer);
+    registrarCasosFaseI(leer);
     const r = await ejecutar();
     const resumen = document.getElementById("resumen");
     resumen.textContent = `${r.pasaron} pasaron, ${r.fallaron} fallaron`;
