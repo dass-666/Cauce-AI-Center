@@ -235,6 +235,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 .vista3d-fuente { font-weight: 800; letter-spacing: .06em; padding: 5px 10px; border-radius: 8px; font-size: 13px; }
 .vista3d-fuente.es-demo { background: #ffb547; color: #1a1200; }
 .vista3d-fuente.es-real { background: #12361f; color: #7ff0a8; border: 1px solid #43c47a; }
+.vista3d-fuente.es-sin { background: #222a3d; color: #b9c3dd; border: 1px solid #4a5677; }
 .vista3d-aviso {
   position: absolute; left: 10px; right: 10px; bottom: 58px; margin: 0; padding: 8px 12px; border-radius: 8px;
   background: #0f1526e6; border: 1px solid var(--borde); color: var(--texto-suave); font-size: 13px;
@@ -521,4 +522,20 @@ html.inmersivo .panel { position: fixed; top: 56px; right: 8px; bottom: 8px; lef
 @media (max-height: 500px) and (orientation: landscape) {
   html.inmersivo body:has(.vista3d-movil) .panel { top: 48px; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); left: auto; right: 6px; width: min(38vw, 340px); max-height: none; }
   html.inmersivo .vista3d-barra, html.inmersivo .vista3d.es-movil .vista3d-aviso.aviso-info { top: 46px; }
+}
+
+/* ===== Fase I: estado de cada piso en el selector (sale de su archivo; no anima nada) ===== */
+.piso { display: inline-flex; align-items: center; gap: 6px; position: relative; }
+.piso-estado { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; padding: 1px 6px; border-radius: 999px; border: 1px solid currentColor; line-height: 1.4; }
+.piso-luz { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.piso-real { color: #5fd38d; }
+.piso-demo { color: #f2c14e; }
+.piso-desactualizado { color: #f0a35e; }
+.piso-invalido { color: #ff7b7b; }
+.piso-desconectado { color: #9aa6c2; }
+.reintentar-3d { color: #ffe3e3; text-decoration: underline; font-weight: 600; }
+/* En celular la fila de pisos es estrecha: queda el punto de color; el texto sigue para lectores (aria-label). */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) {
+  .piso-estado { border: 0; padding: 0; }
+  .piso-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }

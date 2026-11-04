@@ -35,6 +35,9 @@ datos/demo/<id>.json (solo si no existe el real; debe decir es_demo: true)      
    tabla como la de `docs/ARQUITECTURA.md` → *Adaptadores*. Sin esa tabla no se continúa.
 2. **Demostración primero:** escribir `datos/demo/<id>.json` con `es_demo: true` y `[DEMO]` en cada texto.
 3. **Escena:** escribir `escena/<id>.json` (departamentos y su posición). Es opcional: sin ella se acomodan solos.
+   Si cada departamento trae además `"nombre"` (y opcionalmente `"descripcion"`), sacados de un inventario del
+   repositorio, el piso muestra esos cuartos **vacíos** mientras no exista archivo de estado: sin personajes, sin
+   cifras, con «Sin conexión» y la nota de inventario (`"inventario"`). Así se ve Montambre (fase I).
 4. **Registro:** agregar una línea en `datos/proyectos.json`:
    `{ "id", "nombre", "estado": "datos/reales/<id>.json", "demo": "datos/demo/<id>.json", "distribucion": "escena/<id>.json" }`.
 5. **Adaptador de solo lectura**, en el repositorio del sistema y con autorización de Diego:
@@ -49,29 +52,13 @@ datos/demo/<id>.json (solo si no existe el real; debe decir es_demo: true)      
 7. **Activar:** el archivo real aparece en `datos/reales/` (fuera de git) y la página lo toma sola en la siguiente
    lectura. Se anota como "Los datos pasaron de DEMO a REAL".
 
-## 3. Estado por proyecto
+## 3. Estado por proyecto (actualizado en la fase I, 2026-11-04)
 
 | # | Proyecto | Registro | Demo | Escena | Adaptador | Siguiente paso |
 |---|---|---|---|---|---|---|
-| 1 | Compago | ✔ | ✔ `datos/demo/compago.json` | ✔ | Construido en Compago PR #9 (`exportar_cauce`), **sin fusionar** | Diego decide cuándo fusionarlo y correrlo en su PC |
-| 2 | Ek Chuah | ✔ | ✔ `datos/demo/ek-chuah.json` | ✔ | **No existe** | Acordar la tabla de evidencia (candidatos ya anotados: `fetch_log`, `alerts_sent`, log diario). Luego, con permiso, el adaptador en el repositorio de Ek Chuah |
-| 3 | Tezcatlipoca | ✔ (sin demo) | — | — | **No existe**; su repositorio no es accesible | Diego indica dónde vive y qué registra. Hasta entonces se ve *Sin conexión* (correcto) |
-| 4 | Futuros (trading…) | — | — | — | — | Mismos 7 pasos |
-
-## 4. Lo que **no** se hace
-
-- El visualizador no se conecta a bases de datos, APIs ni servidores: solo lee archivos locales.
-- No se inventan campos del contrato ni se cambia la versión 1.0.0. Si un sistema necesita algo nuevo, se
-  propone una versión 1.1 compatible, con autorización.
-- No se fabrican archivos "reales". Los datos ficticios de prueba viven solo en memoria, dentro de las pruebas
-  (`pruebas/navegador/estabilidad.cjs`), y dicen *PRUEBA automática (datos ficticios)*.
-- No se activa ninguna integración sin contrato verificado y sin autorización de Diego.
-
-## 5. Riesgos conocidos
-
-| Riesgo | Efecto | Mitigación |
-|---|---|---|
-| El adaptador escribe el archivo a medias | *Archivo inválido* durante una lectura | Escribir a un temporal y renombrar (paso 5) |
-| Relojes desfasados | *Hora en el futuro* o *desactualizado* | Tolerancia de 5 min (`TOLERANCIA_FUTURO_SEGUNDOS`) y `vigencia_segundos` por proyecto |
-| Estados que cambian y regresan entre dos lecturas | No se ven (correcto: no se inventan) | Si importa, el adaptador debe exportar ese historial; sería un cambio de contrato |
-| `proyectos.local.json` editado a mano | Rutas peligrosas | `registro.js` las descarta y avisa en la consola |
+| 1 | Compago | ✔ | ✔ | ✔ + naturalezas | `exportar_cauce` en Compago PR #9/#10, **sin fusionar** | Diego lo fusiona y lo corre en su PC |
+| 2 | Ek Chuah | ✔ | ✔ | ✔ + naturalezas | `exportar-cauce` en Ek Chuah PR #2, **sin fusionar** | Paso 2 de `docs/INFORME-FASE-H.md` §7 (primera exportación real) |
+| 3 | Tezcatlipoca | ✔ (sin demo) | — | — | Repositorio **no accesible** | `docs/TEZCATLIPOCA-REQUISITOS.md` |
+| 4 | Montambre | ✔ (sin demo) | — | ✔ solo estructura (4 cuartos) | **No existe**; tampoco hay procesos automáticos que exportar | `docs/MONTAMBRE-REQUISITOS.md` |
+| 5 | CauceService, Repacar / Auxilio Auto | — | — | — | Repositorios **no accesibles** | Diego indica dónde viven |
+| 6 | Futuros (trading…) | — | — | — | — | Mismos 7 pasos |

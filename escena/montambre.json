@@ -1,0 +1,12 @@
+{
+  "proyecto_id": "montambre",
+  "version": 1,
+  "inventario": "repositorio dass-666/MONTAMBRE, rama main, revisado el 2026-11-04",
+  "cuadricula": { "columnas": 2, "filas": 2, "metros_por_celda": 4 },
+  "departamentos": {
+    "busqueda":   { "x": 0, "y": 0, "ancho": 1, "alto": 1, "nombre": "Búsqueda y mapa", "descripcion": "Módulo web (apps/web): mapa, lista, filtros y ficha. Responde a quien lo usa; no corre solo." },
+    "registro":   { "x": 1, "y": 0, "ancho": 1, "alto": 1, "nombre": "Registro de negocios", "descripcion": "Módulo web (/registrar, /mis-lugares). Lo usa una persona; no hay proceso automático." },
+    "moderacion": { "x": 0, "y": 1, "ancho": 1, "alto": 1, "nombre": "Moderación de altas", "descripcion": "Decisión humana (/moderacion). Nunca se dibuja como agente." },
+    "cobertura":  { "x": 1, "y": 1, "ancho": 1, "alto": 1, "nombre": "Prueba de cobertura", "descripcion": "Herramienta que se corre a mano (tools/coverage-test). Todavía sin datos reales." }
+  }
+}

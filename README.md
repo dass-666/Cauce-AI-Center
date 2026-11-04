@@ -45,7 +45,8 @@ Requiere la rama `claude/exportador-cauce` de Ek Chuah (PR #2; agrega `exportar-
 
 ## Cómo se usa
 
-- Arriba eliges el **piso** (proyecto). Tezcatlipoca aparece **sin conexión** a propósito: aún no tiene adaptador.
+- Arriba eliges el **piso** (proyecto). Cada botón dice qué tiene sin abrirlo: **REAL**, **DEMO**, **Vencido**, **Error** o **Sin conexión** (en celular, un punto de color). Tezcatlipoca y Montambre aparecen **sin conexión** a propósito: aún no tienen adaptador. Montambre muestra sus cuartos vacíos (estructura conocida por inventario, sin personajes).
+- Si la tarjeta gráfica falla, la página pasa sola al plano 2D y ofrece **Reintentar 3D**.
 - **3D / Plano**: la oficina 3D muestra un departamento a la vez (elígelo arriba a la izquierda). Arrastra para girar, rueda o pellizco para acercar, dos dedos o clic derecho para mover. *Centrar* regresa la cámara. El plano 2D muestra todos los departamentos y gasta menos.
 - Haz clic en el **letrero** de un departamento para ver sus indicadores, alertas y resultados.
 - Haz clic en un **personaje** para ver su función, tarea, inicio, fin, avance (si el sistema lo informa), evidencia y errores.

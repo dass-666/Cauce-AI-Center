@@ -3,7 +3,7 @@
 // La vista 3D y three.js solo se descargan si se usan; "Bajo consumo" fuerza el plano 2D.
 
 import { cargarJSON, cargarRegistro } from "./cargador.js";
-import { construirModeloVista, elegirCarga } from "./nucleo/modelo.js";
+import { construirModeloVista, elegirCarga, resumenDe } from "./nucleo/modelo.js";
 import { crearVista2D } from "./vistas/vista2d.js";
 import { dibujarPanel } from "./vistas/panel.js";
 import { el, fecha } from "./vistas/dom.js";
@@ -18,6 +18,16 @@ const registroCambios = crearRegistroCambios({ maximo: 30 });
 const seguidor = crearSeguidorNaturalezas();
 const clasificaciones = new Map(); // proyecto → resultado de validarNaturalezas o null
 let temporizadorBreve = null;
+
+// Estado resumido de cada piso para el selector (REAL, DEMO, sin conexión...). Se lee de sus archivos, nada más.
+const resumenPisos = new Map();
+const RESUMEN = {
+  real: { texto: "REAL", titulo: "Datos reales vigentes" },
+  demo: { texto: "DEMO", titulo: "Solo datos de demostración" },
+  desactualizado: { texto: "Vencido", titulo: "Datos reales fuera de su vigencia" },
+  invalido: { texto: "Error", titulo: "El archivo de estado tiene errores" },
+  desconectado: { texto: "Sin conexión", titulo: "Todavía no hay archivo de estado" },
+};
 
 const estado = {
   proyectos: [],
@@ -44,16 +54,18 @@ const opcionesVista = {
   /** Lo que tapa la vista desde fuera (el panel de detalle en celular): la cámara lo evita. */
   tapan: () => [$("#panel"), ...(enInmersivo() ? [$("#conexion"), $("#salir-inmersivo"), $("#diagnostico")] : [])],
   alFallar(motivo) {
-    // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos.
-    avisarVista(`${motivo} Se muestra el plano 2D.`);
+    // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos, y se puede volver a intentar.
+    avisarVista(`${motivo} Se muestra el plano 2D.`, { reintentar: true });
     cambiarVista("2d", { forzada: true });
   },
 };
 
-function avisarVista(texto) {
+function avisarVista(texto, { reintentar = false } = {}) {
   const a = $("#aviso-vista");
   a.hidden = !texto;
-  a.textContent = texto ?? "";
+  a.replaceChildren(texto ?? "");
+  // Tras una falla de la tarjeta gráfica (driver reiniciado, poca memoria) la 3D suele volver a funcionar.
+  if (texto && reintentar) a.append(" ", el("button", { type: "button", clase: "enlace reintentar-3d", onclick: () => { avisarVista(null); cambiarVista("3d", { forzada: true }); } }, "Reintentar 3D"));
 }
 
 function vistaDeseada() {
@@ -93,7 +105,7 @@ async function cambiarVista(tipo, { forzada = false } = {}) {
       avisarVista(null);
     } catch (e) {
       console.error(e);
-      avisarVista("Este navegador no pudo abrir la oficina 3D (WebGL no disponible). Se muestra el plano 2D.");
+      avisarVista("Este navegador no pudo abrir la oficina 3D (WebGL no disponible). Se muestra el plano 2D.", { reintentar: true });
       tipoVista = "2d";
       ponerInmersivo(false);
       $(".boton-inmersivo").hidden = true;
@@ -167,10 +179,31 @@ function dibujarPestanas() {
         dibujarPestanas();
         await actualizar();
       },
-    }, p.nombre)));
+    }, p.nombre, insigniaPiso(p.id))));
   // En celular la fila se desliza: la pestaña elegida queda a la vista sin mover la página.
   const elegida = $('#pisos [aria-selected="true"]');
   if (elegida) elegida.parentElement.scrollLeft = Math.max(0, elegida.offsetLeft - elegida.parentElement.offsetLeft - 8);
+}
+
+function insigniaPiso(id) {
+  const k = resumenPisos.get(id);
+  if (!k) return null;
+  return el("span", { clase: `piso-estado piso-${k}`, title: RESUMEN[k].titulo },
+    el("span", { clase: "piso-luz", "aria-hidden": "true" }), el("span", { clase: "piso-estado-texto" }, RESUMEN[k].texto));
+}
+
+/** Lee el archivo de cada piso que no se está viendo (solo para su insignia; no anima ni registra cambios). */
+async function revisarOtrosPisos() {
+  const otros = estado.proyectos.filter((p) => p !== estado.actual);
+  const resultados = await Promise.all(otros.map(async (p) => {
+    const real = await cargarJSON(p.estado);
+    const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
+    const e = elegirCarga(real, demo);
+    return [p.id, resumenDe(construirModeloVista({ proyecto: p, carga: e.carga, ahora: new Date() }))];
+  }));
+  let cambio = false;
+  for (const [id, k] of resultados) if (resumenPisos.get(id) !== k) { resumenPisos.set(id, k); cambio = true; }
+  if (cambio) dibujarPestanas();
 }
 
 let lecturaNumero = 0;
@@ -198,6 +231,9 @@ async function actualizar() {
   registroCambios.leer(estado.modelo); // solo compara con la lectura anterior de esta página
   estado.clasificacion = clasificacion;
   aplicarNaturalezas();
+  const k = resumenDe(estado.modelo);
+  if (resumenPisos.get(p.id) !== k) { resumenPisos.set(p.id, k); dibujarPestanas(); }
+  revisarOtrosPisos();
 }
 
 async function clasificacionDe(p) {

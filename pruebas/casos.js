@@ -356,7 +356,7 @@ export function registrarCasos(leerTexto) {
   prueba("D4: el registro del repositorio es válido", async () => {
     const r = validarRegistro(await leerJSON("datos/proyectos.json"));
     igual(r.avisos, []);
-    igual(r.proyectos.map((p) => p.id), ["compago", "ek-chuah", "tezcatlipoca"]);
+    igual(r.proyectos.map((p) => p.id), ["compago", "ek-chuah", "tezcatlipoca", "montambre"]);
   });
   prueba("Con archivo real válido se muestran los datos reales", () => {
     const real = { tipo: "ok", datos: { real: true } };

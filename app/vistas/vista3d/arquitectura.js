@@ -200,7 +200,8 @@ function crearLetreroRecepcion(recursos) {
   return {
     malla,
     dibujar(modelo) {
-      const nueva = [modelo.proyecto.nombre, modelo.es_demo, modelo.conexion].join("|");
+      const origen = modelo.es_demo ? "demo" : modelo.generado_en ? "real" : "sin";
+      const nueva = [modelo.proyecto.nombre, origen, modelo.conexion].join("|");
       if (nueva === clave) return;
       clave = nueva;
       ctx.fillStyle = "#0f1526";
@@ -212,15 +213,16 @@ function crearLetreroRecepcion(recursos) {
       ctx.font = "bold 92px system-ui, sans-serif";
       ctx.textBaseline = "middle";
       ctx.fillText(modelo.proyecto.nombre.toUpperCase(), 48, 100);
-      const real = !modelo.es_demo;
-      ctx.fillStyle = real ? "#43c47a" : "#ffb547";
-      ctx.fillRect(48, 168, 150, 56);
+      // "REAL" solo si llegó un archivo real; sin archivo, "SIN DATOS".
+      const caja = { real: ["#43c47a", "REAL", 150], demo: ["#ffb547", "DEMO", 150], sin: ["#8a94ad", "SIN DATOS", 250] }[origen];
+      ctx.fillStyle = caja[0];
+      ctx.fillRect(48, 168, caja[2], 56);
       ctx.fillStyle = "#0b0f19";
       ctx.font = "bold 40px system-ui, sans-serif";
-      ctx.fillText(real ? "REAL" : "DEMO", 62, 197);
+      ctx.fillText(caja[1], 62, 197);
       ctx.fillStyle = modelo.conexion === "en_linea" ? "#a3adc4" : "#ffb547";
       ctx.font = "36px system-ui, sans-serif";
-      ctx.fillText(modelo.conexion_etiqueta, 222, 197);
+      ctx.fillText(modelo.conexion_etiqueta, caja[2] + 72, 197);
       textura.needsUpdate = true;
     },
   };

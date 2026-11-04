@@ -59,7 +59,10 @@ export function construirModeloVista({ proyecto, carga, distribucion = null, aho
       json_invalido: "El archivo de estado no es JSON válido.",
     };
     const conexion = carga.tipo === "json_invalido" ? "invalido" : "desconectado";
-    return conMotivo(base, conexion, motivos[carga.tipo] ?? "Sin datos.", carga.mensaje ? [carga.mensaje] : []);
+    // Que el archivo todavía no exista no es un error del archivo: el motivo ya lo explica.
+    const errores = carga.mensaje && carga.tipo !== "no_encontrado" ? [carga.mensaje] : [];
+    const sinDatos = conMotivo(base, conexion, motivos[carga.tipo] ?? "Sin datos.", errores);
+    return conexion === "desconectado" ? conEstructura(sinDatos, distribucion) : sinDatos;
   }
 
   const r = validarDocumento(carga.datos);
@@ -127,6 +130,45 @@ export function construirModeloVista({ proyecto, carga, distribucion = null, aho
     alertas: doc.alertas,
     resultados: doc.resultados,
   };
+}
+
+/**
+ * Proyecto preparado pero sin adaptador: si su distribución (escena/<id>.json) trae el "nombre" de cada
+ * departamento (sacado de un inventario de su repositorio), se dibujan los cuartos vacíos. No hay
+ * personajes, estados, alertas ni cifras: solo la estructura conocida, marcada como tal.
+ */
+export function conEstructura(m, dist) {
+  const deps = dist?.departamentos && typeof dist.departamentos === "object" ? dist.departamentos : null;
+  const conNombre = deps ? Object.entries(deps).filter(([id, d]) => typeof d?.nombre === "string" && d.nombre.trim() && /^[a-z0-9][a-z0-9_-]{0,39}$/.test(id)) : [];
+  if (conNombre.length === 0) return m;
+  const departamentos = conNombre.slice(0, 50).map(([id, d]) => ({
+    id,
+    nombre: d.nombre.trim().slice(0, 60),
+    descripcion: typeof d.descripcion === "string" ? d.descripcion.trim().slice(0, 240) : null,
+    indicadores: [],
+    agentes: [],
+    posicion: posicionDe(dist, id),
+    estado_resumen: "sin_datos",
+    apariencia_resumen: ESTADOS.sin_datos,
+    alertas: [],
+    resultados: [],
+    solo_estructura: true,
+  }));
+  acomodarSinPosicion(departamentos, m.cuadricula.columnas);
+  const fuente = typeof dist.inventario === "string" ? ` (${dist.inventario.trim().slice(0, 120)})` : "";
+  return {
+    ...m,
+    solo_estructura: true,
+    departamentos,
+    nota_origen: `Se muestran solo los departamentos conocidos por inventario${fuente}. No hay datos ni actividad: ningún personaje representa trabajo.`,
+  };
+}
+
+/** Resumen de un piso para el selector: "real", "demo", "desactualizado", "invalido" o "desconectado". */
+export function resumenDe(m) {
+  if (m.es_demo) return m.conexion === "invalido" ? "invalido" : "demo";
+  if (m.conexion === "en_linea") return "real";
+  return ["desactualizado", "invalido"].includes(m.conexion) ? m.conexion : "desconectado";
 }
 
 function conMotivo(base, conexion, motivo, errores) {
