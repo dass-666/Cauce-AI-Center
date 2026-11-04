@@ -1,0 +1,168 @@
+{
+  "contrato": "cauce.estado-proyecto",
+  "version": "1.0.0",
+  "proyecto": {
+    "id": "ek-chuah",
+    "nombre": "Ek Chuah"
+  },
+  "generado_en": "2026-11-03T16:30:00Z",
+  "vigencia_segundos": 93600,
+  "es_demo": true,
+  "fuente": {
+    "tipo": "demo",
+    "nombre": "Ek Chuah · exportar-cauce (datos sintéticos)",
+    "version": "0.3.1"
+  },
+  "departamentos": [
+    {
+      "id": "datos",
+      "nombre": "Obtención de datos",
+      "descripcion": "Evidencia: tabla fetch_log (una fila por serie descargada). No se exportan peticiones, rutas ni mensajes de error.",
+      "agentes": [
+        {
+          "id": "descargador",
+          "nombre": "Descargador",
+          "rol": "Descarga series oficiales (Banxico, INEGI, FRED) con el comando fetch-macro",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] No hay descargas registradas en fetch_log."
+          }
+        }
+      ],
+      "indicadores": [
+        {
+          "etiqueta": "Descargas en la última corrida",
+          "valor": null,
+          "nota": "No hay descargas registradas en fetch_log."
+        }
+      ]
+    },
+    {
+      "id": "supervision",
+      "nombre": "Supervisión y alertas",
+      "descripcion": "Evidencia: alerts_sent (solo tipo, nivel, canal y hora; nunca títulos ni contenido) y las líneas fijas del log de la tarea diaria.",
+      "agentes": [
+        {
+          "id": "vigia",
+          "nombre": "Vigía",
+          "rol": "Calcula alertas por reglas fijas (sin IA) y las registra en alerts_sent",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] No hay alertas registradas."
+          }
+        },
+        {
+          "id": "tarea-diaria",
+          "nombre": "Tarea diaria",
+          "rol": "Tarea programada de Windows EkChuah-Alertas: fetch-macro + alertas --discord",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] No se encontró logs/alertas_diarias.log en esta computadora: no confirma ni descarta que la tarea esté instalada."
+          }
+        }
+      ],
+      "indicadores": [
+        {
+          "etiqueta": "Alertas registradas 7 días",
+          "valor": null,
+          "nota": "No hay alertas registradas."
+        },
+        {
+          "etiqueta": "Última corrida de la tarea",
+          "valor": null,
+          "nota": "sin registro"
+        }
+      ]
+    },
+    {
+      "id": "informes",
+      "nombre": "Informes",
+      "descripcion": "Evidencia: solo los nombres de archivo AAAA-MM-DD.md en data/analisis (no se lee el contenido). Ek Chuah no registra si el análisis se envió.",
+      "agentes": [
+        {
+          "id": "redactor",
+          "nombre": "Redactor",
+          "rol": "Análisis semanal escrito por una tarea externa de la app de Claude (domingo 20:00)",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] No hay carpeta data/analisis."
+          }
+        }
+      ],
+      "indicadores": [
+        {
+          "etiqueta": "Último análisis",
+          "valor": null,
+          "nota": "No hay carpeta data/analisis."
+        }
+      ]
+    },
+    {
+      "id": "simulaciones",
+      "nombre": "Simulaciones",
+      "descripcion": "portfolio-sim, practice-report e historia: simulaciones con dinero imaginario.",
+      "indicadores": [
+        {
+          "etiqueta": "Ejecuciones registradas",
+          "valor": null,
+          "nota": "Ek Chuah no registra cuándo se ejecuta"
+        }
+      ],
+      "agentes": [
+        {
+          "id": "simulador",
+          "nombre": "Simulador",
+          "rol": "Simula carteras con datos históricos",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] Módulo que se ejecuta a mano; no deja registro que Cauce pueda leer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "riesgo",
+      "nombre": "Análisis de riesgo",
+      "descripcion": "risk-menu y pruebas de crisis (evaluation/stress).",
+      "indicadores": [
+        {
+          "etiqueta": "Ejecuciones registradas",
+          "valor": null,
+          "nota": "Ek Chuah no registra cuándo se ejecuta"
+        }
+      ],
+      "agentes": [
+        {
+          "id": "evaluador-riesgo",
+          "nombre": "Evaluadora",
+          "rol": "Compara opciones del menú contra sus límites de caída",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] Módulo que se ejecuta a mano; no deja registro que Cauce pueda leer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "auditoria",
+      "nombre": "Auditoría y verificación",
+      "descripcion": "Evidencia: alertas de tipo calificacion o revision en alerts_sent. La revisión mensual la hace la tarea de la app de Claude (día 15) y la decisión es humana.",
+      "agentes": [
+        {
+          "id": "auditor",
+          "nombre": "Auditor",
+          "rol": "Calificación mensual y revisión trimestral del menú por reglas; decide una persona",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] No hay calificaciones ni revisiones registradas en alerts_sent."
+          }
+        }
+      ]
+    }
+  ],
+  "alertas": [],
+  "resultados": [],
+  "demo": {
+    "ahora_simulado": "2026-11-03T16:30:00Z"
+  }
+}
