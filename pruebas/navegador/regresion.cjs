@@ -70,7 +70,9 @@ require('fs').mkdirSync(SAL, { recursive: true });
     await p.screenshot({ path: `${SAL}/${nombre}.png` });
     // Barra inferior: flechas, lista y menú.
     const barra = p.locator('.vista3d-movil');
-    ok(`${nombre}: barra móvil visible y selector de arriba oculto`, await barra.isVisible() && !(await p.locator('.vista3d-selector').isVisible()) && await p.locator('.vista3d-fuente').isVisible());
+    ok(`${nombre}: barra móvil visible y selector de arriba oculto`, await barra.isVisible() && !(await p.locator('.vista3d-selector').isVisible())
+      // G: en horizontal la insignia REAL/DEMO de la escena se quita porque la del tablero (fija) queda justo encima.
+      && (await p.locator('.vista3d-fuente').isVisible() || await p.locator('#conexion .tablero-insignia').isVisible()));
     const enc = await p.evaluate(() => { const b = document.querySelector('.movil-barra').getBoundingClientRect(); let c = 0;
       for (const n of document.querySelectorAll('.etiqueta-dep')) { if (n.hidden) continue; const r = n.getBoundingClientRect(); if (r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top) c++; } return c; });
     ok(`${nombre}: ninguna etiqueta debajo de la barra`, enc === 0);

@@ -18,7 +18,7 @@ export function dibujarTablero(nodo, m, cambios, { alElegirDepartamento }) {
     ? el("span", { clase: `tablero-insignia ${m.es_demo ? "es-demo" : "es-real"}`, title: m.es_demo ? "Datos de demostración: no es actividad real" : "Datos reales del adaptador (solo lectura)" }, m.es_demo ? "DEMO" : "REAL")
     : null;
   const edad = m.generado_en
-    ? el("span", { clase: "tablero-dato" }, `Dato de hace ${describirDuracion(m.edad_segundos)}`, el("span", { clase: "tablero-suave tablero-fecha" }, ` (${fecha(m.generado_en)}${m.hora_simulada ? ", hora simulada" : ""})`))
+    ? el("span", { clase: "tablero-dato" }, el("span", { clase: "ocultar-movil" }, "Dato de "), `hace ${describirDuracion(m.edad_segundos)}`, el("span", { clase: "tablero-suave tablero-fecha" }, ` (${fecha(m.generado_en)}${m.hora_simulada ? ", hora simulada" : ""})`))
     : null;
 
   // Agentes por estado mostrado (si los datos no son vigentes, todos cuentan como "Sin información").
@@ -47,7 +47,7 @@ export function dibujarTablero(nodo, m, cambios, { alElegirDepartamento }) {
           : null))));
 
   const listaCambios = el("details", { "data-k": "cambios", clase: "tablero-desplegable", open: abiertos.cambios },
-    el("summary", {}, `Cambios observados (${cambios.length})`),
+    el("summary", {}, "Cambios", el("span", { clase: "ocultar-movil" }, " observados"), ` (${cambios.length})`),
     el("div", { clase: "tablero-lista" },
       el("p", { clase: "tablero-suave" }, "Solo diferencias entre las lecturas que hizo esta página desde que la abriste. No es un historial: lo que cambió y regresó entre dos lecturas no aparece, y la hora exacta no se conoce."),
       cambios.length === 0 ? el("p", {}, "Sin cambios observados todavía.") : null,

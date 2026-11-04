@@ -215,6 +215,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     // Lo que flota abajo sube el límite inferior; lo que flota arriba (el aviso en celular) baja el superior.
     for (const n of [aviso, personajesDom, barraMovil?.nodo, ...tapan()]) {
       if (!n || n.hidden || n.offsetHeight === 0 || !n.childNodes.length) continue;
+      // La pastilla informativa de celular es chica y va en una esquina: no recorta toda la franja de
+      // arriba; encuadrar() ya evita que algún cuarto quede debajo de ella (está en sus obstáculos).
+      if (n === aviso && movil && aviso.classList.contains("aviso-info")) continue;
       const c = cajaEnRaiz(n);
       if (c.abajo <= 0 || c.arriba >= h || c.der <= 0 || c.izq >= w) continue; // fuera de la vista (p. ej. el panel a un lado en escritorio)
       const columna = Math.min(c.abajo, h) - Math.max(c.arriba, 0) > h * 0.6 && c.der - c.izq < w * 0.6;
@@ -628,7 +631,19 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   const personajesAhora = () => (escenario?.personajes() ?? []).map((p) => ({
     id: p.id, estado: p.estado, accion: p.accion, cola: [...p.cola], bucle: p.bucle, postura: p.postura, visible: p.raiz.visible,
   }));
-  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora };
+  // Solo con ?medir=1: caja en pantalla (px de la ventana) de los cuartos del escenario, para medir el encuadre.
+  function cajaEdificio() {
+    if (!escenario) return null;
+    const r = lienzo.getBoundingClientRect(), v = new THREE.Vector3();
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const c of escenario.cuartos.values()) for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [0, 1.2]) {
+      v.set(c.x + sx * c.ancho / 2, y, c.z + sz * c.fondo / 2).project(camara);
+      const px = r.left + (v.x + 1) / 2 * r.width, py = r.top + (1 - v.y) / 2 * r.height;
+      x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+    }
+    return { izq: x0, der: x1, arriba: y0, abajo: y1 };
+  }
+  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio };
 
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {
@@ -646,6 +661,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       selector.hidden = true;
       personajesDom.replaceChildren();
       aviso.hidden = false;
+      aviso.classList.remove("aviso-info");
       aviso.textContent = m.motivo ?? "No hay datos de este proyecto.";
       if (barraMovil) barraMovil.nodo.hidden = true;
       return;
@@ -724,13 +740,19 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const vacios = clasificado
       ? agentesAviso.filter((a) => a.animacion_mostrada === "ausente").length
       : agentesAviso.filter((a) => a.estado === "sin_datos").length;
-    const textos = [];
-    if (m.conexion !== "en_linea") textos.push(`${m.conexion_etiqueta}: sin evidencia vigente, los personajes salen de la oficina.`);
-    else if (agentesAviso.length === 0) textos.push("Este departamento no tiene personajes.");
-    else if (vacios && clasificado) textos.push(`${vacios} puesto(s) sin personaje (módulos, humanos o sin registro nuevo).`);
-    else if (vacios) textos.push(`${vacios} silla(s) vacía(s): sin registro que respalde actividad.`);
-    aviso.hidden = textos.length === 0;
-    aviso.textContent = textos.join(" ");
+    // Un aviso de conexión se muestra completo; el informativo (puestos sin personaje) tiene además
+    // una forma corta que en celular ocupa una sola línea y deja el edificio a la vista.
+    let largo = null, corto = null;
+    if (m.conexion !== "en_linea") largo = `${m.conexion_etiqueta}: sin evidencia vigente, los personajes salen de la oficina.`;
+    else if (agentesAviso.length === 0) largo = "Este departamento no tiene personajes.";
+    else if (vacios && clasificado) { largo = `${vacios} puesto(s) sin personaje (módulos, humanos o sin registro nuevo).`; corto = `${vacios} sin personaje`; }
+    else if (vacios) { largo = `${vacios} silla(s) vacía(s): sin registro que respalde actividad.`; corto = `${vacios} silla(s) vacía(s)`; }
+    aviso.hidden = largo === null;
+    aviso.classList.toggle("aviso-info", corto !== null);
+    aviso.title = corto ? largo : "";
+    aviso.replaceChildren(...(corto
+      ? [el("span", { clase: "aviso-largo" }, largo), el("span", { clase: "aviso-corto", "aria-hidden": "true" }, corto)]
+      : [largo ?? ""]));
 
     const chips = modo === "edificio" && !enfocado ? [] : dep.agentes;
     const reencuadrar = recienConstruido;
