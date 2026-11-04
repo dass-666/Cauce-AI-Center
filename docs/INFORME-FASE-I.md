@@ -113,4 +113,4 @@ La prueba nueva cubre:
 5. `probar.bat` debe decir **214 pasaron, 0 fallaron**.
 
 ## Rama, commit y PR
-Rama `fase-i/centro-completo`, encima del PR #17 (rama `fase-h/ek-chuah`). Commit y PR en la descripción del PR y en el mensaje del hilo.
+Rama `fase-i/centro-completo`, PR #18 (https://github.com/dass-666/Cauce-AI-Center/pull/18), encima del PR #17. Commits: `7348e58` (cambios) y uno más con este dato.
