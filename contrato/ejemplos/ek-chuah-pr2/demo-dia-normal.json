@@ -1,0 +1,261 @@
+{
+  "contrato": "cauce.estado-proyecto",
+  "version": "1.0.0",
+  "proyecto": {
+    "id": "ek-chuah",
+    "nombre": "Ek Chuah"
+  },
+  "generado_en": "2026-11-03T16:30:00Z",
+  "vigencia_segundos": 93600,
+  "es_demo": true,
+  "fuente": {
+    "tipo": "demo",
+    "nombre": "Ek Chuah · exportar-cauce (datos sintéticos)",
+    "version": "0.3.1"
+  },
+  "departamentos": [
+    {
+      "id": "datos",
+      "nombre": "Obtención de datos",
+      "descripcion": "Evidencia: tabla fetch_log (una fila por serie descargada). No se exportan peticiones, rutas ni mensajes de error.",
+      "agentes": [
+        {
+          "id": "descargador",
+          "nombre": "Descargador",
+          "rol": "Descarga series oficiales (Banxico, INEGI, FRED) con el comando fetch-macro",
+          "estado": "finalizado",
+          "actividad": {
+            "descripcion": "[DEMO] Última corrida de fetch-macro: 4 series sin fallas.",
+            "inicio": "2026-11-03T15:00:14Z",
+            "fin": "2026-11-03T15:00:16Z"
+          },
+          "evidencia": {
+            "origen": "fetch_log",
+            "referencia": "[DEMO] ids 1–4 · ok=3 partial=1 failed=0 running=0",
+            "observado_en": "2026-11-03T16:30:00Z"
+          }
+        }
+      ],
+      "indicadores": [
+        {
+          "etiqueta": "Descargas en la última corrida",
+          "valor": 4,
+          "unidad": "series"
+        },
+        {
+          "etiqueta": "Fallidas en la última corrida",
+          "valor": 0
+        },
+        {
+          "etiqueta": "Sin datos nuevos (partial)",
+          "valor": 1
+        },
+        {
+          "etiqueta": "Última descarga terminada",
+          "valor": "2026-11-03T15:00:16Z"
+        }
+      ]
+    },
+    {
+      "id": "supervision",
+      "nombre": "Supervisión y alertas",
+      "descripcion": "Evidencia: alerts_sent (solo tipo, nivel, canal y hora; nunca títulos ni contenido) y las líneas fijas del log de la tarea diaria.",
+      "agentes": [
+        {
+          "id": "vigia",
+          "nombre": "Vigía",
+          "rol": "Calcula alertas por reglas fijas (sin IA) y las registra en alerts_sent",
+          "estado": "finalizado",
+          "actividad": {
+            "descripcion": "[DEMO] Última tanda registrada: 2 alerta(s) por el canal discord.",
+            "fin": "2026-11-03T15:00:35Z"
+          },
+          "evidencia": {
+            "origen": "alerts_sent",
+            "referencia": "[DEMO] ids 1–2 · known_at=2026-11-03T15:00:35Z · canal=discord",
+            "observado_en": "2026-11-03T16:30:00Z"
+          }
+        },
+        {
+          "id": "tarea-diaria",
+          "nombre": "Tarea diaria",
+          "rol": "Tarea programada de Windows EkChuah-Alertas: fetch-macro + alertas --discord",
+          "estado": "finalizado",
+          "actividad": {
+            "descripcion": "[DEMO] Última corrida terminó con código 0.",
+            "inicio": "2026-11-03T15:00:00Z",
+            "fin": "2026-11-03T15:00:41Z"
+          },
+          "evidencia": {
+            "origen": "logs/alertas_diarias.log",
+            "referencia": "[DEMO] línea 'Inicio' 2026-11-03T15:00:00Z · 'Fin (código 0)'",
+            "observado_en": "2026-11-03T16:30:00Z"
+          }
+        }
+      ],
+      "indicadores": [
+        {
+          "etiqueta": "Alertas en la última tanda",
+          "valor": 2
+        },
+        {
+          "etiqueta": "Importantes en la última tanda",
+          "valor": 1
+        },
+        {
+          "etiqueta": "Alertas registradas 7 días",
+          "valor": 2
+        },
+        {
+          "etiqueta": "Última corrida de la tarea",
+          "valor": "2026-11-03T15:00:00Z"
+        },
+        {
+          "etiqueta": "Código de salida",
+          "valor": 0
+        },
+        {
+          "etiqueta": "Código de fetch-macro",
+          "valor": 0
+        }
+      ]
+    },
+    {
+      "id": "informes",
+      "nombre": "Informes",
+      "descripcion": "Evidencia: solo los nombres de archivo AAAA-MM-DD.md en data/analisis (no se lee el contenido). Ek Chuah no registra si el análisis se envió.",
+      "agentes": [
+        {
+          "id": "redactor",
+          "nombre": "Redactor",
+          "rol": "Análisis semanal escrito por una tarea externa de la app de Claude (domingo 20:00)",
+          "estado": "esperando",
+          "actividad": {
+            "descripcion": "[DEMO] Último análisis escrito: 2026-11-01.md. Espera el próximo domingo.",
+            "fin": "2026-11-01T16:30:00Z"
+          },
+          "evidencia": {
+            "origen": "data/analisis (solo nombres)",
+            "referencia": "[DEMO] archivo 2026-11-01.md",
+            "observado_en": "2026-11-03T16:30:00Z"
+          }
+        }
+      ],
+      "indicadores": [
+        {
+          "etiqueta": "Último análisis",
+          "valor": "2026-11-01"
+        },
+        {
+          "etiqueta": "Análisis guardados",
+          "valor": 2
+        }
+      ]
+    },
+    {
+      "id": "simulaciones",
+      "nombre": "Simulaciones",
+      "descripcion": "portfolio-sim, practice-report e historia: simulaciones con dinero imaginario.",
+      "indicadores": [
+        {
+          "etiqueta": "Ejecuciones registradas",
+          "valor": null,
+          "nota": "Ek Chuah no registra cuándo se ejecuta"
+        }
+      ],
+      "agentes": [
+        {
+          "id": "simulador",
+          "nombre": "Simulador",
+          "rol": "Simula carteras con datos históricos",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] Módulo que se ejecuta a mano; no deja registro que Cauce pueda leer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "riesgo",
+      "nombre": "Análisis de riesgo",
+      "descripcion": "risk-menu y pruebas de crisis (evaluation/stress).",
+      "indicadores": [
+        {
+          "etiqueta": "Ejecuciones registradas",
+          "valor": null,
+          "nota": "Ek Chuah no registra cuándo se ejecuta"
+        }
+      ],
+      "agentes": [
+        {
+          "id": "evaluador-riesgo",
+          "nombre": "Evaluadora",
+          "rol": "Compara opciones del menú contra sus límites de caída",
+          "estado": "sin_datos",
+          "actividad": {
+            "descripcion": "[DEMO] Módulo que se ejecuta a mano; no deja registro que Cauce pueda leer."
+          }
+        }
+      ]
+    },
+    {
+      "id": "auditoria",
+      "nombre": "Auditoría y verificación",
+      "descripcion": "Evidencia: alertas de tipo calificacion o revision en alerts_sent. La revisión mensual la hace la tarea de la app de Claude (día 15) y la decisión es humana.",
+      "agentes": [
+        {
+          "id": "auditor",
+          "nombre": "Auditor",
+          "rol": "Calificación mensual y revisión trimestral del menú por reglas; decide una persona",
+          "estado": "finalizado",
+          "actividad": {
+            "descripcion": "[DEMO] Última calificación mensual registrada.",
+            "fin": "2026-10-15T16:30:00Z"
+          },
+          "evidencia": {
+            "origen": "alerts_sent",
+            "referencia": "[DEMO] id 3 · tipo calificacion",
+            "observado_en": "2026-11-03T16:30:00Z"
+          }
+        }
+      ]
+    }
+  ],
+  "alertas": [
+    {
+      "id": "ek-as-2",
+      "nivel": "advertencia",
+      "titulo": "[DEMO] Movimiento del IPC",
+      "creada_en": "2026-11-03T15:00:35Z",
+      "detalle": "Registrada en alerts_sent (id 2, tipo ipc, canal discord). El texto completo queda solo en Ek Chuah.",
+      "departamento_id": "supervision"
+    },
+    {
+      "id": "ek-as-1",
+      "nivel": "info",
+      "titulo": "[DEMO] Aviso de subasta de valores",
+      "creada_en": "2026-11-03T15:00:35Z",
+      "detalle": "Registrada en alerts_sent (id 1, tipo subasta, canal discord). El texto completo queda solo en Ek Chuah.",
+      "departamento_id": "supervision"
+    }
+  ],
+  "resultados": [
+    {
+      "id": "analisis-2026-11-01",
+      "titulo": "[DEMO] Análisis semanal 2026-11-01",
+      "descripcion": "Archivo local en la PC de Ek Chuah (data/analisis); no se copia a Cauce.",
+      "departamento_id": "informes",
+      "creado_en": "2026-11-01T16:30:00Z"
+    },
+    {
+      "id": "analisis-2026-10-25",
+      "titulo": "[DEMO] Análisis semanal 2026-10-25",
+      "descripcion": "Archivo local en la PC de Ek Chuah (data/analisis); no se copia a Cauce.",
+      "departamento_id": "informes",
+      "creado_en": "2026-10-25T16:30:00Z"
+    }
+  ],
+  "demo": {
+    "ahora_simulado": "2026-11-03T16:30:00Z"
+  }
+}

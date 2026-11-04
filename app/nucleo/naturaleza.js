@@ -7,6 +7,9 @@
 // Naturalezas:
 //   automatico  proceso continuo con señal de vida (hoy, en Compago, solo el consumidor de importaciones).
 //   programado  se ejecuta por un programador de tareas REAL (cron). Exige decir cuál es la evidencia.
+//               Con `programacion.reciente_horas`, la programación solo se da por confirmada si el último
+//               registro de ejecución cabe en esas horas (fase G: la tarea de Windows de Ek Chuah no está
+//               confirmada; sin una corrida reciente, Cauce no afirma que "se ejecuta según su programación").
 //   reactivo    se ejecuta cuando alguien lo pide o cuando llega un archivo; no trabaja de forma continua.
 //   humano      las decisiones las toma una persona; Cauce no sabe si está presente.
 //   modulo      cálculo o consulta que corre al abrir una pantalla o un comando; no es un agente.
@@ -39,7 +42,13 @@ export function validarNaturalezas(datos) {
   const avisos = [];
   const mapa = new Map();
   if (!datos || typeof datos !== "object" || !datos.agentes || typeof datos.agentes !== "object") {
-    return { valido: false, errores: ['Falta el objeto "agentes".'], avisos, mapa };
+    return { valido: false, errores: ['Falta el objeto "agentes".'], avisos, mapa, hora_del_registro: "observado" };
+  }
+  // Qué hora fecha el hecho (fase G). "observado" (por omisión, como hasta la fase F) o "actividad".
+  let hora_del_registro = "observado";
+  if (datos.hora_del_registro !== undefined) {
+    if (datos.hora_del_registro === "actividad" || datos.hora_del_registro === "observado") hora_del_registro = datos.hora_del_registro;
+    else errores.push('"hora_del_registro" debe ser "observado" o "actividad".');
   }
   for (const [id, v] of Object.entries(datos.agentes)) {
     let n = v && v.naturaleza;
@@ -48,15 +57,21 @@ export function validarNaturalezas(datos) {
       avisos.push(`"${id}": "programado" sin evidencia de una programación real; se muestra como reactivo.`);
       n = "reactivo";
     }
+    let reciente_horas = null;
+    if (n === "programado" && v.programacion.reciente_horas !== undefined) {
+      const h = v.programacion.reciente_horas;
+      if (typeof h === "number" && Number.isFinite(h) && h > 0 && h <= 24 * 31) reciente_horas = h;
+      else errores.push(`"${id}": "programacion.reciente_horas" debe ser un número de horas entre 0 y 744.`);
+    }
     let latido = null;
     if (v.latido !== undefined) {
       const ok = v.latido && typeof v.latido.indicador === "string" && Array.isArray(v.latido.vivo) && v.latido.vivo.length;
       if (ok) latido = { indicador: v.latido.indicador, vivo: v.latido.vivo.map(String) };
       else errores.push(`"${id}": "latido" necesita "indicador" y una lista "vivo".`);
     }
-    mapa.set(id, { naturaleza: n, latido });
+    mapa.set(id, { naturaleza: n, latido, reciente_horas });
   }
-  return { valido: errores.length === 0, errores, avisos, mapa };
+  return { valido: errores.length === 0, errores, avisos, mapa, hora_del_registro };
 }
 
 /**
@@ -79,7 +94,7 @@ export function latidoDe(dep, latido) {
  * @returns {{naturaleza, puesto, personaje: "presente"|"breve"|"ausente", animacion, pantalla, texto, avisos}}
  *   animacion = animacion3d del catálogo de estados ("ausente" si no hay personaje).
  */
-export function presentar(agente, naturaleza, { breve = false, cambioObservado = false, vivo = true } = {}) {
+export function presentar(agente, naturaleza, { breve = false, cambioObservado = false, vivo = true, programacion = null } = {}) {
   breve = breve || cambioObservado;
   const avisos = [];
   const estado = agente.estado_mostrado ?? agente.estado;
@@ -108,6 +123,14 @@ export function presentar(agente, naturaleza, { breve = false, cambioObservado =
       const mostrar = breve && conEvidencia && ESTADOS_BREVES.has(estado);
       const cuando = naturaleza === "programado" ? "se ejecuta según su programación" : "se ejecuta cuando se le pide";
       if (mostrar) return { ...base, personaje: "breve", animacion: animacionDe(estado), pantalla, texto: `Llegó un registro nuevo; ${cuando}.` };
+      if (naturaleza === "programado" && programacion && !programacion.confirmada) {
+        // Sin una ejecución registrada en el plazo, no se afirma que la programación exista ni que corra.
+        return { ...ausente(`Programación sin confirmar: no hay una ejecución registrada en las últimas ${programacion.reciente_horas} h.`,
+          conEvidencia ? pantalla : "apagada"), programacion: "sin_confirmar" };
+      }
+      if (naturaleza === "programado" && programacion) {
+        return { ...ausente(`Última ejecución registrada hace menos de ${programacion.reciente_horas} h; ${cuando}.`, pantalla), programacion: "confirmada" };
+      }
       return ausente(conEvidencia && estado !== "sin_datos" ? `Último registro en la pantalla; ${cuando}.` : `Sin registros recientes; ${cuando}.`,
         conEvidencia ? pantalla : "apagada");
     }
@@ -152,13 +175,37 @@ export function cambioDeEvidencia(antes, ahora, id) {
  * como actividad si su hora (evidencia.observado_en, o actividad.fin / inicio) es posterior a la lectura anterior
  * y cabe en la vigencia del archivo. Sin hora, no se puede saber: no cuenta.
  */
-export function esReciente(agente, modelo, generadoAnterior) {
-  const t = Date.parse(agente?.evidencia?.observado_en ?? agente?.actividad?.fin ?? agente?.actividad?.inicio ?? "");
+export function esReciente(agente, modelo, generadoAnterior, modo = "observado") {
+  const t = horaDelRegistro(agente, modo);
   if (!Number.isFinite(t)) return false;
   // Mismo segundo que la lectura anterior: cuenta (las horas vienen redondeadas al segundo).
   if (generadoAnterior && t < Date.parse(generadoAnterior)) return false;
   const ref = Date.parse(modelo.ahora_referencia ?? modelo.generado_en);
   return ref - t <= (modelo.vigencia_segundos ?? 0) * 1000;
+}
+
+/**
+ * Hora del HECHO que respalda el estado. Devuelve ms o NaN.
+ * modo "observado" (por omisión; Compago y todo proyecto sin indicarlo, igual que en la fase F):
+ *   `evidencia.observado_en`, luego `actividad.fin`, luego `actividad.inicio`.
+ * modo "actividad" (fase G, Ek Chuah): si el puesto no está trabajando y hay `actividad.fin`, manda `fin`.
+ *   El exportador de Ek Chuah (PR #2) pone en `observado_en` la hora en que exportó, no la del registro;
+ *   con esa hora, una corrida de hace días parecería nueva. Si está trabajando, se usa lo de siempre.
+ */
+export function horaDelRegistro(agente, modo = "observado") {
+  const ac = agente?.actividad ?? {};
+  const estado = agente?.estado_mostrado ?? agente?.estado;
+  const porActividad = modo === "actividad" && estado !== "trabajando" && ac.fin;
+  return Date.parse(porActividad ? ac.fin : (agente?.evidencia?.observado_en ?? ac.fin ?? ac.inicio ?? ""));
+}
+
+/** ¿La última ejecución registrada cabe en `horas` antes de la hora de referencia? Sin evidencia u hora: no. */
+export function ejecucionReciente(agente, modelo, horas, modo = "observado") {
+  if (!agente?.evidencia || (agente.estado_mostrado ?? agente.estado) === "sin_datos") return false;
+  const t = horaDelRegistro(agente, modo);
+  if (!Number.isFinite(t)) return false;
+  const ref = Date.parse(modelo.ahora_referencia ?? modelo.generado_en);
+  return ref - t <= horas * 3600 * 1000 && t - ref <= 300 * 1000;
 }
 
 /**
@@ -190,7 +237,7 @@ export function crearSeguidorNaturalezas({ duracionMs = DURACION_BREVE_SEGUNDOS 
         const h = huellaEvidencia(modelo);
         const porId = new Map(modelo.departamentos.flatMap((d) => d.agentes.map((a) => [a.id, a])));
         for (const id of h.keys()) {
-          if (cambioDeEvidencia(huella, h, id) && esReciente(porId.get(id), modelo, generadoAnterior)) hasta.set(id, ahoraMs + duracionMs);
+          if (cambioDeEvidencia(huella, h, id) && esReciente(porId.get(id), modelo, generadoAnterior, clasificacion.hora_del_registro)) hasta.set(id, ahoraMs + duracionMs);
         }
         generadoAnterior = modelo.generado_en;
         huella = h; // solo se guarda una lectura con departamentos (una falla de lectura no borra la memoria)
@@ -204,7 +251,9 @@ export function crearSeguidorNaturalezas({ duracionMs = DURACION_BREVE_SEGUNDOS 
           const breve = fin > ahoraMs;
           if (breve) proximo = Math.min(proximo ?? Infinity, fin - ahoraMs);
           else hasta.delete(a.id);
-          const p = presentar(a, c?.naturaleza, { breve, vivo: latidoDe(d, c?.latido) });
+          const programacion = c?.naturaleza === "programado" && c.reciente_horas
+            ? { reciente_horas: c.reciente_horas, confirmada: ejecucionReciente(a, modelo, c.reciente_horas, clasificacion.hora_del_registro) } : null;
+          const p = presentar(a, c?.naturaleza, { breve, vivo: latidoDe(d, c?.latido), programacion });
           a.naturaleza = p.naturaleza;
           a.presentacion = p;
           a.animacion_mostrada = p.animacion;
