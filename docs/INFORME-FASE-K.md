@@ -1,6 +1,6 @@
 # Informe fase K: de edificio 3D a centro de operaciones (2026-11-05)
 
-Rama `fase-k/oficina-virtual-profesional`, creada desde `fase-j/estabilidad-puente` (`ce0688a`, PR #19).
+PR #20 (borrador). Rama `fase-k/oficina-virtual-profesional`, creada desde `fase-j/estabilidad-puente` (`ce0688a`, PR #19).
 Sin fusionar, sin desplegar, sin tocar `main`, el contrato v1, los exportadores ni el trabajo de Ronny.
 
 ## 1. Resumen ejecutivo
