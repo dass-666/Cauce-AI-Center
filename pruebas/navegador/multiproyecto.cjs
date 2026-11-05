@@ -46,7 +46,15 @@ function sintetico(id, deps, agentes) {
   await p.goto('http://127.0.0.1:8765/?medir=1'); await p.waitForTimeout(9000);
   const m = () => p.evaluate(() => window.__cauce3d.metricas());
   const heap = () => p.evaluate(() => { window.gc?.(); return Math.round((performance.memory?.usedJSHeapSize ?? 0) / 1048576); });
-  const elegir = async (nombre, espera = 5000) => { await p.locator('#pisos .piso', { hasText: nombre }).first().click(); await p.waitForTimeout(espera); };
+  const listaAbierta = [];
+  // Fase L: los pisos pendientes (2 o más) se agrupan en «+N pendientes»; si la pestaña está ahí, se abre el grupo primero.
+  const elegir = async (nombre, espera = 5000) => {
+    const b = p.locator('#pisos .piso', { hasText: nombre }).first();
+    const agrupado = !(await b.isVisible());
+    if (agrupado) await p.locator('#pisos .pisos-mas > summary').click();
+    await b.click(); await p.waitForTimeout(espera);
+    if (agrupado) listaAbierta.push(await p.locator('#pisos .pisos-mas-lista').isVisible());
+  };
   // 1. Costo por proyecto (escena del edificio completo).
   const filas = [];
   for (const [nombre, id] of [['Compago', null], ['Ek Chuah', null], ['Tezcatlipoca', null], ...Object.keys(tamanos).slice(0, 6).map((id) => [`Sintético ${id.slice(-2)}`, id])]) {
@@ -62,6 +70,7 @@ function sintetico(id, deps, agentes) {
   for (let v = 0; v < 6; v++) for (const n of ciclo) await elegir(n, 1500);
   await p.waitForTimeout(5000);
   const tras = { ...(await m()), heap: await heap(), nodos: await p.evaluate(() => document.getElementsByTagName('*').length) };
+  ok('«+N pendientes»: los pisos agrupados se eligen desde la lista y la lista se cierra (no tapa los controles)', listaAbierta.length > 0 && !listaAbierta.some(Boolean), `${listaAbierta.length} elecciones`);
   ok('30 cambios de proyecto: geometrías y texturas vuelven al mismo número', tras.geometrias <= base.geometrias && tras.texturas <= base.texturas, `geo ${base.geometrias}→${tras.geometrias}, tex ${base.texturas}→${tras.texturas}`);
   ok('30 cambios de proyecto: nodos de la página estables', tras.nodos <= base.nodos + 20, `${base.nodos}→${tras.nodos}`);
   info('memoria JS tras 30 cambios (no es la GPU)', `${base.heap} → ${tras.heap} MB`);

@@ -9,7 +9,7 @@ import { ESTADOS } from "../../nucleo/estados.js";
 
 const claseEstado = (estado) => ESTADOS[estado]?.clase2d ?? "sin_datos";
 
-export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar, alVolverPiso, alRecepcion = null, alSiguienteAlerta = null, alSala = null }) {
+export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar, alVolverPiso, alRecepcion = null, alSiguienteAlerta = null, alSala = null, alAnterior = null }) {
   const anterior = el("button", { type: "button", clase: "movil-flecha", "aria-label": "Departamento anterior" }, "◀");
   const siguiente = el("button", { type: "button", clase: "movil-flecha", "aria-label": "Departamento siguiente" }, "▶");
   const luz = el("span", { clase: "etiqueta-luz", "aria-hidden": "true" });
@@ -56,8 +56,8 @@ export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar
      * @param modo       "edificio" | "individual"
      * @param luzFija    boolean
      */
-    actualizar({ resumenes, actualId, modo, luzFija, hayAtencion = false }) {
-      const clave = JSON.stringify([resumenes, actualId, modo, luzFija, hayAtencion]);
+    actualizar({ resumenes, actualId, modo, luzFija, hayAtencion = false, hayAnterior = false }) {
+      const clave = JSON.stringify([resumenes, actualId, modo, luzFija, hayAtencion, hayAnterior]);
       if (clave === ultimo) return;
       ultimo = clave;
       const dep = resumenes.find((r) => r.id === actualId) ?? null;
@@ -91,6 +91,7 @@ export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar
         el("p", { clase: "movil-menu-titulo" }, "Cámara"),
         opcion("Centrar", alCentrar),
         modo === "edificio" && actualId ? opcion("← Volver al piso", alVolverPiso) : null,
+        modo === "edificio" && alAnterior && hayAnterior ? opcion("↶ Vista anterior", alAnterior) : null,
         modo === "edificio" && alRecepcion ? opcion("⌂ Ir a la recepción", alRecepcion) : null,
         alSiguienteAlerta && hayAtencion ? opcion("⚠ Siguiente departamento con alertas", alSiguienteAlerta) : null,
         alSala ? el("p", { clase: "movil-menu-titulo" }, "Empresa") : null,

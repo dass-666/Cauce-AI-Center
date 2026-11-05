@@ -9,6 +9,8 @@ import { Personaje } from "./personaje.js";
 import { Recursos } from "./recursos.js";
 import { dibujarIcono, hex } from "./iconos.js";
 import { NATURALEZAS } from "../../nucleo/naturaleza.js";
+import { crearMobiliario } from "./mobiliario.js";
+import { huella } from "./disposicion.js";
 
 const ALTO_ESCRITORIO = 0.6;
 
@@ -49,7 +51,12 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     maceta: mat(OFICINA.maceta),
     vidrio: recursos.agregar(new THREE.MeshLambertMaterial({ color: OFICINA.vidrio, transparent: true, opacity: 0.16, depthWrite: false })),
     marco: mat(0x5a6480),
+    claro: mat(0xdfe4ee),
   };
+  // Fase L: muebles del catálogo compartido (mobiliario.js). Sin escena (pruebas), uno propio de este cuarto.
+  const mob = compartido.mobiliario ?? crearMobiliario(recursos);
+  m.acento = acentoMat();
+  function acentoMat() { return opciones.acento != null ? mat(opciones.acento) : m.claro; }
 
   // Base del diorama y piso con duelas.
   const { ancho: W, fondo: F } = cuarto;
@@ -113,30 +120,22 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     grupo.add(poste);
   }
 
-  // Escritorios, computadoras y sillas (uno por agente; sin agentes, uno vacío).
+  // Escritorios, computadoras y sillas (uno por agente; sin agentes, uno vacío). Fase L: del catálogo (mobiliario.js).
   const g = {
-    cubierta: caja(1.3, 0.05, 0.7),
-    pata: caja(0.05, ALTO_ESCRITORIO, 0.05),
-    monitor: caja(0.62, 0.38, 0.04),
     pantalla: recursos.agregar(new THREE.PlaneGeometry(0.56, 0.32)),
-    pie: caja(0.06, 0.14, 0.06),
-    teclado: caja(0.42, 0.02, 0.14),
-    asiento: caja(0.42, 0.06, 0.4),
-    respaldo: caja(0.42, 0.26, 0.06), // bajo, para no tapar al personaje sentado
-    poste: recursos.agregar(new THREE.CylinderGeometry(0.03, 0.03, 0.26, 8)),
-    ruedas: recursos.agregar(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 10)),
-    taza: recursos.agregar(new THREE.CylinderGeometry(0.04, 0.035, 0.09, 10)),
+    taza: mob.cil(0.04, 0.035, 0.09, 10),
     // Equipo (terminal de proceso o módulo), gabinete bajo el escritorio y placa de puesto humano.
-    torre: caja(0.2, 0.32, 0.36),
-    luzTorre: caja(0.02, 0.03, 0.2),
-    gabinete: caja(0.5, 0.48, 0.5),
-    ranura: caja(0.4, 0.025, 0.02),
+    torre: mob.caja(0.2, 0.32, 0.36),
+    luzTorre: mob.caja(0.02, 0.03, 0.2),
+    gabinete: mob.caja(0.5, 0.48, 0.5),
+    ranura: mob.caja(0.4, 0.025, 0.02),
     placa: recursos.agregar(new THREE.PlaneGeometry(0.72, 0.18)),
-    pieplaca: caja(0.72, 0.03, 0.08),
-    cinta: caja(0.22, 0.012, 0.74),
+    pieplaca: mob.caja(0.72, 0.03, 0.08),
+    cinta: mob.caja(0.22, 0.012, 0.74),
   };
   const matCinta = mat(0xd9b23a);
   const pantallas = [];
+  const lugarDe = new Map(); // agente → posición del puesto (para consultar un puesto vacío)
   lugares.forEach((l, i) => {
     const puesto = new THREE.Group();
     puesto.position.set(l.x, 0, l.z);
@@ -144,31 +143,35 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     // Tipo de puesto según lo que el agente ES (naturaleza.js). Sin clasificación: puesto de siempre.
     const tipo = agente?.presentacion?.puesto ?? "personaje";
 
-    const cubierta = new THREE.Mesh(g.cubierta, m.madera);
-    cubierta.position.y = ALTO_ESCRITORIO;
-    puesto.add(cubierta);
-    for (const [px, pz] of [[-0.6, -0.3], [0.6, -0.3], [-0.6, 0.3], [0.6, 0.3]]) {
-      const pata = new THREE.Mesh(g.pata, m.maderaOscura);
-      pata.position.set(px, ALTO_ESCRITORIO / 2, pz);
-      puesto.add(pata);
-    }
-    const monitor = new THREE.Mesh(g.monitor, m.metal);
-    monitor.position.set(0, ALTO_ESCRITORIO + 0.33, -0.18);
-    const pie = new THREE.Mesh(g.pie, m.metal);
-    pie.position.set(0, ALTO_ESCRITORIO + 0.08, -0.18);
+    mob.escritorio(puesto, m);
+    mob.monitorYTeclado(puesto, m);
     const matPantalla = recursos.agregar(new THREE.MeshBasicMaterial({ color: OFICINA.pantallaApagada }));
     const pantalla = new THREE.Mesh(g.pantalla, matPantalla);
     pantalla.position.set(0, ALTO_ESCRITORIO + 0.33, -0.157);
     pantalla.userData.dinamico = true; // cambia de color: no se fusiona
     if (agente) pantalla.userData.seleccion = { tipo: "agente", id: agente.id };
-    const teclado = new THREE.Mesh(g.teclado, m.metal);
-    teclado.position.set(0, ALTO_ESCRITORIO + 0.035, 0.1);
-    const taza = new THREE.Mesh(g.taza, m.marco);
-    taza.position.set(0.48, ALTO_ESCRITORIO + 0.07, 0.05);
-    puesto.add(monitor, pie, pantalla, teclado);
-    if (tipo !== "equipo") puesto.add(taza); // un equipo no tiene a nadie tomando café
+    puesto.add(pantalla);
+    if (tipo !== "equipo") { // un equipo no tiene a nadie tomando café
+      const taza = new THREE.Mesh(g.taza, m.marco);
+      taza.position.set(0.48, ALTO_ESCRITORIO + 0.07, 0.05);
+      puesto.add(taza);
+    }
+    // Fase L: cada escritorio con algo propio (papeles o una planta chica), fijo por puesto: no todos iguales.
+    const detalle = huella(`${dep.id}#${i}`) % 3;
+    if (detalle === 0 && tipo !== "equipo") mob.papeles(puesto, m, { x: -0.42, y: ALTO_ESCRITORIO + 0.025, z: 0.12, rot: 0.2 });
+    if (detalle === 1 && tipo !== "terminal" && tipo !== "equipo") mob.planta(puesto, m, { x: -0.5, y: ALTO_ESCRITORIO + 0.025, z: -0.22, tam: "baja" });
     pantallas.push({ material: matPantalla, agenteId: agente?.id ?? null });
     agregarMueblesDePuesto(puesto, tipo, g, m, mat(acento ?? OFICINA.brillo), matCinta, compartido.matPlacaHumano);
+    // Fase L: zona invisible para tocar el puesto completo (también vacío, sin personaje). No se dibuja.
+    if (agente && compartido.matToque) {
+      const toque = new THREE.Mesh(compartido.geoToque, compartido.matToque);
+      toque.position.set(0, 0.55, 0.3);
+      toque.userData.dinamico = true;
+      toque.userData.seleccion = { tipo: "agente", id: agente.id };
+      toque.name = "toque-puesto";
+      puesto.add(toque);
+      lugarDe.set(agente.id, { x: l.x, z: l.z });
+    } else if (agente) lugarDe.set(agente.id, { x: l.x, z: l.z });
     if (tipo === "equipo" || tipo === "inactivo") { // sin silla: nadie se sienta ahí
       const sombraE = new THREE.Mesh(compartido.geoSombraEscritorio, compartido.matSombra);
       sombraE.position.y = 0.006;
@@ -178,18 +181,7 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     }
 
     // Silla detrás del escritorio (+Z), mirando al monitor.
-    const silla = new THREE.Group();
-    silla.position.set(0, 0, 0.75);
-    const asiento = new THREE.Mesh(g.asiento, m.silla);
-    asiento.position.y = 0.3;
-    const respaldo = new THREE.Mesh(g.respaldo, m.silla);
-    respaldo.position.set(0, 0.46, 0.2);
-    const poste = new THREE.Mesh(g.poste, m.metal);
-    poste.position.y = 0.15;
-    const ruedas = new THREE.Mesh(g.ruedas, m.metal);
-    ruedas.position.y = 0.02;
-    silla.add(asiento, respaldo, poste, ruedas);
-    puesto.add(silla);
+    mob.silla(puesto, m, { z: 0.75 });
 
     const sombra = new THREE.Mesh(compartido.geoSombraEscritorio, compartido.matSombra);
     sombra.position.y = 0.006;
@@ -197,12 +189,11 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     grupo.add(puesto);
   });
 
-  // Decoración sencilla: planta en la esquina del fondo derecho y lámparas colgantes.
-  const maceta = new THREE.Mesh(recursos.agregar(new THREE.CylinderGeometry(0.2, 0.16, 0.34, 12)), m.maceta);
-  maceta.position.set(W / 2 - 0.45, 0.17, -F / 2 + 0.45);
-  const follaje = new THREE.Mesh(recursos.agregar(new THREE.IcosahedronGeometry(0.34, 0)), m.planta);
-  follaje.position.set(W / 2 - 0.45, 0.6, -F / 2 + 0.45);
-  grupo.add(maceta, follaje);
+  // Decoración: planta en la esquina del fondo derecho y, fase L, un mueble propio del cuarto junto al muro del
+  // fondo (estantería, credenza o cocineta), elegido por el id: los cuartos ya no son todos iguales.
+  mob.planta(grupo, m, { x: W / 2 - 0.45, z: -F / 2 + 0.45, tam: "media" });
+  agregarVariante(grupo, mob, m, W, F, huella(dep.id) % 3, opciones.tema ?? "");
+  agregarPuertaYZocalo(grupo, mob, m, W, F, ALTO_MURO, puerta(cuarto), huella(dep.id) % 2 === 0);
   agregarTema(grupo, opciones.tema ?? "", W, F, caja, mat, m, acento ?? OFICINA.brillo, (g) => recursos.agregar(g));
 
   // Letrero en el muro del fondo (en el edificio, con muros bajos, se apoya encima del muro).
@@ -224,7 +215,7 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
   // Personajes: solo donde alguna vez puede haber alguien (no en módulos, puestos humanos ni futuros).
   const puedeTenerPersonaje = (a) => !a.naturaleza || NATURALEZAS[a.naturaleza]?.personaje;
   const personajes = dep.agentes.map((agente, i) => puedeTenerPersonaje(agente) && new Personaje({
-    agente, puesto: lugares[i], cuarto, retraso: i * 0.9,
+    agente, puesto: lugares[i], cuarto, retraso: i * 0.9, todos: lugares, quieto: compartido.quieto,
     fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(id, recursos) : null,
     geo: compartido.geoPersonaje, recursos, texturaSombra: compartido.texturaSombra, burbujas: compartido.burbujas,
     anillosEstado: compartido.anillosEstado ?? null,
@@ -251,6 +242,8 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     grupo,
     cuarto,
     personajes,
+    /** Posición (en el cuarto) del escritorio de un agente, aunque no tenga personaje. */
+    lugarDe: (id) => lugarDe.get(id) ?? null,
     actualizar,
     paso(dt, reloj) {
       for (const per of personajes) per.paso(dt, reloj);
@@ -419,6 +412,28 @@ function crearTorreta(recursos, caja) {
   };
 }
 
+/**
+ * Fase L: mueble propio del cuarto junto al muro del fondo, entre el mueble del tema (izquierda) y la planta
+ * (derecha). Bajo (≤ 1 m) para no tapar la vista isométrica. Solo decoración.
+ */
+function agregarVariante(grupo, mob, m, W, F, variante, tema) {
+  const x = W / 2 - 1.6, z = -F / 2 + 0.3;
+  if (tema === "supervision" || W < 6) return; // ya tiene consola larga, o no cabe
+  if (variante === 0) mob.estanteria(grupo, m, { x, z, ancho: 1.1 });
+  else if (variante === 1) mob.credenza(grupo, m, { x, z: z + 0.02, ancho: 1.1 });
+  else { mob.garrafon(grupo, m, { x: x + 0.35, z }); mob.archivero(grupo, m, { x: x - 0.3, z: z + 0.02, cajones: 2 }); }
+}
+
+/** Fase L: hoja de la puerta abierta hacia adentro (junto al muro izquierdo) y zócalo de madera o de acento. */
+function agregarPuertaYZocalo(grupo, mob, m, W, F, ALTO_MURO, p, zocaloAcento) {
+  // Hoja de cristal con marco, girada 90° sobre su bisagra: no estorba el paso (va pegada al muro izquierdo).
+  mob.divisionCristal(grupo, m, { x: p.x - 0.53, z: F / 2 - 0.5, rot: Math.PI / 2, largo: 0.95, alto: 0.88 });
+  // Zócalo en el lado interior del muro del fondo: da profundidad sin luz extra.
+  const zocalo = new THREE.Mesh(mob.caja(W - 0.02, Math.min(0.3, ALTO_MURO * 0.3), 0.02), zocaloAcento ? m.acento : m.maderaOscura);
+  zocalo.position.set(0, Math.min(0.15, ALTO_MURO * 0.15), -F / 2 + 0.005);
+  grupo.add(zocalo);
+}
+
 /** Muebles propios de cada tema (solo decoración; se fusionan con lo demás del cuarto). */
 function agregarTema(grupo, tema, W, F, caja, mat, m, acento, reg) {
   const poner = (geo, material, x, y, z) => { const o = new THREE.Mesh(geo, material); o.position.set(x, y, z); grupo.add(o); return o; };
@@ -483,30 +498,46 @@ function agregarTema(grupo, tema, W, F, caja, mat, m, acento, reg) {
   }
 }
 
-/** Junta en una sola malla por material todo lo estático del cuarto (no personajes, pantallas ni letrero). */
+/**
+ * Junta en una sola malla todo lo estático del cuarto (no personajes, pantallas ni letrero).
+ * Fase L: los materiales Lambert de color liso (sin textura, opacos y que no cambian de color) se juntan además en
+ * UNA sola malla con el color en cada vértice: el mismo aspecto con muchas menos llamadas de dibujo. Los que tienen
+ * textura, transparencia o cambian en vivo (material.userData.vivo) siguen juntándose por material, como antes.
+ */
 export function fusionarEstaticos(grupo, recursos) {
   grupo.updateMatrixWorld(true);
   const inversa = grupo.matrixWorld.clone().invert();
   const porMaterial = new Map();
   const quitar = [];
+  const LISO = "liso";
+  const esLiso = (m) => m.isMeshLambertMaterial && !m.map && !m.transparent && !m.userData.vivo && m.visible && m.emissive.getHex() === 0 && !m.vertexColors;
   grupo.traverse((o) => {
     if (!o.isMesh || o.userData.dinamico || o.isSkinnedMesh) return;
     for (let p = o.parent; p && p !== grupo; p = p.parent) if (p.userData.dinamico) return;
     const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone());
     for (const nombre of Object.keys(g.attributes)) if (!["position", "normal", "uv"].includes(nombre)) g.deleteAttribute(nombre);
     g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inversa, o.matrixWorld));
-    const lista = porMaterial.get(o.material) ?? [];
+    const liso = esLiso(o.material);
+    if (liso) {
+      const n = g.attributes.position.count, c = o.material.color, colores = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { colores[i * 3] = c.r; colores[i * 3 + 1] = c.g; colores[i * 3 + 2] = c.b; }
+      g.setAttribute("color", new THREE.BufferAttribute(colores, 3));
+    }
+    const clave = liso ? LISO : o.material;
+    const lista = porMaterial.get(clave) ?? [];
     lista.push({ g, orden: o.renderOrder });
-    porMaterial.set(o.material, lista);
+    porMaterial.set(clave, lista);
     quitar.push(o);
   });
   for (const o of quitar) o.removeFromParent();
-  for (const [material, lista] of porMaterial) {
+  for (const [clave, lista] of porMaterial) {
     const fusion = mergeGeometries(lista.map((x) => x.g));
     for (const x of lista) x.g.dispose();
     if (!fusion) continue;
+    const material = clave === LISO ? recursos.agregar(new THREE.MeshLambertMaterial({ vertexColors: true })) : clave;
     const malla = new THREE.Mesh(recursos.agregar(fusion), material);
     malla.renderOrder = Math.max(...lista.map((x) => x.orden));
+    if (clave === LISO) malla.name = "estaticos-color";
     grupo.add(malla);
   }
 }

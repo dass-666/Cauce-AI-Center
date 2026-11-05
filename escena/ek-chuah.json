@@ -3,11 +3,11 @@
   "version": 1,
   "cuadricula": { "columnas": 3, "filas": 2, "metros_por_celda": 4 },
   "departamentos": {
-    "datos":         { "x": 0, "y": 0, "ancho": 1, "alto": 1 },
+    "datos":         { "x": 0, "y": 0, "ancho": 1, "alto": 1, "tema": "integracion" },
     "supervision":   { "x": 1, "y": 0, "ancho": 1, "alto": 1 },
-    "informes":      { "x": 2, "y": 0, "ancho": 1, "alto": 1 },
-    "simulaciones":  { "x": 0, "y": 1, "ancho": 1, "alto": 1 },
-    "riesgo":        { "x": 1, "y": 1, "ancho": 1, "alto": 1 },
+    "informes":      { "x": 2, "y": 0, "ancho": 1, "alto": 1, "tema": "fuentes" },
+    "simulaciones":  { "x": 0, "y": 1, "ancho": 1, "alto": 1, "tema": "oportunidades" },
+    "riesgo":        { "x": 1, "y": 1, "ancho": 1, "alto": 1, "tema": "margenes" },
     "auditoria":     { "x": 2, "y": 1, "ancho": 1, "alto": 1 }
   }
 }

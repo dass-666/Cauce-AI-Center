@@ -12,6 +12,8 @@ import { crearRegistroCambios } from "./nucleo/cambios.js";
 import { crearSeguidorNaturalezas, validarNaturalezas } from "./nucleo/naturaleza.js";
 import { ESTADO_PISO, crearBitacora, resumirEmpresa, resumirProyecto } from "./nucleo/sala.js";
 import { dibujarSala } from "./vistas/sala.js";
+import { agruparPisos } from "./nucleo/pisos.js";
+import { leerConfiguracion } from "./configuracion.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
@@ -123,7 +125,13 @@ async function cambiarVista(tipo, { forzada = false } = {}) {
 }
 
 async function iniciar() {
+  // Fase L: modo incrustado (también lo activa index.html antes de pintar; aquí por si se carga app.js en otra página).
+  document.documentElement.classList.toggle("incrustado", leerConfiguracion(location.href).incrustado);
   aplicarBajoConsumo(leerPreferencia("cauce.bajo-consumo") === "1");
+  // Fase L: la lista «+N pendientes» se cierra al tocar fuera o con Escape (no debe quedar tapando los controles).
+  const cerrarPendientes = () => { const d = $("#pisos .pisos-mas"); if (d?.open) d.open = false; };
+  document.addEventListener("pointerdown", (e) => { if (!e.target.closest?.(".pisos-mas")) cerrarPendientes(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarPendientes(); });
   $("#bajo-consumo").addEventListener("change", (e) => {
     aplicarBajoConsumo(e.target.checked);
     guardarPreferencia("cauce.bajo-consumo", e.target.checked ? "1" : "0");
@@ -203,6 +211,7 @@ function dibujarSalaSiAbierta() {
   if (!salaAbierta() || !empresa) return;
   dibujarSala($("#sala-control"), empresa, {
     actualId: estado.actual?.id ?? null,
+    registro: estado.proyectos,
     alCerrar: () => ponerSala(false),
     alIrProyecto: (id) => irA(id, null),
     alIrDepartamento: (id, dep) => irA(id, dep),
@@ -242,14 +251,22 @@ function aplicarBajoConsumo(activo) {
 }
 
 function dibujarPestanas() {
-  $("#pisos").replaceChildren(...estado.proyectos.map((p) =>
-    el("button", {
-      type: "button",
-      role: "tab",
-      clase: "piso",
-      "aria-selected": p.id === estado.actual.id ? "true" : "false",
-      onclick: () => elegirProyecto(p),
-    }, p.nombre, insigniaPiso(p.id))));
+  // Fase L: con muchos proyectos, los pendientes (sin datos ni oficinas) se juntan en «+N pendientes».
+  const { pestanas, agrupados } = agruparPisos(estado.proyectos, resumenPisos, estado.actual.id);
+  const pestana = (p) => el("button", {
+    type: "button",
+    role: "tab",
+    clase: "piso",
+    "aria-selected": p.id === estado.actual.id ? "true" : "false",
+    onclick: () => elegirProyecto(p),
+  }, p.nombre, insigniaPiso(p.id));
+  const abierto = $("#pisos .pisos-mas")?.open ?? false;
+  const mas = agrupados.length ? el("details", { clase: "pisos-mas", open: abierto },
+    el("summary", { clase: "piso", title: "Proyectos pendientes: sin repositorio localizado ni datos" }, `+${agrupados.length} pendientes`),
+    el("div", { clase: "pisos-mas-lista" }, ...agrupados.map((p) => el("button", {
+      type: "button", clase: "piso", title: p.pendiente, onclick: (e) => { e.currentTarget.closest("details").open = false; elegirProyecto(p); },
+    }, p.nombre, insigniaPiso(p.id))))) : null;
+  $("#pisos").replaceChildren(...pestanas.map(pestana), ...(mas ? [mas] : []));
   // En celular la fila se desliza: la pestaña elegida queda a la vista sin mover la página.
   const elegida = $('#pisos [aria-selected="true"]');
   if (elegida) elegida.parentElement.scrollLeft = Math.max(0, elegida.offsetLeft - elegida.parentElement.offsetLeft - 8);

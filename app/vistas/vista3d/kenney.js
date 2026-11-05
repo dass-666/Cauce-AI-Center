@@ -126,7 +126,7 @@ function crearCuerpoKenney(gltf, recursos) {
 
   let gestoAnterior = null;
   let baseAnterior = null;
-  function aplicar({ base, s, gesto, t, r, o = 0 }, dt) {
+  function aplicar({ base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false }, dt) {
     modelo.position.y = 0;
     if (gesto !== gestoAnterior || base !== baseAnterior) {
       if (gesto !== gestoAnterior && CLIP_GESTO[gesto] && acciones[CLIP_GESTO[gesto]]) acciones[CLIP_GESTO[gesto]].time = 0; // empieza desde el inicio
@@ -148,21 +148,37 @@ function crearCuerpoKenney(gltf, recursos) {
     } else {
       pesos(CLIP_GESTO[gesto] ? { [CLIP_GESTO[gesto]]: 1 } : { idle: 1 }, dt);
     }
-    mezclador.update(dt);
+    mezclador.update(quieto && base !== "caminar" && !CLIP_GESTO[gesto] ? 0 : dt); // reducir movimiento: sin respiración del clip
 
     // Gestos que el modelo no trae: se suman a la animación base moviendo huesos.
     if (gesto === "teclear") {
       // brazos al frente, sobre el teclado, con un golpeteo alterno; a veces levanta la vista a la pantalla.
       // Fase K: teclea en ráfagas (no al mismo ritmo todo el tiempo): entre ráfagas deja las manos quietas y lee.
-      const rafaga = rafagaDe(r);
-      const golpe = 0.1 * (1 - o) * rafaga;
+      const rafaga = quieto ? 0 : rafagaDe(r);
+      const pausa = fase === "teclear" ? 0 : k; // fase L: leer, mirar a un lado o acomodarse (maquina.js → faseTrabajo)
+      const golpe = 0.1 * (1 - o) * rafaga * (1 - pausa);
       h.brazoD.rotation.set(-1.25 + Math.sin(r * 14) * golpe, 0, 0.12);
       h.brazoI.rotation.set(-1.25 + Math.sin(r * 14 + 1.7) * golpe, 0, -0.12);
       h.cabeza.rotation.x += 0.12 - 0.22 * o - 0.08 * (1 - rafaga);
-      h.cabeza.rotation.y += Math.sin(r * 0.23) * 0.07; // la vista recorre la pantalla
+      h.cabeza.rotation.y += quieto ? 0 : Math.sin(r * 0.23) * 0.07; // la vista recorre la pantalla
+      if (fase === "leer") { // se recarga un poco, manos sobre el escritorio, lee la pantalla línea por línea
+        h.torso.rotation.x -= 0.14 * pausa;
+        h.brazoD.rotation.x += 0.45 * pausa; h.brazoI.rotation.x += 0.45 * pausa;
+        h.cabeza.rotation.x -= 0.14 * pausa - Math.sin(r * 1.3) * 0.03 * pausa;
+      } else if (fase === "mirar") { // voltea a un lado (papeles o segundo monitor) y regresa
+        h.cabeza.rotation.y += 0.55 * pausa;
+        h.torso.rotation.y += 0.12 * pausa;
+      } else if (fase === "acomodarse") { // se endereza, estira la espalda y suelta los brazos
+        h.torso.rotation.x -= 0.22 * pausa;
+        h.brazoD.rotation.x += 0.7 * pausa; h.brazoI.rotation.x += 0.7 * pausa;
+        h.cabeza.rotation.z += Math.sin(r * 2) * 0.1 * pausa;
+      }
     } else if (gesto === "reposo") {
-      h.cabeza.rotation.y += Math.sin(r * 0.35) * 0.4; // mira alrededor, despacio
-      h.torso.rotation.x -= 0.04 + Math.sin(r * 1.6) * 0.015; // respira
+      // Fase L: esperando, recargado y con la vista casi siempre en la pantalla; de vez en cuando mira a un lado.
+      h.cabeza.rotation.y += 0.45 * o + Math.sin(r * 0.35) * 0.06;
+      h.cabeza.rotation.x -= 0.05;
+      h.torso.rotation.x -= 0.08 + Math.sin(r * 1.6) * 0.012; // respira
+      h.brazoD.rotation.set(-0.5, 0, 0.18); h.brazoI.rotation.set(-0.5, 0, -0.18); // manos en el regazo
     } else if (gesto === "relajado") {
       // recargado en el respaldo, brazos sueltos, cabeza un poco atrás
       h.torso.rotation.x -= 0.18;
@@ -170,22 +186,25 @@ function crearCuerpoKenney(gltf, recursos) {
       h.brazoD.rotation.set(0, 0, 0.35);
       h.brazoI.rotation.set(0, 0, -0.35);
     } else if (gesto === "alerta") {
-      // de pie junto al escritorio, mano en la cabeza, mirando la pantalla; de vez en cuando niega despacio
-      h.brazoD.rotation.set(-2.5, 0, 0.6);
+      // Fase L: de pie, inclinado hacia la pantalla con las manos al frente (atiende el error); de vez en cuando
+      // se lleva la mano a la cabeza y niega despacio. Visible pero moderado.
+      h.torso.rotation.x += 0.16;
+      h.brazoD.rotation.set(-1.0 - 1.5 * o, 0, 0.12 + 0.48 * o);
+      h.brazoI.rotation.set(-1.0, 0, -0.12);
       h.cabeza.rotation.x += 0.2;
-      h.cabeza.rotation.y += Math.sin(r * 5) * 0.25 * o;
+      h.cabeza.rotation.y += Math.sin(r * 5) * 0.22 * o;
     } else if (gesto === "reaccion_error") {
       h.brazoD.rotation.set(-2.5 * Math.min(1, t / 0.4), 0, 0.6);
     } else if (gesto === "atencion") {
-      // sentado; de vez en cuando levanta un poco la mano (pide revisión) y la vuelve a bajar
-      h.brazoD.rotation.set(-0.3 - 2.4 * o, 0, 0.15 * o);
+      // Fase L: sentado con la mano levantada mientras pida revisión (no la baja hasta que cambie la evidencia);
+      // de vez en cuando la sube del todo.
+      h.brazoD.rotation.set(-1.7 - 1.0 * o, 0, 0.15 + 0.1 * o);
     } else if (gesto === "llamar_atencion") {
       h.brazoD.rotation.set(-2.9, 0, 0.15 + Math.sin(t * 6) * 0.2); // levanta la mano y saluda un momento
     } else if (gesto === "celebrar") {
-      const salto = Math.max(0, Math.sin(t * 7));
-      modelo.position.y += salto * 0.08;
-      h.brazoD.rotation.set(-2.8, 0, 0.3 + salto * 0.25);
-      h.brazoI.rotation.set(-2.8, 0, -0.3 - salto * 0.25);
+      // Fase L: gesto breve de satisfacción (puño arriba una vez), sin saltar; termina en postura neutral.
+      const kk = Math.sin(Math.min(1, t / 1.4) * Math.PI);
+      h.brazoD.rotation.set(-2.4 * kk, 0, 0.25 * kk);
     }
 
     // Mezcla entre la postura del gesto anterior y la del actual.

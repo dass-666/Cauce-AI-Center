@@ -4,6 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cauce · Centro de operaciones</title>
+  <script>
+    // Fase L (portal): las rutas son relativas a esta carpeta. Si se abrió como /cauce (sin «/» final), se
+    // corrige a /cauce/ antes de cargar nada. ?incrustado=1 oculta marca y pie (para mostrarse dentro de otra página).
+    (function () {
+      var r = location.pathname, ultimo = r.split("/").pop();
+      if (r !== "/" && r.slice(-1) !== "/" && !/\.[a-z0-9]+$/i.test(ultimo)) { location.replace(r + "/" + location.search + location.hash); return; }
+      if (new URLSearchParams(location.search).get("incrustado") === "1") document.documentElement.classList.add("incrustado");
+    })();
+  </script>
   <link rel="stylesheet" href="app/estilos.css">
   <!-- three.js va copiado en vendor/ (sin CDN): funciona sin internet y sin servicios externos. -->
   <script type="importmap">
@@ -52,7 +61,7 @@
 
   <footer class="pie">
     Un personaje solo aparece trabajando si su sistema dejó un registro que lo respalde.
-    <span class="atajos">Teclas: <kbd>S</kbd> sala de control · <kbd>R</kbd> recepción · <kbd>A</kbd> siguiente alerta · <kbd>0</kbd> edificio completo · <kbd>1</kbd>–<kbd>9</kbd> departamento · <kbd>←</kbd> <kbd>→</kbd> vecino · <kbd>F</kbd> seguir personaje · <kbd>Esc</kbd> cerrar.</span>
+    <span class="atajos">Teclas: <kbd>S</kbd> sala de control · <kbd>R</kbd> recepción · <kbd>A</kbd> siguiente alerta · <kbd>0</kbd> edificio completo · <kbd>1</kbd>–<kbd>9</kbd> departamento · <kbd>←</kbd> <kbd>→</kbd> vecino · <kbd>F</kbd> seguir personaje · <kbd>Retroceso</kbd> vista anterior · <kbd>Esc</kbd> cerrar.</span>
     <a href="pruebas.html">Pruebas</a>
   </footer>
 

@@ -6,6 +6,9 @@
 //   naturalezas   → escena/<archivo>.json        (opcional; por omisión escena/<id>-naturaleza.json, si existe)
 // Así un registro mal escrito no puede leer otro sitio ni mezclar una demostración con datos reales.
 
+/** Estilos visuales de piso que entiende la vista 3D (fase L). Solo cambian decoración, nunca datos. */
+export const ESTILOS_PISO = Object.freeze(["comercial", "financiero", "alimentos", "servicios", "general"]);
+
 const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const ARCHIVO = (carpeta) => new RegExp(`^${carpeta}/[a-z0-9][a-z0-9._-]{0,80}\\.json$`);
 const RUTAS = { estado: ARCHIVO("datos/reales"), demo: ARCHIVO("datos/demo"), distribucion: ARCHIVO("escena"), naturalezas: ARCHIVO("escena") };
@@ -46,6 +49,11 @@ export function validarRegistro(datos) {
     if (p.color !== undefined && p.color !== null) {
       if (typeof p.color === "string" && /^#[0-9a-fA-F]{6}$/.test(p.color)) entrada.color = p.color.toLowerCase();
       else avisos.push(`${p.id}: "color" debe ser #rrggbb; se ignora.`);
+    }
+    // Fase L (opcional, fuera del contrato v1): estilo visual del piso (identidad, no datos). Ver identidad.js.
+    if (p.estilo !== undefined && p.estilo !== null) {
+      if (typeof p.estilo === "string" && ESTILOS_PISO.includes(p.estilo)) entrada.estilo = p.estilo;
+      else avisos.push(`${p.id}: "estilo" debe ser uno de ${ESTILOS_PISO.join(", ")}; se ignora.`);
     }
     proyectos.push(entrada);
   });

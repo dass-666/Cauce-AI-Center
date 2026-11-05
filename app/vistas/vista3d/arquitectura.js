@@ -8,6 +8,8 @@ import { OFICINA, COLOR_ESTADO } from "./paleta.js";
 import { puerta } from "./disposicion.js";
 import { dibujarIcono, hex } from "./iconos.js";
 import { fusionarEstaticos } from "./oficina.js";
+import { crearMobiliario } from "./mobiliario.js";
+import { estiloDe } from "./identidad.js";
 
 const ALTO_EXTERIOR = 2.1;
 const VENTANA = { abajo: 0.75, arriba: 1.75, ancho: 1.6, pilar: 0.45 };
@@ -16,7 +18,9 @@ const VENTANA = { abajo: 0.75, arriba: 1.75, ancho: 1.6, pilar: 0.45 };
  * @param plano     resultado de distribuirEdificio
  * @param cuartos   [{ id, nombre, tema, acento, x, z, ancho, fondo }]
  */
-export function crearArquitectura(plano, cuartos, recursos) {
+export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyecto = null } = {}) {
+  mob ??= crearMobiliario(recursos);
+  const estilo = estiloDe(proyecto);
   const grupo = new THREE.Group();
   const M = (color, extra = {}) => recursos.agregar(new THREE.MeshLambertMaterial({ color, ...extra }));
   const caja = (w, h, d) => recursos.agregar(new THREE.BoxGeometry(w, h, d));
@@ -37,7 +41,15 @@ export function crearArquitectura(plano, cuartos, recursos) {
     hojas: M(OFICINA.planta),
     tapete: M(0x2a3150),
     metal: M(OFICINA.metal),
+    silla: M(OFICINA.silla),
+    claro: M(0xdfe4ee),
+    vidrio: recursos.agregar(new THREE.MeshLambertMaterial({ color: OFICINA.vidrio, transparent: true, opacity: 0.18, depthWrite: false })),
   };
+  m.remate.userData.vivo = true; // cambia al color de identidad del proyecto: no se fusiona por color de vértice
+  m.planta = m.hojas;
+  m.marco = m.columna;
+  m.acento = m.remate; // color de identidad del proyecto (cambia en actualizar)
+  m.pantallaLampara = M(0xffe6b8);
   // Las ventanas muestran el color del cielo según la hora (iluminacion.js): no se fusionan con lo demás.
   const matVentana = recursos.agregar(new THREE.MeshBasicMaterial({ color: OFICINA.vidrio }));
   const luzPasillo = recursos.agregar(new THREE.MeshBasicMaterial({ color: OFICINA.brillo }));
@@ -46,7 +58,14 @@ export function crearArquitectura(plano, cuartos, recursos) {
   poner(caja(W + E * 2, 0.4, F + E * 2), m.losa, 0, -0.25, 0);
   poner(caja(W + 0.6, 0.04, F + 0.6), m.pasillo, 0, -0.06, 0);
   const r = plano.recepcion;
-  if (r) poner(caja(r.ancho, 0.04, r.fondo), m.recepcion, r.x, -0.035, r.z);
+  if (r) {
+    // Fase L: piso de baldosa con los tonos del estilo del proyecto (una textura chica que se repite).
+    const geoR = caja(r.ancho, 0.04, r.fondo);
+    const uvR = geoR.attributes.uv;
+    for (let i = 0; i < uvR.count; i++) uvR.setXY(i, uvR.getX(i) * r.ancho / 1.6, uvR.getY(i) * r.fondo / 1.6);
+    const matBaldosa = recursos.agregar(new THREE.MeshLambertMaterial({ map: recursos.agregar(texturaBaldosa(estilo)) }));
+    poner(geoR, matBaldosa, r.x, -0.035, r.z);
+  }
 
   // Muros exteriores al fondo (-Z) y a la izquierda (-X), con una banda de ventanas.
   const xFondo = -F / 2 - 0.5, xIzq = -W / 2 - 0.5;
@@ -79,6 +98,20 @@ export function crearArquitectura(plano, cuartos, recursos) {
   }
   poner(caja(0.18, 0.25, F + 1.0), m.muro, W / 2 + 0.5, 0.125, 0);
   poner(caja(2.4, 0.02, 1.0), m.tapete, (entrada.desde + entrada.hasta) / 2, 0.0, F / 2 + 0.3);
+  // Fase L: entrada principal: puertas de cristal abiertas, marquesina baja con el nombre del proyecto y una luz
+  // con el estado de conexión (el mismo dato del modelo; no indica actividad).
+  const ex = (entrada.desde + entrada.hasta) / 2, ez = F / 2 + 0.5;
+  for (const lado of [-1, 1]) mob.divisionCristal(grupo, m, { x: ex + lado * 1.15, z: ez, largo: 0.5, alto: 1.1 });
+  for (const lado of [-1, 1]) poner(caja(0.12, 1.25, 0.12), m.columna, ex + lado * 1.45, 0.625, ez + 0.9);
+  poner(caja(3.3, 0.08, 1.15), m.muro, ex, 1.29, ez + 0.45);
+  poner(caja(3.36, 0.06, 0.06), m.remate, ex, 1.24, ez + 1.03);
+  let marquesina = null;
+  {
+    marquesina = crearLetreroMarquesina(recursos);
+    marquesina.malla.position.set(ex, 1.5, ez + 0.95);
+    marquesina.malla.userData.dinamico = true;
+    grupo.add(marquesina.malla);
+  }
 
   // Pasillos: tira de luz y plantas en los extremos.
   const geoMaceta = caja(0.38, 0.4, 0.38);
@@ -99,17 +132,19 @@ export function crearArquitectura(plano, cuartos, recursos) {
     const fondoZ = r.z - r.fondo / 2 + 0.35;
     poner(caja(Math.min(r.ancho - 1, 6), 1.6, 0.25), m.muro, r.x, 0.8, fondoZ);
     poner(caja(Math.min(r.ancho - 1, 6) + 0.1, 0.08, 0.3), m.remate, r.x, 1.64, fondoZ);
-    // Mostrador en L
-    poner(caja(2.6, 0.75, 0.6), m.maderaOscura, r.x, 0.375, r.z - 0.1);
-    poner(caja(2.7, 0.06, 0.7), m.madera, r.x, 0.78, r.z - 0.1);
-    poner(caja(0.6, 0.75, 1.2), m.maderaOscura, r.x - 1.6, 0.375, r.z - 0.4);
+    // Mostrador en L (catálogo, fase L) con franja del color de identidad. Sin recepcionista.
+    mob.mostrador(grupo, m, { x: r.x, z: r.z - 0.1 });
+    mob.laptop(grupo, m, { x: r.x + 0.5, y: 0.81, z: r.z - 0.2, abierta: false });
     // Sala de espera a la derecha
     const sx = r.x + Math.min(r.ancho / 2 - 1.6, 4.2);
-    poner(caja(1.8, 0.35, 0.7), m.sofa, sx, 0.2, r.z + 0.9);
-    poner(caja(1.8, 0.45, 0.18), m.sofa, sx, 0.45, r.z + 1.2);
+    mob.sofa(grupo, m, { x: sx, z: r.z + 0.9 });
     poner(caja(0.9, 0.3, 0.5), m.maderaOscura, sx, 0.15, r.z + 0.1);
-    planta(r.x - r.ancho / 2 + 0.6, r.z - r.fondo / 2 + 0.6);
-    planta(r.x + r.ancho / 2 - 0.6, r.z - r.fondo / 2 + 0.6);
+    mob.planta(grupo, m, { x: r.x - r.ancho / 2 + 0.6, z: r.z - r.fondo / 2 + 0.6, tam: "alta" });
+    mob.planta(grupo, m, { x: r.x + r.ancho / 2 - 0.6, z: r.z - r.fondo / 2 + 0.6, tam: "alta" });
+    mob.lampara(grupo, m, { x: sx + 1.2, z: r.z + 1.1 });
+    // Fase L: espacios con función reconocible si la recepción es ancha: sala de juntas (izquierda, cristal y
+    // sillas vacías), cocineta (derecha) y un mueble del estilo del proyecto. Nadie los ocupa.
+    agregarEspaciosRecepcion(grupo, mob, m, r, estilo, poner, caja);
 
     letrero = crearLetreroRecepcion(recursos);
     letrero.malla.position.set(r.x, 1.0, fondoZ + 0.13);
@@ -135,6 +170,12 @@ export function crearArquitectura(plano, cuartos, recursos) {
 
   // Señalización: placa en el piso frente a la puerta de cada departamento (una textura para todas).
   if (cuartos.length) grupo.add(crearPlacas(cuartos, recursos));
+  // Fase L: charcos de luz cálida en pasillos y recepción (un plano con degradado, sin luces reales: una sola
+  // llamada de dibujo para todos). Ambientación: no cambia con la actividad.
+  const charcos = [];
+  for (const p of plano.pasillos) for (let x = -p.ancho / 2 + 3; x < p.ancho / 2 - 1; x += 6) charcos.push([x, p.z, 2.6]);
+  if (r) for (const dx of [-1, 0, 1]) if (Math.abs(dx) * 5 < r.ancho / 2 - 1) charcos.push([r.x + dx * 5, r.z + 0.6, 3.4]);
+  if (charcos.length) grupo.add(crearCharcosLuz(charcos, recursos));
 
   fusionarEstaticos(grupo, recursos);
 
@@ -146,8 +187,10 @@ export function crearArquitectura(plano, cuartos, recursos) {
       letrero?.dibujar(modelo);
       directorio?.dibujar(modelo);
       emblema?.dibujar(modelo);
+      marquesina?.dibujar(modelo);
     },
     paso() { reloj?.mover(new Date()); },
+    // Fase L: la marquesina repite nombre y conexión del modelo (y se redibuja solo si cambian).
     aplicarLuz(luz) { matVentana.color.setHex(luz.ventana); },
   };
 }
@@ -170,9 +213,11 @@ function crearPlacas(cuartos, recursos) {
     ctx.fillStyle = "#e8ecf5";
     ctx.font = "bold 40px system-ui, sans-serif";
     ctx.textBaseline = "middle";
+    // Fase L: número del departamento (la misma tecla 1–9 que lo enfoca).
+    const numero = i < 9 ? `${i + 1} · ` : "";
     let nombre = c.nombre;
-    while (nombre.length > 1 && ctx.measureText(nombre).width > 380) nombre = nombre.slice(0, -2) + "…";
-    ctx.fillText(nombre, 124, y0 + filaAlto / 2);
+    while (nombre.length > 1 && ctx.measureText(numero + nombre).width > 370) nombre = nombre.slice(0, -2) + "…";
+    ctx.fillText(numero + nombre, 124, y0 + filaAlto / 2);
 
     const g = new THREE.PlaneGeometry(2.0, 0.5).rotateX(-Math.PI / 2);
     const uv = g.attributes.uv;
@@ -325,7 +370,7 @@ function crearLetreroRecepcion(recursos) {
     malla,
     dibujar(modelo) {
       const origen = modelo.es_demo ? "demo" : modelo.generado_en ? "real" : "sin";
-      const nueva = [modelo.proyecto.nombre, origen, modelo.conexion, modelo.proyecto.color ?? ""].join("|");
+      const nueva = [modelo.proyecto.nombre, origen, modelo.conexion, modelo.proyecto.color ?? "", modelo.proyecto.estilo ?? ""].join("|");
       if (nueva === clave) return;
       clave = nueva;
       ctx.fillStyle = "#0f1526";
@@ -336,7 +381,10 @@ function crearLetreroRecepcion(recursos) {
       ctx.fillStyle = "#ffd89a";
       ctx.font = "bold 92px system-ui, sans-serif";
       ctx.textBaseline = "middle";
-      ctx.fillText(modelo.proyecto.nombre.toUpperCase(), 48, 100);
+      ctx.fillText(recortarTexto(ctx, modelo.proyecto.nombre.toUpperCase(), 760), 48, 100);
+      // Fase L: símbolo y etiqueta del estilo del proyecto (identidad del registro; no son datos).
+      const est = estiloDe(modelo.proyecto);
+      dibujarIcono(ctx, est.icono, 940, 96, 48, modelo.proyecto.color ?? "#e0a458");
       // "REAL" solo si llegó un archivo real; sin archivo, "SIN DATOS".
       const caja = { real: ["#43c47a", "REAL", 150], demo: ["#ffb547", "DEMO", 150], sin: ["#8a94ad", "SIN DATOS", 250] }[origen];
       ctx.fillStyle = caja[0];
@@ -373,6 +421,118 @@ function crearReloj(recursos, matMetal) {
       ultimo = min;
       minutos.rotation.z = -(min % 60) / 60 * Math.PI * 2;
       horas.rotation.z = -(min % 720) / 720 * Math.PI * 2;
+    },
+  };
+}
+
+function recortarTexto(ctx, texto, max) {
+  let t = texto;
+  while (t.length > 1 && ctx.measureText(t).width > max) t = t.slice(0, -2) + "…";
+  return t;
+}
+
+/** Fase L: baldosa de la recepción (dos tonos del estilo y junta fina), 128 px que se repiten. */
+function texturaBaldosa(estilo) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  const [a, b] = estilo.baldosa;
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = (i + j) % 2 ? b : a; ctx.fillRect(i * 64, j * 64, 64, 64); }
+  ctx.strokeStyle = estilo.linea;
+  ctx.lineWidth = 2;
+  for (const k of [0, 64, 128]) { ctx.beginPath(); ctx.moveTo(k, 0); ctx.lineTo(k, 128); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, k); ctx.lineTo(128, k); ctx.stroke(); }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Fase L: charcos de luz (planos con degradado radial, suma de color). Todos en una sola malla. */
+function crearCharcosLuz(lista, recursos) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(32, 32, 1, 32, 32, 32);
+  g.addColorStop(0, "rgba(255,214,150,0.55)");
+  g.addColorStop(1, "rgba(255,214,150,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  const textura = recursos.agregar(new THREE.CanvasTexture(c));
+  const geos = lista.map(([x, z, d]) => new THREE.PlaneGeometry(d, d).rotateX(-Math.PI / 2).translate(x, 0.003, z));
+  const malla = new THREE.Mesh(recursos.agregar(mergeSimple(geos)), recursos.agregar(new THREE.MeshBasicMaterial({
+    map: textura, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.32, toneMapped: false,
+  })));
+  malla.userData.dinamico = true;
+  malla.renderOrder = 1;
+  malla.name = "charcos-luz";
+  return malla;
+}
+
+/**
+ * Fase L: espacios de la recepción con función reconocible (solo si caben). Todos vacíos: sin personas.
+ *   sala de juntas  mesa con sillas detrás de una división de cristal, a la izquierda
+ *   cocineta        barra con garrafón y plantas, a la derecha
+ *   mueble del estilo  exhibidor (comercial), archiveros y caja fuerte (financiero) o barra con frutero (alimentos)
+ */
+function agregarEspaciosRecepcion(grupo, mob, m, r, estilo, poner, caja) {
+  const izq = r.x - r.ancho / 2, der = r.x + r.ancho / 2;
+  if (r.ancho >= 14) {
+    const jx = izq + 4.2, jz = r.z - 0.2;
+    mob.mesaReuniones(grupo, m, { x: jx, z: jz, largo: 2.2, sillas: 3 });
+    mob.divisionCristal(grupo, m, { x: jx + 2.1, z: jz, rot: Math.PI / 2, largo: 3.2, alto: 0.9 });
+    mob.divisionCristal(grupo, m, { x: jx, z: jz - 1.7, largo: 4.0, alto: 0.9 });
+    mob.planta(grupo, m, { x: jx - 1.6, z: jz - 1.2, tam: "media" });
+  }
+  if (r.ancho >= 20) {
+    const cx = der - 3.2, cz = r.z - r.fondo / 2 + 0.75;
+    poner(caja(2.2, 0.85, 0.6), m.maderaOscura, cx, 0.425, cz);
+    poner(caja(2.3, 0.05, 0.66), m.claro, cx, 0.875, cz);
+    mob.garrafon(grupo, m, { x: cx + 1.5, z: cz });
+    mob.planta(grupo, m, { x: cx - 0.7, y: 0.9, z: cz, tam: "baja" });
+  }
+  // Mueble del estilo, frente a la sala de espera (no tapa el directorio ni la entrada).
+  const ex = r.x + Math.min(r.ancho / 2 - 1.2, 6.4), ez = r.z - r.fondo / 2 + 0.6;
+  if (estilo.icono === "comercial") mob.estanteria(grupo, m, { x: ex, z: ez, ancho: 1.4, colores: [m.acento, m.claro, m.sofa ?? m.claro] });
+  else if (estilo.icono === "financiero") { mob.archivero(grupo, m, { x: ex - 0.5, z: ez, cajones: 3 }); poner(caja(0.6, 0.7, 0.55), m.columna, ex + 0.25, 0.35, ez); poner(caja(0.12, 0.12, 0.02), m.acento, ex + 0.25, 0.42, ez + 0.285); }
+  else if (estilo.icono === "alimentos") { poner(caja(1.4, 0.85, 0.5), m.maderaOscura, ex, 0.425, ez); poner(caja(0.34, 0.06, 0.34), m.claro, ex - 0.3, 0.88, ez); poner(caja(0.22, 0.12, 0.22), m.acento, ex + 0.3, 0.91, ez); }
+}
+
+/** Fase L: letrero de la marquesina de la entrada: nombre del proyecto y una luz con el estado de conexión. */
+function crearLetreroMarquesina(recursos) {
+  const lienzo = document.createElement("canvas");
+  lienzo.width = 512;
+  lienzo.height = 96;
+  const ctx = lienzo.getContext("2d");
+  const textura = recursos.agregar(new THREE.CanvasTexture(lienzo));
+  textura.colorSpace = THREE.SRGBColorSpace;
+  textura.anisotropy = 4;
+  const malla = new THREE.Mesh(recursos.agregar(new THREE.PlaneGeometry(3.0, 0.56)),
+    recursos.agregar(new THREE.MeshBasicMaterial({ map: textura, toneMapped: false })));
+  malla.name = "marquesina";
+  let clave = "";
+  return {
+    malla,
+    dibujar(modelo) {
+      const nueva = [modelo.proyecto.nombre, modelo.proyecto.color ?? "", modelo.conexion, modelo.es_demo].join("|");
+      if (nueva === clave) return;
+      clave = nueva;
+      ctx.fillStyle = "#0f1526";
+      ctx.fillRect(0, 0, 512, 96);
+      ctx.fillStyle = modelo.proyecto.color ?? "#e0a458";
+      ctx.fillRect(0, 88, 512, 8);
+      // Luz de conexión: verde en línea, ámbar desactualizado, gris sin conexión (dato del modelo).
+      ctx.fillStyle = modelo.conexion === "en_linea" ? "#43c47a" : modelo.conexion === "desactualizado" ? "#ffb547" : "#8a94ad";
+      ctx.beginPath(); ctx.arc(40, 46, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffd89a";
+      ctx.font = "bold 50px system-ui, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText(recortarTexto(ctx, modelo.proyecto.nombre.toUpperCase(), modelo.es_demo ? 300 : 420), 72, 48);
+      if (modelo.es_demo) {
+        ctx.fillStyle = "#ffb547"; ctx.fillRect(392, 22, 108, 50);
+        ctx.fillStyle = "#1a1200"; ctx.font = "bold 34px system-ui, sans-serif"; ctx.fillText("DEMO", 402, 48);
+      }
+      textura.needsUpdate = true;
     },
   };
 }

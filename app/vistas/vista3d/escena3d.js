@@ -23,6 +23,8 @@ import { crearCapaEtiquetas } from "./etiquetas-dom.js";
 import { crearCatalogoKenney } from "./kenney.js";
 import { Recursos } from "./recursos.js";
 import { crearMedidor, firmaMedicion } from "./medidor.js";
+import { crearMobiliario } from "./mobiliario.js";
+import { crearHistorialCamara, claveSeleccion } from "./camara-historial.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
 const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométrica clásica)
@@ -53,6 +55,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   const volverPiso = el("button", { type: "button", clase: "boton boton-chico", hidden: true, title: "Volver al piso completo (Esc o 0)" }, "← Piso");
   // Fase K: accesos directos de cámara. Solo mueven la cámara; no actúan sobre ningún sistema.
   const irRecepcion = el("button", { type: "button", clase: "boton boton-chico", "data-ir": "recepcion", title: "Acercar a la recepción del piso (R)", "aria-label": "Recepción" }, el("span", { "aria-hidden": "true" }, "⌂"), el("span", { clase: "texto-k" }, " Recepción"));
+  const irAnterior = el("button", { type: "button", clase: "boton boton-chico", "data-ir": "anterior", hidden: true, title: "Volver a la vista anterior de la cámara (Retroceso)", "aria-label": "Vista anterior" }, el("span", { "aria-hidden": "true" }, "↶"), el("span", { clase: "texto-k" }, " Anterior"));
   const irAlerta = el("button", { type: "button", clase: "boton boton-chico boton-alerta", "data-ir": "alerta", hidden: true, title: "Ir al siguiente departamento con alertas, errores o revisiones (A)", "aria-label": "Siguiente alerta" }, el("span", { "aria-hidden": "true" }, "⚠"), el("span", { clase: "texto-k" }, " Siguiente alerta"));
   const luzFija = el("input", { type: "checkbox" });
   const minimapa = crearMinimapa({ alElegir: (id) => (id ? alSeleccionar({ tipo: "departamento", id }) : volverAlPiso()) });
@@ -72,8 +75,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     alRecepcion: () => verRecepcion(),
     alSiguienteAlerta: () => irASiguienteAlerta(),
     alSala,
+    alAnterior: () => volverAnterior(),
   }) : null;
   const aviso = el("p", { clase: "vista3d-aviso", role: "status" });
+  // Fase L: tarjeta flotante sobre el personaje (o el puesto) elegido: quién es, su departamento, qué es y su estado.
+  const tarjeta = el("div", { clase: "vista3d-tarjeta", hidden: true, "aria-hidden": "true" });
   const personajesDom = el("div", { clase: "vista3d-personajes", role: "toolbar", "aria-label": "Personajes del departamento" });
   const medidasTexto = el("pre", {});
   const copiar = el("button", { type: "button", clase: "boton boton-chico" }, "Copiar medición");
@@ -87,11 +93,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     lienzo,
     etiquetasDom,
     el("div", { clase: "vista3d-barra" },
-      fuente, modoDom, volverPiso, irRecepcion, irAlerta, selector,
+      fuente, modoDom, volverPiso, irAnterior, irRecepcion, irAlerta, selector,
       movil ? null : el("label", { clase: "interruptor", title: "Resplandor de letreros y pantallas" }, brillo, "Brillo"),
       el("label", { clase: "interruptor luz-fija", title: "Sin luz de la hora: la escena siempre igual de iluminada" }, luzFija, "Luz fija"),
       centrar),
-    aviso, personajesDom, minimapa.nodo, barraMovil?.nodo ?? null, medidasDom);
+    aviso, tarjeta, personajesDom, minimapa.nodo, barraMovil?.nodo ?? null, medidasDom);
   if (movil) raiz.classList.add("es-movil");
   contenedor.append(raiz);
 
@@ -161,6 +167,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     // Un material por estado para el anillo bajo cada personaje (opacidad según la hora).
     anillosEstado: new Map(Object.entries(COLOR_ESTADO).map(([estado, color]) =>
       [estado, compartidos.agregar(new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }))])),
+    // Fase L: catálogo de muebles (geometrías compartidas por todo el edificio) y zona invisible para tocar un
+    // puesto (también vacío). material.visible = false: el rayo la encuentra, pero no se dibuja (0 llamadas).
+    mobiliario: crearMobiliario(compartidos),
+    geoToque: compartidos.agregar(new THREE.BoxGeometry(1.4, 1.1, 1.9)),
+    matToque: compartidos.agregar(new THREE.MeshBasicMaterial({ visible: false })),
+    quieto: () => menosMovimiento.matches,
   };
 
   let escenario = null;    // edificio completo o un solo cuarto (edificio.js)
@@ -367,6 +379,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     animCam.hacia = centrarEnZona(new THREE.Vector3(p.x, 0.6, p.z), animCam.zoomHacia);
   }
   function volverAlPiso() {
+    recordar();
     enfocado = null;
     siguiendo = null;
     encuadrar({ suave: true });
@@ -376,7 +389,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   function verRecepcion() {
     if (!escenario) return;
     if (modo !== "edificio") { pendienteRecepcion = true; cambiarModo("edificio"); return; }
+    recordar(seleccion, enfocado);
+    restaurando = { soloBloquear: true }; // que el cambio de selección no guarde otra vista ni mueva la cámara
     if (enfocado || seleccion) { enfocado = null; alSeleccionar(null); }
+    restaurando = null;
     siguiendo = null;
     const r = escenario.recepcion;
     if (r) enfocarRect({ x: r.x, z: r.z, ancho: r.ancho * 0.6, fondo: r.fondo * 0.6 });
@@ -387,6 +403,39 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const d = siguienteConAtencion(modelo.departamentos, modo === "edificio" ? enfocado : depMostrado);
     if (d) alSeleccionar({ tipo: "departamento", id: d.id });
   }
+  // --- Fase L: vista anterior. Antes de cada movimiento de cámara (enfocar, acercarse, recepción, edificio
+  // completo o mover a mano) se guarda dónde estaba; «↶ Anterior» o Retroceso regresa a esa vista. ---
+  const historial = crearHistorialCamara({ maximo: 12 });
+  let restaurando = null;
+  let ultimaSel = null; // la selección que se dibujó por última vez (la «anterior» al cambiar)
+  function recordar(sel = ultimaSel, enf = enfocado) {
+    if (!escenario || escenario.modo !== "edificio" || restaurando) return;
+    const t = controles.target;
+    historial.recordar({ x: t.x, y: t.y, z: t.z, zoom: camara.zoom, sel, enfocado: enf });
+    irAnterior.hidden = historial.tamano === 0;
+    if (modelo) actualizarBarraMovil();
+  }
+  function volverAnterior() {
+    const v = historial.sacar();
+    irAnterior.hidden = historial.tamano === 0;
+    if (!v || !escenario || escenario.modo !== "edificio") return;
+    siguiendo = null;
+    restaurando = v;
+    if (claveSeleccion(v.sel) !== claveSeleccion(seleccion)) alSeleccionar(v.sel); // vuelve a dibujar sin mover la cámara
+    aplicarRestauracion();
+  }
+  function aplicarRestauracion() {
+    const v = restaurando;
+    if (!v) return;
+    restaurando = null;
+    enfocado = v.enfocado && escenario?.cuartos.has(v.enfocado) ? v.enfocado : null;
+    volverPiso.hidden = !(modo === "edificio" && enfocado);
+    usuarioMovio = true;
+    animCam = { t: 0, desde: controles.target.clone(), hacia: new THREE.Vector3(v.x, v.y, v.z), zoomDesde: camara.zoom, zoomHacia: v.zoom };
+    if (modelo) { actualizarBarraMovil(); capaEtiquetas.actualizar(modelo.departamentos, seleccion, enfocado); }
+  }
+  irAnterior.addEventListener("click", volverAnterior);
+
   // Seguir a un personaje (opcional): la cámara acompaña su escritorio o su camino. Se apaga al mover la cámara.
   let siguiendo = null;
   const seguido = new THREE.Vector3();
@@ -418,6 +467,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       modo,
       luzFija: luzFija.checked,
       hayAtencion: Boolean(siguienteConAtencion(modelo.departamentos, null)),
+      hayAnterior: historial.tamano > 0,
     });
   }
 
@@ -433,6 +483,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     if (tecla === "r") { e.preventDefault(); verRecepcion(); return; }
     if (tecla === "a") { e.preventDefault(); irASiguienteAlerta(); return; }
     if (tecla === "f" && seleccion?.tipo === "agente") { e.preventDefault(); alternarSeguir(seleccion.id); return; }
+    if (tecla === "Backspace") { if (historial.tamano) { e.preventDefault(); volverAnterior(); } return; }
     if (/^[1-9]$/.test(e.key)) destino = deps[Number(e.key) - 1] ?? null;
     else if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); irAVecino(e.key === "ArrowRight" ? 1 : -1); return; }
     else if (e.key === "Escape" && !seleccion && modo === "edificio" && enfocado) { volverAlPiso(); e.preventDefault(); return; }
@@ -472,7 +523,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   }
 
   // No dejar que el usuario arrastre la oficina fuera de la pantalla.
-  controles.addEventListener("start", () => { animCam = null; usuarioMovio = true; if (siguiendo) { siguiendo = null; if (modelo) dibujar(modelo, seleccion); } }); // el usuario toma el control
+  controles.addEventListener("start", () => { recordar(seleccion, enfocado); animCam = null; usuarioMovio = true; if (siguiendo) { siguiendo = null; if (modelo) dibujar(modelo, seleccion); } }); // el usuario toma el control
   controles.addEventListener("change", () => {
     if (!escenario) return;
     const t = controles.target;
@@ -540,6 +591,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let anterior = 0;
   let ultimoDibujo = 0;
   let reloj = 0;
+  let ultimaZona = 0;
   const medidor = crearMedidor({ ventana: 20 });
   let brilloApagadoSolo = null;
 
@@ -555,6 +607,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     controles.update();
     if (escenario) {
       ultimoAnimados = escenario.paso(dt, reloj, hzDe);
+      if (t - ultimaZona > 300) { ultimaZona = t; zonaLibreCache = zonaLibre(); }
+      colocarTarjeta();
       if (escenario.modo === "edificio") {
         colocarEtiquetas();
         if (t - ultimoMinimapa > 250) { ultimoMinimapa = t; dibujarMinimapa(); }
@@ -685,7 +739,17 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   // Solo con ?medir=1 (pruebas): qué hace cada personaje ahora mismo.
   const personajesAhora = () => (escenario?.personajes() ?? []).map((p) => ({
     id: p.id, estado: p.estado, accion: p.accion, cola: [...p.cola], bucle: p.bucle, postura: p.postura, visible: p.raiz.visible,
+    fase: p.fase ?? null, x: p.raiz.position.x, z: p.raiz.position.z, giro: p.raiz.rotation.y,
   }));
+  // Solo con ?medir=1 (fase L): punto en pantalla del escritorio de un agente (aunque no tenga personaje) y cámara.
+  function proyectarPuesto(id) {
+    const l = escenario?.posicionPuesto(id);
+    if (!l) return null;
+    const v = new THREE.Vector3(l.x, 0.75, l.z + 0.25).project(camara);
+    const r = lienzo.getBoundingClientRect();
+    return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
+  }
+  const estadoCamara = () => ({ x: controles.target.x, y: controles.target.y, z: controles.target.z, zoom: camara.zoom, enfocado, historial: historial.tamano, siguiendo, animando: Boolean(animCam) });
   // Solo con ?medir=1: caja en pantalla (px de la ventana) de los cuartos del escenario, para medir el encuadre.
   function cajaEdificio() {
     if (!escenario) return null;
@@ -698,11 +762,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     }
     return { izq: x0, der: x1, arriba: y0, abajo: y1 };
   }
-  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio };
+  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara };
 
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {
     modelo = m;
+    const selAntes = ultimaSel;
     seleccion = sel;
     const deps = m.departamentos;
     raiz.dataset.conexion = m.conexion;
@@ -719,7 +784,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       personajesDom.replaceChildren();
       aviso.hidden = false;
       aviso.classList.remove("aviso-info");
-      aviso.textContent = m.motivo ?? "No hay datos de este proyecto.";
+      // Fase L: un proyecto pendiente explica por qué no tiene oficinas (no se inventan departamentos).
+      aviso.textContent = m.proyecto.pendiente
+        ? `Proyecto pendiente: ${m.proyecto.pendiente} No tiene oficinas ni datos; su piso aparecerá cuando exista un exportador de solo lectura.`
+        : m.motivo ?? "No hay datos de este proyecto.";
+      tarjeta.hidden = true; tarjetaId = null;
       if (barraMovil) barraMovil.nodo.hidden = true;
       return;
     }
@@ -757,6 +826,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
         escena.add(escenario.grupo);
         claveOficina = clave;
         crearEtiquetas(visibles);
+        historial.vaciar(); // escena nueva (otro piso, modo o datos): las vistas guardadas ya no aplican
+        irAnterior.hidden = true;
+        lienzo.style.opacity = "0"; // fase L: el piso nuevo aparece con un fundido corto (sin él con «reducir movimiento»)
+        requestAnimationFrame(() => { lienzo.style.opacity = ""; });
         encuadrar();
         recienConstruido = true;
         aplicarLuz();
@@ -773,16 +846,21 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     } else {
       escenario.actualizar(visibles, m);
     }
+    let guardada = false;
     if (escenario && nuevoEnfoque !== enfocado) {
+      if (!recienConstruido && !restaurando && nuevoEnfoque) { recordar(selAntes, enfocado); guardada = true; }
       enfocado = nuevoEnfoque;
       // En celular, al elegir un departamento la vista 3D sube hasta quedar bajo la cabecera fija,
       // así el cuarto tiene espacio entre la insignia y el detalle.
       if (movil && enfocado && raiz.getBoundingClientRect().top > 120) contenedor.scrollIntoView({ block: "start" });
-      if (modo === "edificio" && enfocado) enfocar(enfocado);
+      if (modo === "edificio" && enfocado && !restaurando) enfocar(enfocado);
     }
     // Al elegir un agente, la cámara se acerca a su escritorio (una vez por elección).
     const agenteElegido = escenario && sel?.tipo === "agente" ? sel.id : null;
-    if (agenteElegido && agenteElegido !== ultimoAgente) acercarAgente(agenteElegido);
+    if (agenteElegido && agenteElegido !== ultimoAgente && !restaurando) {
+      if (!guardada) recordar(selAntes, enfocado);
+      acercarAgente(agenteElegido);
+    }
     ultimoAgente = agenteElegido;
     volverPiso.hidden = !(modo === "edificio" && enfocado);
     irRecepcion.hidden = !(modo === "edificio" && escenario?.recepcion);
@@ -794,6 +872,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     actualizarBarraMovil();
     escenario?.seleccionar(sel);
     actualizarEtiquetas(visibles, sel);
+    ultimaSel = sel;
+    dibujarTarjeta(m, sel);
 
     const delAviso = modo === "edificio" && !enfocado ? deps : [dep];
     const agentesAviso = delAviso.flatMap((d) => d.agentes);
@@ -840,6 +920,40 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
 
     arrancar();
   }
+
+  // --- Fase L: tarjeta flotante del personaje o puesto elegido (solo texto; las acciones siguen en el panel). ---
+  let tarjetaId = null;
+  function dibujarTarjeta(m, sel) {
+    const a = sel?.tipo === "agente" ? m.departamentos.flatMap((d) => d.agentes.map((x) => [x, d])).find(([x]) => x.id === sel.id) : null;
+    tarjetaId = a && escenario ? sel.id : null;
+    if (!a) { tarjeta.hidden = true; return; }
+    const [ag, dep] = a;
+    const enEscena = escenario?.personajes().some((p) => p.id === ag.id && p.raiz.visible);
+    const que = ag.naturaleza ? NATURALEZAS[ag.naturaleza].etiqueta : "Sin clasificar";
+    tarjeta.className = `vista3d-tarjeta ${ag.apariencia.clase2d}`;
+    tarjeta.replaceChildren(
+      el("strong", {}, ag.nombre),
+      el("span", { clase: "tarjeta-dep" }, dep.nombre),
+      el("span", { clase: "tarjeta-estado" }, el("span", { "aria-hidden": "true" }, ag.apariencia.icono), ` ${ag.apariencia.etiqueta}`, m.es_demo ? " · DEMO" : ""),
+      el("span", { clase: "tarjeta-que" }, que),
+      ...(enEscena ? [] : [el("span", { clase: "tarjeta-vacio" }, "Puesto sin personaje: no hay evidencia de actividad vigente")]));
+    tarjeta.dataset.puesto = enEscena ? "personaje" : "vacio";
+  }
+  const puntoTarjeta = new THREE.Vector3();
+  function colocarTarjeta() {
+    if (!tarjetaId || !escenario) { tarjeta.hidden = true; return; }
+    const per = escenario.personajes().find((p) => p.id === tarjetaId && p.raiz.visible);
+    if (per) { per.raiz.getWorldPosition(puntoTarjeta); puntoTarjeta.y += 1.55; }
+    else { const l = escenario.posicionPuesto(tarjetaId); if (!l) { tarjeta.hidden = true; return; } puntoTarjeta.set(l.x, 1.25, l.z); }
+    puntoTarjeta.project(camara);
+    const w = raiz.clientWidth, h = raiz.clientHeight;
+    const x = (puntoTarjeta.x + 1) / 2 * w, y = (1 - puntoTarjeta.y) / 2 * h;
+    const z = zonaLibreCache;
+    const fuera = !z || x < z.izq || x > z.der || y < z.arriba + 30 || y > z.abajo;
+    tarjeta.hidden = fuera;
+    if (!fuera) tarjeta.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
+  }
+  let zonaLibreCache = null;
 
   function dibujarMinimapa() {
     if (!escenario || escenario.modo !== "edificio" || !modelo) return;

@@ -43,6 +43,25 @@ export function dibujarIcono(ctx, tema, cx, cy, r, color) {
       ctx.beginPath(); ctx.ellipse(cx - r * 0.3, cy, r * 0.5, r * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(cx + r * 0.3, cy, r * 0.5, r * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
       break;
+    case "comercial": // carrito de compras (estilo de piso, fase L)
+      linea(cx - r * 0.85, cy - r * 0.6, cx - r * 0.55, cy - r * 0.6, cx - r * 0.3, cy + r * 0.3, cx + r * 0.6, cy + r * 0.3, cx + r * 0.8, cy - r * 0.35, cx - r * 0.45, cy - r * 0.35);
+      circulo(cx - r * 0.2, cy + r * 0.65, r * 0.13, true); circulo(cx + r * 0.5, cy + r * 0.65, r * 0.13, true);
+      break;
+    case "financiero": // columnas de un edificio financiero
+      linea(cx - r * 0.85, cy - r * 0.35, cx, cy - r * 0.85, cx + r * 0.85, cy - r * 0.35, cx - r * 0.85, cy - r * 0.35);
+      for (const dx of [-0.55, 0, 0.55]) linea(cx + dx * r, cy - r * 0.2, cx + dx * r, cy + r * 0.5);
+      linea(cx - r * 0.85, cy + r * 0.72, cx + r * 0.85, cy + r * 0.72);
+      break;
+    case "alimentos": // tenedor y cuchillo
+      linea(cx - r * 0.35, cy - r * 0.85, cx - r * 0.35, cy + r * 0.85);
+      linea(cx - r * 0.6, cy - r * 0.85, cx - r * 0.6, cy - r * 0.3, cx - r * 0.1, cy - r * 0.3, cx - r * 0.1, cy - r * 0.85);
+      linea(cx + r * 0.45, cy + r * 0.85, cx + r * 0.45, cy - r * 0.85);
+      ctx.beginPath(); ctx.moveTo(cx + r * 0.45, cy - r * 0.85); ctx.quadraticCurveTo(cx + r * 0.85, cy - r * 0.3, cx + r * 0.45, cy); ctx.stroke();
+      break;
+    case "servicios": // llave inglesa simplificada
+      circulo(cx - r * 0.35, cy - r * 0.35, r * 0.35);
+      linea(cx - r * 0.1, cy - r * 0.1, cx + r * 0.75, cy + r * 0.75);
+      break;
     default: // rombo
       linea(cx, cy - r * 0.75, cx + r * 0.75, cy, cx, cy + r * 0.75, cx - r * 0.75, cy, cx, cy - r * 0.75);
   }
