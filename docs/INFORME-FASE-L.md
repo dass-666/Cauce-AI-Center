@@ -18,8 +18,8 @@ exportadores, CauceService ni el trabajo de Ronny. Sin dependencias nuevas.
   muebles; triángulos 6 271 → 9 363 (+49 %, todavía poco); texturas 20 → 23.
 - **No medido:** cuadros por segundo en tu Intel UHD. Última medición real: fase G (≈61 cps). H–L sin validar en tu
   equipo. Guía de 5 minutos: `docs/VALIDAR-FASE-L.md`.
-- **Pruebas:** Node **251/251** (antes 230, +21). Chromium: **21 scripts** (los 19 de K + `fase-l.cjs` + `fase-l-portal.cjs`);
-  resultado final en la sección 6.
+- **Pruebas:** Node **251/251** (antes 230, +21) y lo mismo en `pruebas.html`. Chromium: **21/21 scripts en verde**
+  (los 19 de K + `fase-l.cjs` 42/42 + `fase-l-portal.cjs` 12/12).
 
 ## 2. Qué se implementó (por bloque)
 
@@ -133,7 +133,10 @@ exportadores, CauceService ni el trabajo de Ronny. Sin dependencias nuevas.
   - Nuevos: `fase-l.cjs` (42 comprobaciones: muebles, marquesina, pausas, giro, caminos, vista anterior, tarjetas,
     puesto vacío, estilo, temas, sala, celular, incrustado, reducir movimiento) y `fase-l-portal.cjs` (12: subruta,
     nada pedido fuera de `/cauce/`, cabeceras, iframe del mismo origen).
-  - Resultado de la corrida final: ver `RESULTADO-PRUEBAS.txt` en la carpeta de entrega.
+  - Corrida final completa: **21/21 en verde** (fase-k 48, regresion 47, inmersivo 34, auditoria-visual 20,
+    ek-chuah-pr2 19, fase-i 19, ek-chuah-integracion 16, movil-medidas 16, animaciones 15, estabilidad 15, fase-j 15,
+    compago-pr10 9, multiproyecto 7 (antes 6; +1 de la lista de pendientes), memoria 4, brillo 3, y los de capturas,
+    naturaleza y pruebas.html). Salida completa en `RESULTADO-PRUEBAS.txt` en la carpeta de entrega.
 - Ninguna prueba anterior se quitó ni se relajó. La línea base de K se corrió en una copia aparte (19/19 en verde).
 
 ## 7. Riesgos y limitaciones
