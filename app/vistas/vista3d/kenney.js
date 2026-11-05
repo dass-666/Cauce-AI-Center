@@ -24,6 +24,13 @@ export function modeloDe(id) {
   return MODELOS_KENNEY[huella(id) % MODELOS_KENNEY.length];
 }
 
+/** 0..1: cuánto teclea en el instante r. Ráfagas de 3–6 s con pausas cortas; distinto para cada personaje (r ya trae su fase). */
+export function rafagaDe(r) {
+  const onda = Math.sin(r * 0.9 + Math.sin(r * 0.37) * 2);
+  const x = Math.min(1, Math.max(0, (onda + 0.55) / 0.5));
+  return x * x * (3 - 2 * x);
+}
+
 /** Descarga y guarda en memoria los modelos (uno por archivo, compartido por todos sus clones). */
 export function crearCatalogoKenney(recursos) {
   const cargador = new GLTFLoader();
@@ -95,37 +102,64 @@ function crearCuerpoKenney(gltf, recursos) {
     a.setEffectiveWeight(0);
     acciones[n] = a;
   }
-  const pesos = (objetivo) => {
-    for (const [n, a] of Object.entries(acciones)) a.setEffectiveWeight(objetivo[n] ?? 0);
+  // Fase K: los pesos de los clips se acercan a su objetivo en ~0.3 s (antes cambiaban de golpe, p. ej. al
+  // terminar de celebrar). La primera vez se ponen directo: el personaje aparece ya en su postura.
+  const actuales = new Map();
+  let suavizar = true;
+  const pesos = (objetivo, dt = 0) => {
+    const k = suavizar && actuales.size ? 1 - Math.exp(-dt * 10) : 1;
+    for (const [n, a] of Object.entries(acciones)) {
+      const meta = objetivo[n] ?? 0;
+      const valor = (actuales.get(n) ?? meta) + (meta - (actuales.get(n) ?? meta)) * k;
+      const final = Math.abs(valor - meta) < 0.002 ? meta : valor;
+      actuales.set(n, final);
+      a.setEffectiveWeight(final);
+    }
   };
+  // Fase K: al cambiar de gesto, brazos, cabeza y torso pasan de la postura anterior a la nueva en 0.35 s.
+  const huesos = Object.values(h);
+  const previos = huesos.map(() => new THREE.Quaternion());
+  const desde = huesos.map(() => new THREE.Quaternion());
+  const MEZCLA = 0.35;
+  let mezcla = 1;
+  let primera = true;
 
   let gestoAnterior = null;
+  let baseAnterior = null;
   function aplicar({ base, s, gesto, t, r, o = 0 }, dt) {
     modelo.position.y = 0;
-    if (gesto !== gestoAnterior) {
+    if (gesto !== gestoAnterior || base !== baseAnterior) {
+      if (gesto !== gestoAnterior && CLIP_GESTO[gesto] && acciones[CLIP_GESTO[gesto]]) acciones[CLIP_GESTO[gesto]].time = 0; // empieza desde el inicio
       gestoAnterior = gesto;
-      if (CLIP_GESTO[gesto] && acciones[CLIP_GESTO[gesto]]) acciones[CLIP_GESTO[gesto]].time = 0; // empieza desde el inicio
+      baseAnterior = base;
+      if (!primera) { huesos.forEach((b, i) => desde[i].copy(previos[i])); mezcla = 0; }
     }
     for (const [b, q, p] of inicial) { b.quaternion.copy(q); b.position.copy(p); }
-    if (base === "caminar") pesos({ walk: 1 });
+    // Al sentarse, la propia transición ya es suave (s va de 0 a 1): se aplica tal cual, sin retraso.
+    suavizar = base !== "sentandose";
+    if (base === "caminar") pesos({ walk: 1 }, dt);
     else if (base === "sentandose") {
       const k = s * s * (3 - 2 * s);
-      pesos({ idle: 1 - k, sit: k });
+      pesos({ idle: 1 - k, sit: k }, dt);
       modelo.position.y = ALTO_ASIENTO * k;
     } else if (base === "sentado") {
-      pesos({ sit: 1 });
+      pesos({ sit: 1 }, dt);
       modelo.position.y = ALTO_ASIENTO;
     } else {
-      pesos(CLIP_GESTO[gesto] ? { [CLIP_GESTO[gesto]]: 1 } : { idle: 1 });
+      pesos(CLIP_GESTO[gesto] ? { [CLIP_GESTO[gesto]]: 1 } : { idle: 1 }, dt);
     }
     mezclador.update(dt);
 
     // Gestos que el modelo no trae: se suman a la animación base moviendo huesos.
     if (gesto === "teclear") {
-      // brazos al frente, sobre el teclado, con un golpeteo alterno; a veces levanta la vista a la pantalla
-      h.brazoD.rotation.set(-1.25 + Math.sin(r * 14) * 0.1 * (1 - o), 0, 0.12);
-      h.brazoI.rotation.set(-1.25 + Math.sin(r * 14 + 1.7) * 0.1 * (1 - o), 0, -0.12);
-      h.cabeza.rotation.x += 0.12 - 0.22 * o;
+      // brazos al frente, sobre el teclado, con un golpeteo alterno; a veces levanta la vista a la pantalla.
+      // Fase K: teclea en ráfagas (no al mismo ritmo todo el tiempo): entre ráfagas deja las manos quietas y lee.
+      const rafaga = rafagaDe(r);
+      const golpe = 0.1 * (1 - o) * rafaga;
+      h.brazoD.rotation.set(-1.25 + Math.sin(r * 14) * golpe, 0, 0.12);
+      h.brazoI.rotation.set(-1.25 + Math.sin(r * 14 + 1.7) * golpe, 0, -0.12);
+      h.cabeza.rotation.x += 0.12 - 0.22 * o - 0.08 * (1 - rafaga);
+      h.cabeza.rotation.y += Math.sin(r * 0.23) * 0.07; // la vista recorre la pantalla
     } else if (gesto === "reposo") {
       h.cabeza.rotation.y += Math.sin(r * 0.35) * 0.4; // mira alrededor, despacio
       h.torso.rotation.x -= 0.04 + Math.sin(r * 1.6) * 0.015; // respira
@@ -153,6 +187,15 @@ function crearCuerpoKenney(gltf, recursos) {
       h.brazoD.rotation.set(-2.8, 0, 0.3 + salto * 0.25);
       h.brazoI.rotation.set(-2.8, 0, -0.3 - salto * 0.25);
     }
+
+    // Mezcla entre la postura del gesto anterior y la del actual.
+    if (mezcla < 1) {
+      mezcla = Math.min(1, mezcla + dt / MEZCLA);
+      const k = mezcla * mezcla * (3 - 2 * mezcla);
+      huesos.forEach((b, i) => b.quaternion.slerpQuaternions(desde[i], b.quaternion.clone(), k));
+    }
+    huesos.forEach((b, i) => previos[i].copy(b.quaternion));
+    primera = false;
   }
 
   return { raiz, aplicar };

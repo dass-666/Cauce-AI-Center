@@ -6,10 +6,10 @@
 export function fotografia(m) {
   const agentes = new Map();
   for (const d of m.departamentos) {
-    for (const a of d.agentes) agentes.set(a.id, { estado: a.estado, nombre: a.nombre, departamento: d.nombre });
+    for (const a of d.agentes) agentes.set(a.id, { estado: a.estado, nombre: a.nombre, departamento: d.nombre, departamento_id: d.id });
   }
   const deps = new Map(m.departamentos.map((d) => [d.id, d.nombre]));
-  const alertas = new Map(m.alertas.map((a) => [a.id, { titulo: a.titulo, nivel: a.nivel, departamento: deps.get(a.departamento_id) ?? null }]));
+  const alertas = new Map(m.alertas.map((a) => [a.id, { titulo: a.titulo, nivel: a.nivel, departamento: deps.get(a.departamento_id) ?? null, departamento_id: deps.has(a.departamento_id) ? a.departamento_id : null }]));
   return {
     proyecto: m.proyecto.id,
     generado_en: m.generado_en,
@@ -41,17 +41,18 @@ export function compararLecturas(antes, ahora) {
   if (!validos || antes.generado_en === ahora.generado_en) return cambios;
   for (const [id, a] of ahora.agentes) {
     const previo = antes.agentes.get(id);
-    if (!previo) cambios.push({ ...base, tipo: "agente_nuevo", agente: a.nombre, departamento: a.departamento, a: a.estado });
-    else if (previo.estado !== a.estado) cambios.push({ ...base, tipo: "estado", agente: a.nombre, departamento: a.departamento, de: previo.estado, a: a.estado });
+    const ref = { agente_id: id, departamento_id: a.departamento_id };
+    if (!previo) cambios.push({ ...base, tipo: "agente_nuevo", agente: a.nombre, departamento: a.departamento, a: a.estado, ...ref });
+    else if (previo.estado !== a.estado) cambios.push({ ...base, tipo: "estado", agente: a.nombre, departamento: a.departamento, de: previo.estado, a: a.estado, ...ref });
   }
   for (const [id, a] of antes.agentes) {
-    if (!ahora.agentes.has(id)) cambios.push({ ...base, tipo: "agente_quitado", agente: a.nombre, departamento: a.departamento });
+    if (!ahora.agentes.has(id)) cambios.push({ ...base, tipo: "agente_quitado", agente: a.nombre, departamento: a.departamento, agente_id: id, departamento_id: a.departamento_id });
   }
   for (const [id, al] of ahora.alertas) {
-    if (!antes.alertas.has(id)) cambios.push({ ...base, tipo: "alerta_nueva", titulo: al.titulo, nivel: al.nivel, departamento: al.departamento });
+    if (!antes.alertas.has(id)) cambios.push({ ...base, tipo: "alerta_nueva", titulo: al.titulo, nivel: al.nivel, departamento: al.departamento, departamento_id: al.departamento_id });
   }
   for (const [id, al] of antes.alertas) {
-    if (!ahora.alertas.has(id)) cambios.push({ ...base, tipo: "alerta_quitada", titulo: al.titulo, nivel: al.nivel, departamento: al.departamento });
+    if (!ahora.alertas.has(id)) cambios.push({ ...base, tipo: "alerta_quitada", titulo: al.titulo, nivel: al.nivel, departamento: al.departamento, departamento_id: al.departamento_id });
   }
   return cambios;
 }

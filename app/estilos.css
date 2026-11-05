@@ -539,3 +539,85 @@ html.inmersivo .panel { position: fixed; top: 56px; right: 8px; bottom: 8px; lef
   .piso-estado { border: 0; padding: 0; }
   .piso-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+
+/* ---------- Fase K: sala de control ---------- */
+.boton-sala { display: inline-flex; align-items: center; gap: 4px; border-color: #3d4a70; }
+.boton-sala[aria-pressed="true"] { border-color: var(--brillo); box-shadow: 0 0 0 1px var(--brillo) inset; }
+.sala-contador { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--c-error); color: #1a0000; font-weight: 800; font-size: 12px; line-height: 20px; text-align: center; }
+html.sala-abierta #oficina, html.sala-abierta #panel, html.sala-abierta #conexion,
+html.sala-abierta #banda-demo, html.sala-abierta #diagnostico, html.sala-abierta #aviso-vista { display: none !important; }
+html.sala-abierta .principal { grid-template-columns: 1fr !important; }
+.sala-control[hidden], .llegada[hidden] { display: none; }
+.sala-control { background: #0f1424; border: 1px solid var(--borde); border-radius: 14px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.sala-cabeza { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.sala-cabeza h2 { font-size: 20px; }
+.sala-cabeza h2:focus { outline: none; }
+.sala-sub, .sala-nota { margin: 2px 0 0; font-size: 12.5px; color: var(--texto-suave); }
+.sala-suave { color: var(--texto-suave); font-style: normal; }
+.sala-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
+.sala-cifra { background: var(--cuarto); border: 1px solid var(--borde); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.sala-cifra strong { font-size: 22px; line-height: 1.1; }
+.sala-cifra span { font-size: 12px; color: var(--texto-suave); }
+.sala-cifra.c-real strong { color: #5fd38d; }
+.sala-cifra.c-demo strong { color: #f2c14e; }
+.sala-cifra.c-aviso strong { color: var(--c-revision); }
+.sala-cifra.c-error strong { color: var(--c-error); }
+.sala-cuerpo { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.sala-columna { display: grid; gap: 14px; min-width: 0; }
+.sala-seccion { min-width: 0; }
+.sala-seccion > h3, .sala-h3-linea { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-suave); margin: 0 0 8px; display: inline; }
+.sala-seccion > h3 { display: block; }
+.sala-eventos > summary { cursor: pointer; list-style: revert; }
+.sala-proyectos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.sala-tarjeta { background: var(--cuarto); border: 1px solid var(--borde); border-left: 4px solid var(--c-sin-datos); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; }
+.sala-k-real { border-left-color: #43c47a; }
+.sala-k-demo { border-left-color: #f2c14e; }
+.sala-k-desactualizado { border-left-color: var(--c-revision); }
+.sala-k-invalido { border-left-color: var(--c-error); }
+.piso-pendiente { color: #9aa6c2; }
+.sala-tarjeta .piso-estado { border: 1px solid currentColor; padding: 1px 6px; }
+.sala-tarjeta .piso-estado-texto { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+.sala-tarjeta.es-actual { box-shadow: 0 0 0 1px #3d4a70 inset; }
+.sala-tarjeta-cabeza { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.sala-tarjeta h4 { margin: 0; font-size: 15px; }
+.sala-tarjeta-conexion { margin: 0; font-size: 13px; font-weight: 600; }
+.sala-datos { margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--texto-suave); }
+.sala-datos li { color: var(--texto-suave); }
+.sala-tarjeta .sala-nota { color: var(--texto-suave); }
+.sala-tarjeta-atencion { margin: 0; font-size: 12.5px; color: var(--c-revision) !important; font-weight: 600; }
+.sala-ir { justify-self: start; margin-top: 4px; }
+.sala-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sala-item { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--cuarto); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+.sala-item-texto { flex: 1 1 200px; min-width: 0; }
+.sala-nivel, .sala-cat { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #2a3350; white-space: nowrap; }
+.nivel-critica .sala-nivel, .nivel-error .sala-nivel, .nivel-invalido .sala-nivel, .cat-error { background: #4a1820; color: #ffb3b3; }
+.nivel-advertencia .sala-nivel, .nivel-requiere_revision .sala-nivel, .nivel-desactualizado .sala-nivel, .cat-vencida, .cat-alerta { background: #4a3812; color: #ffd98a; }
+.cat-finalizacion { background: #12361f; color: #7ff0a8; }
+.cat-estado, .cat-conexion, .cat-fuente { background: #1d2c4a; color: #a9cbff; }
+.sala-vacio { margin: 0; font-size: 13px; color: var(--texto-suave); }
+.llegada { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 30; margin: 0; background: #11182b; border: 1px solid var(--brillo); color: var(--texto); padding: 8px 14px; border-radius: 999px; font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.45); }
+.piso.recien-elegido { animation: resaltar-piso 1.2s ease-out 2; }
+@keyframes resaltar-piso { 0% { box-shadow: 0 0 0 3px var(--brillo); } 100% { box-shadow: 0 0 0 1px var(--brillo) inset; } }
+@media (prefers-reduced-motion: reduce) { .piso.recien-elegido { animation: none; box-shadow: 0 0 0 3px var(--brillo); } }
+@media (max-width: 900px) { .sala-cuerpo { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .sala-control { padding: 10px; border-radius: 10px; gap: 10px; }
+  .sala-cabeza h2 { font-size: 17px; }
+  .sala-cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .sala-cifra { padding: 5px 7px; gap: 0; }
+  .sala-cifra strong { font-size: 17px; }
+  .sala-cifra span { font-size: 11px; line-height: 1.25; }
+  .sala-proyectos { grid-template-columns: 1fr; }
+  .sala-control .boton, .sala-control .boton-chico { min-height: 44px; padding: 8px 12px; }
+  .boton-sala .sala-contador { min-width: 18px; line-height: 18px; }
+  .llegada { top: auto; bottom: calc(118px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 24px); }
+}
+/* K: con 6 pisos, los que no tienen conexión muestran solo su punto (el texto sigue para lectores y en el título). */
+.pisos .piso-desconectado { border: 0; padding: 0; }
+.pisos .piso-desconectado .piso-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* K: con el detalle abierto (o pantallas medianas) los accesos de cámara quedan como icono; el nombre sigue en aria-label y título. */
+.principal:has(.panel:not([hidden])) .vista3d-barra .texto-k { display: none; }
+@media (max-width: 1180px) { .vista3d-barra .texto-k { display: none; } }
+.chip-seguir[aria-pressed="true"] { border-color: var(--brillo); color: var(--brillo); }
+.historial { display: grid; gap: 4px; }
+.historial li { font-size: 13px; }

@@ -36,8 +36,18 @@ export function validarRegistro(datos) {
       return null;
     };
     vistos.add(p.id);
-    proyectos.push({ id: p.id, nombre: p.nombre.trim(), estado: p.estado, demo: opcional("demo"), distribucion: opcional("distribucion"),
-      naturalezas: opcional("naturalezas") ?? `escena/${p.id}-naturaleza.json` });
+    const entrada = { id: p.id, nombre: p.nombre.trim(), estado: p.estado, demo: opcional("demo"), distribucion: opcional("distribucion"),
+      naturalezas: opcional("naturalezas") ?? `escena/${p.id}-naturaleza.json` };
+    // Fase K (opcionales, fuera del contrato v1): proyecto pendiente de localizar y color de identidad del piso.
+    if (p.pendiente !== undefined && p.pendiente !== null) {
+      if (typeof p.pendiente === "string" && p.pendiente.trim() && p.pendiente.length <= 200) entrada.pendiente = p.pendiente.trim();
+      else avisos.push(`${p.id}: "pendiente" debe ser un texto corto; se ignora.`);
+    }
+    if (p.color !== undefined && p.color !== null) {
+      if (typeof p.color === "string" && /^#[0-9a-fA-F]{6}$/.test(p.color)) entrada.color = p.color.toLowerCase();
+      else avisos.push(`${p.id}: "color" debe ser #rrggbb; se ignora.`);
+    }
+    proyectos.push(entrada);
   });
   return { proyectos, avisos };
 }

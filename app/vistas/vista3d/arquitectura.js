@@ -4,7 +4,7 @@
 // no tiene recepcionista para que nada parezca trabajo sin evidencia.
 
 import * as THREE from "three";
-import { OFICINA } from "./paleta.js";
+import { OFICINA, COLOR_ESTADO } from "./paleta.js";
 import { puerta } from "./disposicion.js";
 import { dibujarIcono, hex } from "./iconos.js";
 import { fusionarEstaticos } from "./oficina.js";
@@ -28,7 +28,7 @@ export function crearArquitectura(plano, cuartos, recursos) {
     pasillo: M(0x3a4258),
     recepcion: M(0x4a5474),
     muro: M(0x323d60),
-    remate: M(0xe0a458),
+    remate: M(COLOR_IDENTIDAD), // color de identidad del proyecto (se cambia en actualizar)
     columna: M(0x283252),
     madera: M(OFICINA.madera),
     maderaOscura: M(OFICINA.maderaOscura),
@@ -93,6 +93,8 @@ export function crearArquitectura(plano, cuartos, recursos) {
   // Recepción: mostrador, muro con el letrero del proyecto, sala de espera y plantas. Sin personas.
   let letrero = null;
   let reloj = null;
+  let directorio = null;
+  let emblema = null;
   if (r) {
     const fondoZ = r.z - r.fondo / 2 + 0.35;
     poner(caja(Math.min(r.ancho - 1, 6), 1.6, 0.25), m.muro, r.x, 0.8, fondoZ);
@@ -113,6 +115,19 @@ export function crearArquitectura(plano, cuartos, recursos) {
     letrero.malla.position.set(r.x, 1.0, fondoZ + 0.13);
     letrero.malla.userData.dinamico = true;
     grupo.add(letrero.malla);
+    // Fase K: directorio del piso (totem con pantalla) y emblema del proyecto en el piso de la recepción.
+    const tx = r.x - r.ancho / 2 + 1.3, tz = r.z + r.fondo / 2 - 1.2;
+    poner(caja(0.7, 0.06, 0.4), m.metal, tx, 0.03, tz);
+    poner(caja(0.1, 0.5, 0.1), m.metal, tx, 0.3, tz);
+    directorio = crearDirectorio(recursos);
+    directorio.malla.position.set(tx, 1.4, tz);
+    directorio.malla.rotation.y = Math.PI / 4; // de frente a la cámara isométrica
+    directorio.malla.userData.dinamico = true;
+    grupo.add(directorio.malla);
+    emblema = crearEmblema(recursos);
+    emblema.malla.position.set(r.x + 0.6, 0.008, r.z + 1.4);
+    emblema.malla.userData.dinamico = true;
+    grupo.add(emblema.malla);
     reloj = crearReloj(recursos, m.metal);
     reloj.grupo.position.set(r.x + Math.min(r.ancho - 1, 6) / 2 - 0.6, 1.25, fondoZ + 0.14);
     grupo.add(reloj.grupo);
@@ -125,7 +140,13 @@ export function crearArquitectura(plano, cuartos, recursos) {
 
   return {
     grupo,
-    actualizar(modelo) { letrero?.dibujar(modelo); },
+    actualizar(modelo) {
+      const color = modelo.proyecto.color ?? null;
+      m.remate.color.set(color ?? COLOR_IDENTIDAD);
+      letrero?.dibujar(modelo);
+      directorio?.dibujar(modelo);
+      emblema?.dibujar(modelo);
+    },
     paso() { reloj?.mover(new Date()); },
     aplicarLuz(luz) { matVentana.color.setHex(luz.ventana); },
   };
@@ -186,6 +207,109 @@ function mergeSimple(geos) {
   return out;
 }
 
+const COLOR_IDENTIDAD = 0xe0a458; // ámbar: el color de siempre si el registro no da uno
+
+/**
+ * Directorio del piso (fase K): pantalla en la recepción con cada departamento, su estado (los mismos colores
+ * que el resto) y sus alertas. Solo repite el modelo de vista; con datos no vigentes todo se ve «sin información».
+ */
+function crearDirectorio(recursos) {
+  const lienzo = document.createElement("canvas");
+  lienzo.width = 512;
+  lienzo.height = 640;
+  const ctx = lienzo.getContext("2d");
+  const textura = recursos.agregar(new THREE.CanvasTexture(lienzo));
+  textura.colorSpace = THREE.SRGBColorSpace;
+  textura.anisotropy = 4;
+  const malla = new THREE.Mesh(recursos.agregar(new THREE.PlaneGeometry(1.6, 2.0)),
+    recursos.agregar(new THREE.MeshBasicMaterial({ map: textura, toneMapped: false })));
+  malla.name = "directorio";
+  let clave = "";
+  return {
+    malla,
+    dibujar(modelo) {
+      const filas = modelo.departamentos.map((d) => [d.nombre, d.estado_resumen, d.alertas.length]);
+      const origen = modelo.es_demo ? "DEMO" : modelo.generado_en ? "REAL" : "SIN DATOS";
+      const nueva = JSON.stringify([origen, modelo.conexion, filas]);
+      if (nueva === clave) return;
+      clave = nueva;
+      ctx.fillStyle = "#0b1020";
+      ctx.fillRect(0, 0, 512, 640);
+      ctx.strokeStyle = "#3a4568";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, 506, 634);
+      ctx.fillStyle = "#e8ecf5";
+      ctx.font = "bold 34px system-ui, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText("DIRECTORIO", 28, 44);
+      ctx.fillStyle = origen === "REAL" ? "#43c47a" : origen === "DEMO" ? "#ffb547" : "#8a94ad";
+      ctx.font = "bold 26px system-ui, sans-serif";
+      const ancho = ctx.measureText(origen).width;
+      ctx.fillRect(484 - ancho - 16, 26, ancho + 16, 36);
+      ctx.fillStyle = "#0b0f19";
+      ctx.fillText(origen, 484 - ancho - 8, 45);
+      ctx.fillStyle = "#a3adc4";
+      ctx.font = "24px system-ui, sans-serif";
+      ctx.fillText(modelo.conexion_etiqueta, 28, 88);
+      const max = 9;
+      filas.slice(0, max).forEach(([nombre, estado, alertas], i) => {
+        const y = 140 + i * 54;
+        ctx.fillStyle = hex(COLOR_ESTADO[estado] ?? COLOR_ESTADO.sin_datos);
+        ctx.beginPath(); ctx.arc(42, y, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#e8ecf5";
+        ctx.font = "26px system-ui, sans-serif";
+        let n = nombre;
+        const limite = alertas ? 330 : 400;
+        while (n.length > 1 && ctx.measureText(n).width > limite) n = n.slice(0, -2) + "…";
+        ctx.fillText(n, 66, y);
+        if (alertas) { ctx.fillStyle = "#ffb547"; ctx.font = "bold 24px system-ui, sans-serif"; ctx.fillText(`⚠ ${alertas}`, 420, y); }
+      });
+      if (filas.length > max) { ctx.fillStyle = "#a3adc4"; ctx.font = "22px system-ui, sans-serif"; ctx.fillText(`y ${filas.length - max} más…`, 66, 140 + max * 54); }
+      if (filas.length === 0) { ctx.fillStyle = "#a3adc4"; ctx.font = "24px system-ui, sans-serif"; ctx.fillText("Sin departamentos conocidos", 28, 150); }
+      textura.needsUpdate = true;
+    },
+  };
+}
+
+/** Emblema del proyecto en el piso de la recepción: iniciales en un círculo con su color de identidad. */
+function crearEmblema(recursos) {
+  const lienzo = document.createElement("canvas");
+  lienzo.width = lienzo.height = 256;
+  const ctx = lienzo.getContext("2d");
+  const textura = recursos.agregar(new THREE.CanvasTexture(lienzo));
+  textura.colorSpace = THREE.SRGBColorSpace;
+  textura.anisotropy = 4;
+  const malla = new THREE.Mesh(recursos.agregar(new THREE.PlaneGeometry(2.2, 2.2).rotateX(-Math.PI / 2).rotateY(Math.PI / 4)),
+    recursos.agregar(new THREE.MeshBasicMaterial({ map: textura, transparent: true, depthWrite: false, toneMapped: false })));
+  malla.name = "emblema";
+  let clave = "";
+  return {
+    malla,
+    dibujar(modelo) {
+      const color = modelo.proyecto.color ?? hex(COLOR_IDENTIDAD);
+      const iniciales = modelo.proyecto.nombre.split(/[\s/-]+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+      const nueva = `${color}|${iniciales}`;
+      if (nueva === clave) return;
+      clave = nueva;
+      ctx.clearRect(0, 0, 256, 256);
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 12;
+      ctx.beginPath(); ctx.arc(128, 128, 110, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(128, 128, 104, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.font = "bold 92px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(iniciales, 128, 134);
+      ctx.globalAlpha = 1;
+      textura.needsUpdate = true;
+    },
+  };
+}
+
 /** Letrero de la recepción: proyecto, REAL o DEMO, y conexión (datos del modelo). */
 function crearLetreroRecepcion(recursos) {
   const lienzo = document.createElement("canvas");
@@ -201,12 +325,12 @@ function crearLetreroRecepcion(recursos) {
     malla,
     dibujar(modelo) {
       const origen = modelo.es_demo ? "demo" : modelo.generado_en ? "real" : "sin";
-      const nueva = [modelo.proyecto.nombre, origen, modelo.conexion].join("|");
+      const nueva = [modelo.proyecto.nombre, origen, modelo.conexion, modelo.proyecto.color ?? ""].join("|");
       if (nueva === clave) return;
       clave = nueva;
       ctx.fillStyle = "#0f1526";
       ctx.fillRect(0, 0, 1024, 256);
-      ctx.strokeStyle = "#e0a458";
+      ctx.strokeStyle = modelo.proyecto.color ?? "#e0a458";
       ctx.lineWidth = 8;
       ctx.strokeRect(4, 4, 1016, 248);
       ctx.fillStyle = "#ffd89a";
