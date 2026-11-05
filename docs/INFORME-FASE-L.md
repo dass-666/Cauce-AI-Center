@@ -174,6 +174,8 @@ No recomiendo más animación ni más muebles antes de medir en tu equipo y de t
 
 ## 11. Versiones
 
+- PR #21 (borrador), base `fase-k/oficina-virtual-profesional`.
+
 - Base: `05c5aeb` (fase K). Three.js r187 y Kenney Mini Characters sin cambios. Sin dependencias nuevas.
 - Archivos nuevos: `mobiliario.js`, `camara-historial.js`, `app/nucleo/pisos.js`, `app/configuracion.js`,
   `pruebas/casos-fase-l.js`, `pruebas/navegador/fase-l.cjs`, `fase-l-portal.cjs`, `todas.cjs`, este informe,
