@@ -3,12 +3,22 @@
 // (cola de acciones, caminos, posturas) queda igual.
 
 import * as THREE from "three";
-import { planDeTransicion, variacion, gestoOcasional } from "./maquina.js";
+import { planDeTransicion, variacion, gestoOcasional, faseTrabajo, girarHacia } from "./maquina.js";
+
+/** Gira hacia `objetivo` sin pasar de GIRO_MAXIMO rad/s. */
+function girar(actual, objetivo, dt) {
+  const meta = girarHacia(actual, objetivo, 1);
+  const paso = Math.max(-GIRO_MAXIMO * dt, Math.min(GIRO_MAXIMO * dt, (meta - actual) * Math.min(1, dt * GIRO)));
+  return actual + paso;
+}
 import { camino, longitudCamino, puntoEnCamino, huella } from "./disposicion.js";
 import { aspecto, COLOR_ESTADO } from "./paleta.js";
 
 const VELOCIDAD = 1.3; // m/s al caminar
-const DURACION = { sentarse: 0.55, levantarse: 0.55, celebrar: 1.8, reaccion_error: 1.4, llamar_atencion: 1.8 };
+// Fase L: la celebración es un gesto breve de satisfacción (1.4 s, sin saltos), no una fiesta.
+const DURACION = { sentarse: 0.6, levantarse: 0.6, celebrar: 1.4, reaccion_error: 1.4, llamar_atencion: 1.8 };
+const GIRO = 8; // qué tan rápido gira hacia donde camina o hacia el escritorio (1/s)
+const GIRO_MAXIMO = 4.5; // rad/s: un cuarto de vuelta toma ~0.35 s (no se voltea de golpe aunque haya pocos cuadros)
 const GESTOS = new Set(["celebrar", "reaccion_error", "llamar_atencion"]);
 const ALTURA_CADERA = 0.36;
 const ALTURA_SENTADO = 0.36; // el asiento está a 0.32 m
@@ -94,19 +104,19 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
 }
 
 /** Traduce la pose pedida por el controlador a las piezas del personaje provisional. */
-function aplicarProvisional(c, { base, s, gesto, t, r, o = 0 }) {
+function aplicarProvisional(c, { base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false }) {
   reposo(c);
-  if (base === "caminar") return caminar(c, t);
+  if (base === "caminar") return caminar(c, quieto ? 0 : t);
   if (base === "sentandose") return sentar(c, suave(s));
   if (base === "sentado") sentar(c, 1);
   if (gesto === "celebrar") celebrar(c, t);
-  else if (gesto === "teclear") { teclear(c, r); c.cabeza.rotation.x -= 0.2 * o; } // a veces levanta la vista a la pantalla
+  else if (gesto === "teclear") { teclear(c, r, quieto); c.cabeza.rotation.x -= 0.2 * o; pausaTrabajo(c, fase, k, r); } // a veces levanta la vista a la pantalla
   else if (gesto === "reposo") respirar(c, r, base === "sentado");
   else if (gesto === "relajado") { respirar(c, r * 0.7, true); c.torso.rotation.x = -0.2; c.cabeza.rotation.x = -0.1; }
   else if (gesto === "alerta") alerta(c, r, o);
   else if (gesto === "reaccion_error") { alerta(c, r, 1); c.cabeza.rotation.y = Math.sin(t * 12) * 0.4 * Math.max(0, 1 - t / 1.4); }
   else if (gesto === "llamar_atencion") levantarMano(c, t);
-  else if (gesto === "atencion") { c.brazoD.rotation.x = -0.4 - 2.4 * o; c.brazoD.rotation.z = 0.2 * o; c.cabeza.rotation.x = -0.1 * o; }
+  else if (gesto === "atencion") { c.brazoD.rotation.x = -1.6 - 1.2 * o; c.brazoD.rotation.z = 0.15 + 0.1 * o; c.cabeza.rotation.x = -0.1; } // fase L: la mano queda arriba mientras pida revisión
 }
 
 /**
@@ -114,14 +124,15 @@ function aplicarProvisional(c, { base, s, gesto, t, r, o = 0 }) {
  * (estados.js → animacion3d) y la convierte en una cola de acciones.
  */
 export class Personaje {
-  constructor({ agente, puesto, cuarto, geo, recursos, texturaSombra, burbujas, anillosEstado = null, retraso = 0, fabricarCuerpo = null }) {
+  constructor({ agente, puesto, cuarto, geo, recursos, texturaSombra, burbujas, anillosEstado = null, retraso = 0, fabricarCuerpo = null, todos = [], quieto = () => false }) {
     this.id = agente.id;
     // Cuerpo: el modelo de Kenney si se cargó; si no, el provisional hecho con código.
     this.cuerpo = fabricarCuerpo?.(agente.id) ?? crearCuerpo(geo, recursos, agente.id, texturaSombra);
     this.raiz = this.cuerpo.raiz;
     this.raiz.visible = false;
     this.raiz.userData.seleccion = { tipo: "agente", id: agente.id };
-    this.camino = camino(cuarto, puesto);
+    this.camino = camino(cuarto, puesto, todos); // fase L: rodea los escritorios de enfrente
+    this.quieto = quieto; // «reducir movimiento» del sistema: posturas fijas, sin balanceos
     this.longitud = longitudCamino(this.camino);
     this.silla = this.camino[this.camino.length - 1];
     this.burbujas = burbujas;
@@ -143,6 +154,7 @@ export class Personaje {
 
     this.burbuja = new THREE.Sprite(burbujas.material("sin_datos"));
     this.burbuja.scale.set(0.34, 0.34, 1);
+    this.recorrido = 0;
     this.burbuja.position.y = 1.32;
     this.raiz.add(this.burbuja);
 
@@ -162,6 +174,9 @@ export class Personaje {
   actualizar(agente) {
     this.estado = agente.estado;
     this.burbuja.material = this.burbujas.material(agente.estado);
+    // Fase L: error y revisión se ven un poco más grandes (piden atención), sin parpadear.
+    const s = agente.estado === "error" || agente.estado === "requiere_revision" ? 0.44 : 0.34;
+    this.burbuja.scale.set(s, s, 1);
     if (this.anilloEstado) this.anilloEstado.material = this.anillosEstado.get(agente.estado) ?? this.anillosEstado.get("sin_datos");
     // Con clasificación (naturaleza.js) manda animacion_mostrada: un módulo, un puesto humano o un
     // reactivo sin registro nuevo observado quedan "ausente" aunque su estado tenga postura.
@@ -206,6 +221,7 @@ export class Personaje {
       return;
     }
     if (this.accion === "entrar") this.raiz.visible = true;
+    if (this.accion === "entrar" || this.accion === "salir") this.recorrido = 0;
   }
 
   seleccionar(activo) {
@@ -225,51 +241,59 @@ export class Personaje {
     this.t += dt;
     let terminada = false;
     const v = this.variacion;
-    const pose = { base: "de_pie", s: 0, gesto: null, t: this.t, r: reloj * v.ritmo + v.fase, o: 0 };
+    const quieto = this.quieto();
+    // Con «reducir movimiento» el reloj de los bucles se congela: posturas fijas, sin balanceo ni tecleo visible.
+    const r = quieto ? v.fase : reloj * v.ritmo + v.fase;
+    const pose = { base: "de_pie", s: 0, gesto: null, t: this.t, r, o: 0, fase: "teclear", k: 1, quieto };
 
     if (a === "entrar" || a === "salir") {
-      const d = a === "entrar" ? this.t * VELOCIDAD : this.longitud - this.t * VELOCIDAD;
+      // Fase L: arranca y llega despacio (sin saltar de 0 a la velocidad completa) y gira hacia donde camina.
+      const restante = this.longitud - this.recorrido;
+      const factor = Math.min(1, 0.35 + this.t / 0.4, 0.35 + restante / 0.5);
+      this.recorrido = Math.min(this.longitud, this.recorrido + VELOCIDAD * factor * dt);
+      const d = a === "entrar" ? this.recorrido : this.longitud - this.recorrido;
       const p = puntoEnCamino(this.camino, d);
-      // al salir camina en sentido contrario
-      const angulo = a === "salir" ? p.angulo + Math.PI : p.angulo;
+      const angulo = a === "salir" ? p.angulo + Math.PI : p.angulo; // al salir camina en sentido contrario
       this.raiz.position.set(p.x, 0, p.z);
-      this.raiz.rotation.y = angulo;
+      this.raiz.rotation.y = quieto ? angulo : girar(this.raiz.rotation.y, angulo, dt);
       pose.base = "caminar";
       this.postura = "de_pie";
-      terminada = this.t * VELOCIDAD >= this.longitud;
-      if (terminada && a === "entrar") this.raiz.rotation.y = Math.PI;
+      terminada = this.recorrido >= this.longitud - 1e-6;
       if (terminada && a === "salir") this.postura = "fuera";
     } else if (a === "sentarse" || a === "levantarse") {
       const k = Math.min(1, this.t / DURACION[a]);
-      this.colocarEnSilla();
+      this.colocarEnSilla(dt, quieto);
       pose.base = "sentandose";
       pose.s = a === "sentarse" ? k : 1 - k;
       terminada = k >= 1;
       if (terminada) this.postura = a === "sentarse" ? "sentado" : "de_pie";
     } else if (GESTOS.has(a)) {
       // Gesto de transición: solo llega aquí si se observó el cambio entre dos lecturas (maquina.js).
-      this.colocarEnSilla();
+      this.colocarEnSilla(dt, quieto);
       pose.base = this.postura === "sentado" ? "sentado" : "de_pie";
       pose.gesto = a;
       terminada = this.t >= DURACION[a];
     } else {
       // En bucle según la postura final, con un pequeño gesto ocasional propio de cada personaje.
-      this.colocarEnSilla();
+      this.colocarEnSilla(dt, quieto);
       pose.base = this.postura === "sentado" ? "sentado" : "de_pie";
       pose.gesto = this.bucle;
-      pose.o = gestoOcasional(reloj, v);
+      pose.o = quieto ? 0 : gestoOcasional(reloj, v);
+      if (this.bucle === "teclear" && !quieto) Object.assign(pose, faseTrabajo(reloj, v)); // fase L: pausas para leer, mirar, acomodarse
     }
+    this.fase = pose.gesto === "teclear" ? pose.fase : null;
     // De pie en su lugar (error, celebración) se hace a un lado de la silla, deslizándose.
     const objetivo = pose.base === "de_pie" && a !== "entrar" && a !== "salir" ? 1 : 0;
-    this.lado += (objetivo - this.lado) * Math.min(1, dt * 5);
+    this.lado += (objetivo - this.lado) * (quieto ? 1 : Math.min(1, dt * 5));
     if (a !== "entrar" && a !== "salir") this.raiz.position.x += this.lado * 0.55;
     this.cuerpo.aplicar(pose, dt);
     if (terminada) this.siguiente();
   }
 
-  colocarEnSilla() {
+  /** En su lugar, mirando al escritorio. Fase L: si venía caminando, termina de girar suave (sin saltar). */
+  colocarEnSilla(dt = 0, quieto = true) {
     this.raiz.position.set(this.silla.x, 0, this.silla.z);
-    this.raiz.rotation.y = Math.PI; // mira al escritorio (-Z)
+    this.raiz.rotation.y = dt > 0 && !quieto ? girar(this.raiz.rotation.y, Math.PI, dt) : Math.PI; // mira al escritorio (-Z)
   }
 }
 
@@ -303,11 +327,20 @@ function sentar(c, s) {
   c.piernaD.rotation.x = -Math.PI / 2 * s;
 }
 
-function teclear(c, r) {
+function teclear(c, r, quieto = false) {
+  const g = quieto ? 0 : 0.08;
   c.torso.rotation.x = 0.12;
-  c.brazoI.rotation.x = -1.15 + Math.sin(r * 14) * 0.08;
-  c.brazoD.rotation.x = -1.15 + Math.sin(r * 14 + 1.7) * 0.08;
+  c.brazoI.rotation.x = -1.15 + Math.sin(r * 14) * g;
+  c.brazoD.rotation.x = -1.15 + Math.sin(r * 14 + 1.7) * g;
   c.cabeza.rotation.x = 0.1 + Math.sin(r * 0.7) * 0.03;
+}
+
+/** Fase L: pausas dentro del trabajo (leer, mirar a un lado, acomodarse); k = cuánto de la pausa. */
+function pausaTrabajo(c, fase, k, r) {
+  if (fase === "teclear" || k <= 0) return;
+  if (fase === "leer") { c.torso.rotation.x -= 0.18 * k; c.brazoI.rotation.x += 0.45 * k; c.brazoD.rotation.x += 0.45 * k; c.cabeza.rotation.x -= 0.12 * k + Math.sin(r * 1.3) * 0.03 * k; }
+  else if (fase === "mirar") { c.cabeza.rotation.y += 0.55 * k; c.torso.rotation.y += 0.12 * k; }
+  else if (fase === "acomodarse") { c.torso.rotation.x -= 0.25 * k; c.brazoD.rotation.x += 0.6 * k; c.brazoI.rotation.x += 0.6 * k; c.cabeza.rotation.z = Math.sin(r * 2) * 0.12 * k; }
 }
 
 function respirar(c, r, sentado) {
@@ -319,24 +352,24 @@ function respirar(c, r, sentado) {
   c.cabeza.rotation.y = Math.sin(r * 0.35) * 0.35; // mira alrededor, despacio
 }
 
+/** Fase L: gesto breve de satisfacción (puño arriba una vez y asiente), sin saltar; vuelve a neutral al final. */
 function celebrar(c, t) {
-  const salto = Math.max(0, Math.sin(t * 7));
-  c.cadera.position.y = ALTURA_CADERA + salto * 0.08;
-  c.brazoI.rotation.x = -Math.PI + 0.2;
-  c.brazoD.rotation.x = -Math.PI + 0.2;
-  c.brazoI.rotation.z = -0.35 - salto * 0.2;
-  c.brazoD.rotation.z = 0.35 + salto * 0.2;
-  c.cabeza.rotation.x = -0.2;
+  const k = Math.sin(Math.min(1, t / 1.4) * Math.PI); // sube y baja una sola vez
+  c.brazoD.rotation.x = -2.4 * k;
+  c.brazoD.rotation.z = 0.25 * k;
+  c.cabeza.rotation.x = -0.15 * k + Math.sin(t * 8) * 0.06 * k;
 }
 
 function alerta(c, r, o = 0) {
-  // De pie junto al escritorio, mano en la cabeza, mirando la pantalla; de vez en cuando niega despacio.
-  c.torso.rotation.y = Math.sin(r * 0.6) * 0.08;
-  c.brazoD.rotation.x = -2.5;
-  c.brazoD.rotation.z = 0.5;
-  c.brazoI.rotation.z = -0.15;
+  // Fase L: de pie junto al escritorio, inclinado hacia la pantalla con las manos al frente (atiende el error);
+  // de vez en cuando se lleva la mano a la cabeza y niega despacio. Visible, pero sin dramatismo.
+  c.torso.rotation.x = 0.16;
+  c.torso.rotation.y = Math.sin(r * 0.6) * 0.05;
+  c.brazoD.rotation.x = -1.0 - 1.5 * o;
+  c.brazoD.rotation.z = 0.1 + 0.4 * o;
+  c.brazoI.rotation.x = -1.0;
   c.cabeza.rotation.x = 0.2;
-  c.cabeza.rotation.y = Math.sin(r * 5) * 0.25 * o;
+  c.cabeza.rotation.y = Math.sin(r * 5) * 0.22 * o;
 }
 
 function levantarMano(c, r) {

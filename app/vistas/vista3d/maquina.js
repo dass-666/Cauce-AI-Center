@@ -112,3 +112,45 @@ export function gestoOcasional(r, v, duracion = 1.6) {
   if (t > duracion) return 0;
   return Math.sin((t / duracion) * Math.PI);
 }
+
+// ---------- Fase L: variaciones naturales dentro de «teclear» ----------
+// Mientras trabaja (solo con evidencia vigente: la postura «teclear» ya lo garantiza), el personaje no teclea
+// sin parar: a ratos se detiene a leer la pantalla, mira a un lado (papeles, segundo monitor) o se acomoda en la
+// silla, y vuelve a teclear. Es una secuencia fija y reproducible (mismo id + mismo reloj = misma fase): no
+// representa ninguna tarea concreta ni dice nada del avance del proceso.
+export const FASES_TRABAJO = Object.freeze(["teclear", "leer", "mirar", "acomodarse"]);
+
+// Tramos del ciclo (fracciones). La mayor parte es teclear; las pausas son cortas.
+const TRAMOS = Object.freeze([
+  ["teclear", 0.42], ["leer", 0.14], ["teclear", 0.22], ["mirar", 0.08], ["teclear", 0.08], ["acomodarse", 0.06],
+]);
+
+/**
+ * Fase de trabajo en el instante `reloj` (s) para un personaje con variación `v` (variacion()).
+ * @returns {{fase: string, k: number}} k = 0..1, cuánto de la fase (entra y sale suave, ~0.7 s).
+ *   En «teclear» k es 1. El ciclo dura 3 × v.periodo (21–39 s) y empieza en un punto distinto para cada uno.
+ */
+export function faseTrabajo(reloj, v) {
+  const ciclo = v.periodo * 3;
+  const t = (((reloj + v.fase * 5) % ciclo) + ciclo) % ciclo;
+  let inicio = 0;
+  for (let i = 0; i < TRAMOS.length; i++) {
+    const [fase, frac] = TRAMOS[i];
+    const dur = frac * ciclo;
+    if (t < inicio + dur || i === TRAMOS.length - 1) {
+      if (fase === "teclear") return { fase, k: 1 };
+      const dentro = Math.min(dur, t - inicio), rampa = Math.min(0.7, dur / 3);
+      const x = Math.max(0, Math.min(1, dentro / rampa, (dur - dentro) / rampa));
+      return { fase, k: x * x * (3 - 2 * x) };
+    }
+    inicio += dur;
+  }
+  return { fase: "teclear", k: 1 };
+}
+
+/** Ángulo intermedio por el camino corto (para girar sin dar la vuelta completa). */
+export function girarHacia(actual, objetivo, k) {
+  let d = objetivo - actual;
+  d = ((d + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+  return actual + d * Math.min(1, Math.max(0, k));
+}

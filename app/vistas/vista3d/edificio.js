@@ -29,7 +29,7 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
   } else {
     const plano = distribuirEdificio(deps.map((d) => ({ id: d.id, posicion: d.posicion, puestos: Math.max(1, d.agentes.length) })));
     const info = plano.cuartos.map((c, i) => ({ ...c, nombre: deps[i].nombre, tema: temaDe(deps[i]), acento: acentoDe(deps[i]) }));
-    arquitectura = crearArquitectura(plano, info, recursos);
+    arquitectura = crearArquitectura(plano, info, recursos, { mob: compartido.mobiliario, proyecto: modelo.proyecto });
     grupo.add(arquitectura.grupo);
     info.forEach((c, i) => {
       const dep = deps[i];
@@ -89,6 +89,14 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
       }
       arquitectura?.paso();
       return animados;
+    },
+    /** Fase L: dónde está el escritorio de un agente (aunque no tenga personaje), en coordenadas de la escena. */
+    posicionPuesto(id) {
+      for (const c of cuartos.values()) {
+        const l = c.oficina.lugarDe?.(id);
+        if (l) return { x: c.x + l.x, z: c.z + l.z };
+      }
+      return null;
     },
     /** Rectángulo de un departamento en coordenadas de la escena (para acercar la cámara). */
     rectangulo(id) {

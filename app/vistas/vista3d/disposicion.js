@@ -50,12 +50,43 @@ export function puerta(cuarto) {
   return { x: redondear(-cuarto.ancho / 2 + 0.9), z: redondear(cuarto.fondo / 2 - 0.3) };
 }
 
-/** Camino de la puerta a la silla: por el pasillo del frente y luego por detrás de la fila. */
-export function camino(cuarto, puesto) {
+/**
+ * Camino de la puerta a la silla: por el pasillo del frente y luego por detrás de la fila.
+ * Fase L: si hay otra fila de escritorios entre el pasillo y su silla, sube por un pasillo entre columnas
+ * (a media separación) que no choque con ningún escritorio ni silla de enfrente, en vez de atravesarlos.
+ * @param todos  todos los puestos del cuarto (para saber qué hay delante); sin ellos, se supone una cuadrícula alineada.
+ */
+export function camino(cuarto, puesto, todos = []) {
   const p = puerta(cuarto);
   const silla = { x: puesto.x, z: redondear(puesto.z + 0.75) };
   const pasilloZ = redondear(cuarto.fondo / 2 - MEDIDAS.margen);
-  return [p, { x: p.x, z: pasilloZ }, { x: silla.x, z: pasilloZ }, { x: silla.x, z: redondear(silla.z + 0.6) }, silla];
+  const detras = redondear(silla.z + 0.6);
+  const filaDelante = pasilloZ - detras > MEDIDAS.profundidadFila - 0.6;
+  if (!filaDelante) return [p, { x: p.x, z: pasilloZ }, { x: silla.x, z: pasilloZ }, { x: silla.x, z: detras }, silla];
+  const delante = todos.filter((q) => q.z > puesto.z + 0.1);
+  const mitad = MEDIDAS.separacionPuestos / 2;
+  const dentro = (x) => x > -cuarto.ancho / 2 + 0.45 && x < cuarto.ancho / 2 - 0.45;
+  // Libre: a más de medio escritorio (0.65) + medio cuerpo (0.2) de cada escritorio de enfrente.
+  const libre = (x) => dentro(x) && delante.every((q) => Math.abs(q.x - x) >= 0.85);
+  // Si de frente no hay escritorio (filas desfasadas), sube derecho, como antes.
+  if (todos.length && libre(silla.x)) return [p, { x: p.x, z: pasilloZ }, { x: silla.x, z: pasilloZ }, { x: silla.x, z: detras }, silla];
+  const candidatos = [silla.x - mitad, silla.x + mitad, silla.x - mitad * 3, silla.x + mitad * 3, silla.x - mitad * 5, silla.x + mitad * 5];
+  const xPasillo = redondear(candidatos.find(libre) ?? (silla.x - mitad));
+  return [p, { x: p.x, z: pasilloZ }, { x: xPasillo, z: pasilloZ }, { x: xPasillo, z: detras }, { x: silla.x, z: detras }, silla];
+}
+
+/** ¿Algún tramo del camino pasa por encima de un escritorio (con su silla) que no es el suyo? (pruebas) */
+export function caminoChoca(ruta, puesto, todos) {
+  const cajas = todos.filter((q) => q !== puesto && (q.x !== puesto.x || q.z !== puesto.z))
+    .map((q) => ({ x0: q.x - 0.65 - 0.15, x1: q.x + 0.65 + 0.15, z0: q.z - 0.35 - 0.15, z1: q.z + 0.75 + 0.25 + 0.15 }));
+  for (let i = 1; i < ruta.length; i++) {
+    const a = ruta[i - 1], b = ruta[i];
+    for (let k = 0; k <= 40; k++) {
+      const x = a.x + (b.x - a.x) * k / 40, z = a.z + (b.z - a.z) * k / 40;
+      if (cajas.some((c) => x > c.x0 && x < c.x1 && z > c.z0 && z < c.z1)) return true;
+    }
+  }
+  return false;
 }
 
 export function longitudCamino(puntos) {

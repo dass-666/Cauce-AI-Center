@@ -5,6 +5,7 @@ No ejecuta adaptadores, no consulta bases de datos y no consume IA: solo entrega
 
 Uso:  py servir.py            (o: python servir.py)
       py servir.py --puerto 9000 --sin-abrir
+      py servir.py --base /cauce/     (fase L: prueba local de cómo se vería publicada bajo una subruta)
 """
 import argparse
 import http.server
@@ -29,10 +30,44 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
         ".html": "text/html; charset=utf-8",
     }
 
+    base = "/"  # subruta donde se publica (fase L); "/" = la raíz, como siempre
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        # Fase L: solo páginas de este mismo origen pueden incrustar el visualizador (protege contra clickjacking).
+        # El portal Cauce deberá decidir su propia política (ver docs/INTEGRACION-PORTAL-CAUCE.md).
+        self.send_header("Content-Security-Policy", "frame-ancestors 'self'")
+        self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
+
+    def _fuera_de_base(self):
+        """Con --base, la subruta sin «/» final redirige y todo lo que esté fuera de la subruta es 404."""
+        if self.base == "/":
+            return False
+        ruta = self.path.split("?", 1)[0]
+        if ruta == self.base.rstrip("/"):
+            self.send_response(301)
+            self.send_header("Location", self.base + (("?" + self.path.split("?", 1)[1]) if "?" in self.path else ""))
+            self.end_headers()
+            return True
+        if not ruta.startswith(self.base):
+            self.send_error(404)
+            return True
+        return False
+
+    def do_GET(self):
+        if not self._fuera_de_base():
+            super().do_GET()
+
+    def do_HEAD(self):
+        if not self._fuera_de_base():
+            super().do_HEAD()
+
+    def translate_path(self, path):
+        if self.base != "/" and path.startswith(self.base):
+            path = "/" + path[len(self.base):]
+        return super().translate_path(path)
 
     def list_directory(self, path):  # no mostrar listados de carpetas
         self.send_error(404)
@@ -47,8 +82,11 @@ def main():
     p = argparse.ArgumentParser(description="Centro de operaciones: servidor local")
     p.add_argument("--puerto", type=int, default=8765)
     p.add_argument("--sin-abrir", action="store_true", help="no abrir el navegador")
+    p.add_argument("--base", default="/", help="subruta de prueba, p. ej. /cauce/ (solo en esta computadora)")
     a = p.parse_args()
-    url = f"http://{HOST}:{a.puerto}/"
+    base = "/" + a.base.strip("/") + "/" if a.base.strip("/") else "/"
+    Manejador.base = base
+    url = f"http://{HOST}:{a.puerto}{base}"
     socketserver.TCPServer.allow_reuse_address = True
     with http.server.ThreadingHTTPServer((HOST, a.puerto), partial(Manejador, directory=str(RAIZ))) as srv:
         print(f"Centro de operaciones en {url}  (Ctrl+C para detener)")

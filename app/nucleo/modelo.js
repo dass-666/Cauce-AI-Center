@@ -34,7 +34,7 @@ export const TOLERANCIA_FUTURO_SEGUNDOS = 300;
 export function construirModeloVista({ proyecto, carga, distribucion = null, ahora, nota_origen = null, origen = "demo" }) {
   const base = {
     nota_origen,
-    proyecto: { id: proyecto.id, nombre: proyecto.nombre, ...(proyecto.color ? { color: proyecto.color } : {}) },
+    proyecto: { id: proyecto.id, nombre: proyecto.nombre, ...(proyecto.color ? { color: proyecto.color } : {}), ...(proyecto.estilo ? { estilo: proyecto.estilo } : {}), ...(proyecto.pendiente ? { pendiente: proyecto.pendiente } : {}) },
     es_demo: false,
     ahora_referencia: ahora.toISOString(),
     hora_simulada: false,
@@ -195,7 +195,9 @@ export function posicionDe(dist, id) {
   const p = dist?.departamentos?.[id];
   const ok = p && [p.x, p.y, p.ancho, p.alto].every((n) => Number.isInteger(n)) && p.x >= 0 && p.y >= 0 && p.ancho > 0 && p.alto > 0;
   if (!ok) return null;
-  return { x: p.x, y: p.y, ancho: p.ancho, alto: p.alto, piso: Number.isInteger(p.piso) ? p.piso : 0, automatica: false };
+  return { x: p.x, y: p.y, ancho: p.ancho, alto: p.alto, piso: Number.isInteger(p.piso) ? p.piso : 0, automatica: false,
+    // Fase L (opcional): tema visual del departamento declarado en la escena; si falta, identidad.js lo adivina.
+    ...(typeof p.tema === "string" && /^[a-z-]{2,30}$/.test(p.tema) ? { tema: p.tema } : {}) };
 }
 
 /** Los departamentos que la distribución no menciona se acomodan en filas nuevas, debajo de los demás. */
