@@ -128,6 +128,10 @@ async function iniciar() {
   // Fase L: modo incrustado (también lo activa index.html antes de pintar; aquí por si se carga app.js en otra página).
   document.documentElement.classList.toggle("incrustado", leerConfiguracion(location.href).incrustado);
   aplicarBajoConsumo(leerPreferencia("cauce.bajo-consumo") === "1");
+  // Fase L: la lista «+N pendientes» se cierra al tocar fuera o con Escape (no debe quedar tapando los controles).
+  const cerrarPendientes = () => { const d = $("#pisos .pisos-mas"); if (d?.open) d.open = false; };
+  document.addEventListener("pointerdown", (e) => { if (!e.target.closest?.(".pisos-mas")) cerrarPendientes(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarPendientes(); });
   $("#bajo-consumo").addEventListener("change", (e) => {
     aplicarBajoConsumo(e.target.checked);
     guardarPreferencia("cauce.bajo-consumo", e.target.checked ? "1" : "0");
@@ -260,7 +264,7 @@ function dibujarPestanas() {
   const mas = agrupados.length ? el("details", { clase: "pisos-mas", open: abierto },
     el("summary", { clase: "piso", title: "Proyectos pendientes: sin repositorio localizado ni datos" }, `+${agrupados.length} pendientes`),
     el("div", { clase: "pisos-mas-lista" }, ...agrupados.map((p) => el("button", {
-      type: "button", clase: "piso", title: p.pendiente, onclick: () => elegirProyecto(p),
+      type: "button", clase: "piso", title: p.pendiente, onclick: (e) => { e.currentTarget.closest("details").open = false; elegirProyecto(p); },
     }, p.nombre, insigniaPiso(p.id))))) : null;
   $("#pisos").replaceChildren(...pestanas.map(pestana), ...(mas ? [mas] : []));
   // En celular la fila se desliza: la pestaña elegida queda a la vista sin mover la página.

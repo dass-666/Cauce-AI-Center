@@ -677,3 +677,4 @@ html.incrustado .cabecera { padding-top: 6px; padding-bottom: 6px; }
 .sala-tarjeta-compacta { padding: 8px 12px; opacity: 0.85; }
 .sala-tarjeta-compacta .sala-nota { font-size: 12px; }
 .sala-control h3[id] { scroll-margin-top: 80px; }
+.sala-accesos a.boton { text-decoration: none; display: inline-flex; align-items: center; }

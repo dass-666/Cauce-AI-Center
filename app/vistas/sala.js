@@ -45,11 +45,13 @@ export function dibujarSala(nodo, empresa, { alIrProyecto, alIrDepartamento, alC
   const lista = empresa.proyectos_lista.map((r, i) => [r, i]).sort((a, b) => orden(a[0]) - orden(b[0]) || a[1] - b[1]).map(([r]) => r);
   const tarjetas = el("div", { clase: "sala-proyectos" }, ...lista.map((r) => tarjetaProyecto(r, { alIrProyecto, actual: r.id === actualId, registro: entrada.get(r.id) })));
   // Fase L: accesos rápidos a cada sección (útiles en celular, donde la sala es una columna larga). Solo desplazan.
-  const ir = (id) => () => nodo.querySelector(`#${id}`)?.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  // Son enlaces dentro de la página (no botones): solo desplazan, no actúan sobre nada.
+  const ir = (id) => (e) => { e.preventDefault(); nodo.querySelector(`#${id}`)?.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); };
+  const acceso = (id, texto, extra = "") => el("a", { href: `#${id}`, clase: `boton boton-chico${extra}`, onclick: ir(id) }, texto);
   const accesos = el("nav", { clase: "sala-accesos", "aria-label": "Secciones de la sala" },
-    el("button", { type: "button", clase: `boton boton-chico${empresa.atencion.length ? " sala-acceso-alerta" : ""}`, onclick: ir("sala-atencion") }, `⚠ Atención (${empresa.atencion.length})`),
-    el("button", { type: "button", clase: "boton boton-chico", onclick: ir("sala-proyectos-titulo") }, `Proyectos (${empresa.proyectos})`),
-    el("button", { type: "button", clase: "boton boton-chico", onclick: ir("sala-eventos-titulo") }, `Cambios (${empresa.eventos.length})`));
+    acceso("sala-atencion", `⚠ Atención (${empresa.atencion.length})`, empresa.atencion.length ? " sala-acceso-alerta" : ""),
+    acceso("sala-proyectos-titulo", `Proyectos (${empresa.proyectos})`),
+    acceso("sala-eventos-titulo", `Cambios (${empresa.eventos.length})`));
 
   const atencion = empresa.atencion;
   const seccionAtencion = el("section", { clase: "sala-seccion", "aria-labelledby": "sala-atencion" },
