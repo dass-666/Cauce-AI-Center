@@ -165,4 +165,8 @@ confirmación, idempotencia contra doble envío y auditoría. **No se creó ning
 
 ## 10. Versiones y commits
 
-__COMMITS__
+- Base: `ce0688a` (fase J, PR #19).
+- `5cc531c` sala de control, recepción, navegación, paneles, personajes, pruebas y diseño del control futuro.
+- `cf809c3` atajos visibles, guía de Windows, prueba de Ek Chuah que caducaba.
+- Commit del informe: el último de la rama.
+- Dependencias nuevas: ninguna (three.js y Kenney ya incluidos). Furniture Kit no hizo falta.
