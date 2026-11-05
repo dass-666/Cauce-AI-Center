@@ -10,6 +10,8 @@ import { el, fecha } from "./vistas/dom.js";
 import { dibujarTablero } from "./vistas/tablero.js";
 import { crearRegistroCambios } from "./nucleo/cambios.js";
 import { crearSeguidorNaturalezas, validarNaturalezas } from "./nucleo/naturaleza.js";
+import { ESTADO_PISO, crearBitacora, resumirEmpresa, resumirProyecto } from "./nucleo/sala.js";
+import { dibujarSala } from "./vistas/sala.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
@@ -21,13 +23,10 @@ let temporizadorBreve = null;
 
 // Estado resumido de cada piso para el selector (REAL, DEMO, sin conexión...). Se lee de sus archivos, nada más.
 const resumenPisos = new Map();
-const RESUMEN = {
-  real: { texto: "REAL", titulo: "Datos reales vigentes" },
-  demo: { texto: "DEMO", titulo: "Solo datos de demostración" },
-  desactualizado: { texto: "Vencido", titulo: "Datos reales fuera de su vigencia" },
-  invalido: { texto: "Error", titulo: "El archivo de estado tiene errores" },
-  desconectado: { texto: "Sin conexión", titulo: "Todavía no hay archivo de estado" },
-};
+const RESUMEN = ESTADO_PISO;
+// Sala de control (fase K): último modelo de vista de cada piso y cambios observados en esta sesión (todos los pisos).
+const modelosPisos = new Map();
+const bitacora = crearBitacora({ maximo: 80 });
 
 const estado = {
   proyectos: [],
@@ -53,6 +52,8 @@ const opcionesVista = {
   },
   /** Lo que tapa la vista desde fuera (el panel de detalle en celular): la cámara lo evita. */
   tapan: () => [$("#panel"), ...(enInmersivo() ? [$("#conexion"), $("#salir-inmersivo"), $("#diagnostico")] : [])],
+  /** Desde la vista 3D (menú del celular): abrir la sala de control. */
+  alSala: () => ponerSala(true),
   alFallar(motivo) {
     // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos, y se puede volver a intentar.
     avisarVista(`${motivo} Se muestra el plano 2D.`, { reintentar: true });
@@ -80,6 +81,7 @@ function vistaDeseada() {
  */
 function ponerInmersivo(activo) {
   activo = activo && tipoVista === "3d";
+  if (activo && salaAbierta()) ponerSala(false);
   document.documentElement.classList.toggle("inmersivo", activo);
   $("#salir-inmersivo").hidden = !activo;
   $(".boton-inmersivo").setAttribute("aria-pressed", activo ? "true" : "false");
@@ -102,6 +104,7 @@ async function cambiarVista(tipo, { forzada = false } = {}) {
       const { crearVista3D } = await import("./vistas/vista3d/escena3d.js");
       if (tipoVista !== "3d") return; // el usuario cambió mientras cargaba
       vista = crearVista3D($("#oficina"), opcionesVista);
+      if (salaAbierta()) vista.pausar?.(true);
       avisarVista(null);
     } catch (e) {
       console.error(e);
@@ -137,6 +140,13 @@ async function iniciar() {
   for (const b of document.querySelectorAll("[data-inmersivo]")) b.addEventListener("click", () => ponerInmersivo(!enInmersivo()));
   await cambiarVista(vistaDeseada());
   $("#recargar").addEventListener("click", () => actualizar());
+  $("#boton-sala").addEventListener("click", () => ponerSala(!salaAbierta()));
+  // S abre o cierra la sala de control (fuera de campos de texto y sin teclas modificadoras).
+  window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    if (e.target instanceof HTMLElement && e.target.closest("input, select, textarea")) return;
+    if (e.key === "s" || e.key === "S") { e.preventDefault(); ponerSala(!salaAbierta()); }
+  });
 
   const registro = await cargarRegistro();
   estado.proyectos = registro.proyectos;
@@ -148,15 +158,82 @@ async function iniciar() {
   estado.actual = estado.proyectos.find((p) => p.id === guardado) ?? estado.proyectos[0];
   dibujarPestanas();
   await actualizar();
+  if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
   estado.temporizador = setInterval(() => { if (!document.hidden) actualizar(); }, INTERVALO_MS);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) actualizar(); });
   // En window (no en document): así corre después de la vista 3D, que usa Esc para volver al piso.
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || e.defaultPrevented) return;
-    // Esc primero cierra el detalle; con el detalle cerrado, sale del modo inmersivo.
-    if (estado.seleccion) { estado.seleccion = null; dibujar(); }
+    // Esc primero cierra la sala, luego el detalle; con el detalle cerrado, sale del modo inmersivo.
+    if (salaAbierta()) ponerSala(false);
+    else if (estado.seleccion) { estado.seleccion = null; dibujar(); }
     else if (enInmersivo()) ponerInmersivo(false);
   });
+}
+
+// ---------- Sala de control (fase K) ----------
+const salaAbierta = () => !$("#sala-control").hidden;
+
+/** Abre o cierra la sala. Mientras está abierta, la vista 3D se pausa (no gasta tarjeta gráfica). */
+function ponerSala(abrir) {
+  if (abrir === salaAbierta()) return;
+  if (abrir) ponerInmersivo(false);
+  $("#sala-control").hidden = !abrir;
+  document.documentElement.classList.toggle("sala-abierta", abrir);
+  $("#boton-sala").setAttribute("aria-pressed", abrir ? "true" : "false");
+  guardarPreferencia("cauce.sala", abrir ? "1" : "0");
+  vista?.pausar?.(abrir);
+  if (abrir) { dibujarSalaSiAbierta(); $("#sala-titulo")?.focus({ preventScroll: true }); }
+  else if (document.activeElement === document.body || $("#sala-control").contains(document.activeElement)) $("#boton-sala").focus({ preventScroll: true });
+}
+
+function empresaActual() {
+  const resumenes = estado.proyectos.map((p) => resumirProyecto(p, modelosPisos.get(p.id) ?? null));
+  return resumirEmpresa(resumenes, bitacora.eventos());
+}
+
+function dibujarSalaSiAbierta() {
+  const empresa = estado.proyectos.length ? empresaActual() : null;
+  // La insignia del botón cuenta solo asuntos de datos REAL (los de DEMO están en la sala, marcados).
+  const reales = empresa ? empresa.atencion.filter((a) => !a.es_demo).length : 0;
+  const insignia = $("#boton-sala .sala-contador");
+  insignia.hidden = reales === 0;
+  insignia.textContent = String(reales);
+  $("#boton-sala").title = reales ? `Sala de control: ${reales} asunto(s) con datos reales por revisar (S)` : "Sala de control: estado de todos los proyectos (S)";
+  if (!salaAbierta() || !empresa) return;
+  dibujarSala($("#sala-control"), empresa, {
+    actualId: estado.actual?.id ?? null,
+    alCerrar: () => ponerSala(false),
+    alIrProyecto: (id) => irA(id, null),
+    alIrDepartamento: (id, dep) => irA(id, dep),
+  });
+}
+
+/** Desde la sala: lleva al piso (y al departamento, si lo hay) y lo resalta un momento. */
+async function irA(proyectoId, depId) {
+  const p = estado.proyectos.find((x) => x.id === proyectoId);
+  if (!p) return;
+  ponerSala(false);
+  await elegirProyecto(p);
+  if (depId && estado.modelo?.departamentos.some((d) => d.id === depId)) {
+    estado.seleccion = { tipo: "departamento", id: depId };
+    dibujar();
+  }
+  anunciarLlegada(p, depId);
+}
+
+let temporizadorLlegada = null;
+function anunciarLlegada(p, depId) {
+  const m = estado.modelo;
+  const dep = depId ? m?.departamentos.find((d) => d.id === depId) : null;
+  const k = resumenPisos.get(p.id);
+  const aviso = $("#llegada");
+  aviso.replaceChildren(el("strong", {}, `Piso ${p.nombre}`), k ? ` · ${RESUMEN[k].texto}` : "", dep ? ` · ${dep.nombre}` : "");
+  aviso.hidden = false;
+  const pestana = [...document.querySelectorAll("#pisos .piso")].find((b) => b.getAttribute("aria-selected") === "true");
+  pestana?.classList.add("recien-elegido");
+  clearTimeout(temporizadorLlegada);
+  temporizadorLlegada = setTimeout(() => { aviso.hidden = true; pestana?.classList.remove("recien-elegido"); }, 3500);
 }
 
 function aplicarBajoConsumo(activo) {
@@ -171,24 +248,28 @@ function dibujarPestanas() {
       role: "tab",
       clase: "piso",
       "aria-selected": p.id === estado.actual.id ? "true" : "false",
-      onclick: async () => {
-        estado.actual = p;
-        estado.seleccion = null;
-        seguidor.reiniciar(); // la primera lectura del otro piso no cuenta como cambio observado
-        guardarPreferencia("cauce.proyecto", p.id);
-        dibujarPestanas();
-        await actualizar();
-      },
+      onclick: () => elegirProyecto(p),
     }, p.nombre, insigniaPiso(p.id))));
   // En celular la fila se desliza: la pestaña elegida queda a la vista sin mover la página.
   const elegida = $('#pisos [aria-selected="true"]');
   if (elegida) elegida.parentElement.scrollLeft = Math.max(0, elegida.offsetLeft - elegida.parentElement.offsetLeft - 8);
 }
 
+async function elegirProyecto(p) {
+  if (p === estado.actual) return;
+  estado.actual = p;
+  estado.seleccion = null;
+  seguidor.reiniciar(); // la primera lectura del otro piso no cuenta como cambio observado
+  guardarPreferencia("cauce.proyecto", p.id);
+  dibujarPestanas();
+  await actualizar();
+}
+
 function insigniaPiso(id) {
   const k = resumenPisos.get(id);
   if (!k) return null;
-  return el("span", { clase: `piso-estado piso-${k}`, title: RESUMEN[k].titulo },
+  const pendiente = estado.proyectos.find((p) => p.id === id)?.pendiente;
+  return el("span", { clase: `piso-estado piso-${k}`, title: k === "desconectado" && pendiente ? `${RESUMEN[k].titulo}. ${pendiente}` : RESUMEN[k].titulo },
     el("span", { clase: "piso-luz", "aria-hidden": "true" }), el("span", { clase: "piso-estado-texto" }, RESUMEN[k].texto));
 }
 
@@ -199,11 +280,18 @@ async function revisarOtrosPisos() {
     const real = await cargarEstado(p.estado);
     const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
     const e = elegirCarga(real, demo);
-    return [p.id, resumenDe(construirModeloVista({ proyecto: p, carga: e.carga, origen: e.origen, ahora: new Date() }))];
+    const modelo = construirModeloVista({ proyecto: p, carga: e.carga, origen: e.origen, ahora: new Date() });
+    return [p.id, resumenDe(modelo), modelo];
   }));
   let cambio = false;
-  for (const [id, k] of resultados) if (resumenPisos.get(id) !== k) { resumenPisos.set(id, k); cambio = true; }
+  for (const [id, k, modelo] of resultados) {
+    if (estado.actual?.id === id) continue; // mientras tanto el usuario eligió este piso: manda su lectura propia
+    modelosPisos.set(id, modelo);
+    bitacora.leer(modelo);
+    if (resumenPisos.get(id) !== k) { resumenPisos.set(id, k); cambio = true; }
+  }
   if (cambio) dibujarPestanas();
+  dibujarSalaSiAbierta();
 }
 
 let lecturaNumero = 0;
@@ -230,10 +318,13 @@ async function actualizar() {
     ahora: new Date(),
   });
   registroCambios.leer(estado.modelo); // solo compara con la lectura anterior de esta página
+  modelosPisos.set(p.id, estado.modelo);
+  bitacora.leer(estado.modelo);
   estado.clasificacion = clasificacion;
   aplicarNaturalezas();
   const k = resumenDe(estado.modelo);
   if (resumenPisos.get(p.id) !== k) { resumenPisos.set(p.id, k); dibujarPestanas(); }
+  dibujarSalaSiAbierta();
   revisarOtrosPisos();
 }
 
@@ -264,7 +355,8 @@ function dibujar() {
   const m = estado.modelo;
   if (!m || !vista) return;
   // Primero el panel: así la vista 3D ya sabe cuánto tapa (en celular se abre encima del edificio).
-  dibujarPanel($("#panel"), m, estado.seleccion, () => { estado.seleccion = null; dibujar(); });
+  dibujarPanel($("#panel"), m, estado.seleccion, () => { estado.seleccion = null; dibujar(); },
+    { historial: bitacora.eventos({ proyecto_id: m.proyecto.id }), ahoraMs: Date.now() });
   vista.dibujar(m, estado.seleccion);
   dibujarEstado(m);
 }

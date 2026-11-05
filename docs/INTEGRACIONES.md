@@ -40,6 +40,10 @@ datos/demo/<id>.json (solo si no existe el real; debe decir es_demo: true)      
    cifras, con «Sin conexión» y la nota de inventario (`"inventario"`). Así se ve Montambre (fase I).
 4. **Registro:** agregar una línea en `datos/proyectos.json`:
    `{ "id", "nombre", "estado": "datos/reales/<id>.json", "demo": "datos/demo/<id>.json", "distribucion": "escena/<id>.json" }`.
+   Opcionales desde la fase K (fuera del contrato v1): `"color": "#rrggbb"` (color de identidad del piso: remate de
+   los muros, marco del letrero y emblema de la recepción) y `"pendiente": "texto"` (por qué todavía no hay conexión;
+   la sala de control lo muestra como «Pendiente»). Con eso el proyecto ya aparece en la **sala de control** y en el
+   selector; no hace falta tocar el motor gráfico.
 5. **Adaptador de solo lectura**, en el repositorio del sistema y con autorización de Diego:
    - abre la base en solo lectura;
    - hace consultas acotadas;
@@ -60,5 +64,5 @@ datos/demo/<id>.json (solo si no existe el real; debe decir es_demo: true)      
 | 2 | Ek Chuah | ✔ | ✔ | ✔ + naturalezas | `exportar-cauce` en Ek Chuah PR #2, **sin fusionar** | Paso 2 de `docs/INFORME-FASE-H.md` §7 (primera exportación real) |
 | 3 | Tezcatlipoca | ✔ (sin demo) | — | — | Repositorio **no accesible** | `docs/TEZCATLIPOCA-REQUISITOS.md` |
 | 4 | Montambre | ✔ (sin demo) | — | ✔ solo estructura (4 cuartos) | **No existe**; tampoco hay procesos automáticos que exportar | `docs/MONTAMBRE-REQUISITOS.md` |
-| 5 | CauceService, Repacar / Auxilio Auto | — | — | — | Repositorios **no accesibles** | Diego indica dónde viven |
+| 5 | CauceService, Repacar / Auxilio Auto | ✔ pendientes (fase K, sin demo) | — | — | Repositorios **no accesibles**; no se sabe si Repacar y Auxilio Auto son uno o dos proyectos | Diego indica dónde viven |
 | 6 | Futuros (trading…) | — | — | — | — | Mismos 7 pasos |

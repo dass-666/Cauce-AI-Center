@@ -48,6 +48,8 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `brillo.js` | Brillo (bloom) opcional: lo descarga solo al encenderlo, lo apaga si falla y libera sus recursos (fase D2) | Sí |
 | `gestos.js` | Deslizar con un dedo en celular: `sentidoDeslizar` decide el sentido (se prueba en Node) y `escucharDeslizar` lo conecta (fase D2) | No |
 | `etiquetas-dom.js` | Capa HTML de etiquetas sobre el lienzo: crea, actualiza y coloca las etiquetas usando las reglas de `etiquetas.js` (fase D2) | Usa la cámara |
+| `../../nucleo/sala.js` (fase K) | Sala de control: resumen de cada piso y de la empresa (DEMO y REAL por separado), bitácora de cambios de la sesión (todos los pisos), categorías del historial y «siguiente departamento con atención» | No (se prueba en Node) |
+| `../sala.js` (fase K) | Interfaz HTML de la sala de control (funciona en 3D, en el plano y sin WebGL; con la sala abierta la 3D no dibuja) | No (DOM) |
 | `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, zona libre, ciclo de dibujo. Coordina los módulos anteriores | Sí |
 
 Reglas:
@@ -68,6 +70,15 @@ Reglas:
 **Registro e integraciones (fase D1/D4):** `app/nucleo/registro.js` valida `datos/proyectos.json` (ids, rutas solo dentro de `datos/reales/`, `datos/demo/` y `escena/`) y `herramientas/validar-estado.mjs` revisa un archivo de estado antes de abrir la página. Detalle en `docs/INTEGRACIONES.md`.
 
 **Tablero y cambios (fuera de la 3D, también en el plano):** `app/vistas/tablero.js` muestra REAL/DEMO, conexión, antigüedad del dato, agentes por estado, alertas del archivo y los cambios observados. `app/nucleo/cambios.js` compara la lectura anterior con la actual (estado de agentes, agentes y alertas que aparecen o desaparecen, conexión). No es un historial: no guarda nada al recargar, no inventa pasos intermedios y solo dice entre qué datos (`generado_en`) se observó cada cambio.
+
+**Fase K (sala de control y navegación):** el botón *Sala de control* (tecla **S**) muestra todos los proyectos del
+registro con su estado (REAL, DEMO, vencido, error, sin conexión o pendiente), lo que requiere atención (errores,
+revisiones, alertas, datos vencidos, archivos inválidos) y los cambios observados en esta sesión. Cada asunto lleva a
+su piso y a su departamento; ninguno se «resuelve» desde Cauce. En el edificio: **R** recepción, **A** siguiente
+departamento con alertas, **0**/Inicio edificio completo, **F** seguir al personaje elegido (se apaga al mover la
+cámara). La recepción tiene un *directorio* (estado de cada departamento, del modelo de vista) y el emblema del
+proyecto; el color de identidad sale de `"color"` en el registro. Con «reducir movimiento» del sistema, la cámara salta
+sin viaje. Diseño de un futuro control de procesos (sin implementar): `docs/CONTROL-FUTURO.md`.
 
 **Decoración vs. evidencia:** la luz, el reloj, las ventanas, los muebles por tema y las placas son decoración y nunca simulan trabajo; no hay personas decorativas. La torreta de un departamento solo aparece si el archivo trae alertas suyas: parpadea solo con una alerta crítica y datos vigentes; con datos vencidos queda gris.
 

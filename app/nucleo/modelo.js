@@ -34,7 +34,7 @@ export const TOLERANCIA_FUTURO_SEGUNDOS = 300;
 export function construirModeloVista({ proyecto, carga, distribucion = null, ahora, nota_origen = null, origen = "demo" }) {
   const base = {
     nota_origen,
-    proyecto: { id: proyecto.id, nombre: proyecto.nombre },
+    proyecto: { id: proyecto.id, nombre: proyecto.nombre, ...(proyecto.color ? { color: proyecto.color } : {}) },
     es_demo: false,
     ahora_referencia: ahora.toISOString(),
     hora_simulada: false,

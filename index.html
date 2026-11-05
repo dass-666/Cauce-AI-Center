@@ -21,6 +21,7 @@
     </div>
     <nav id="pisos" class="pisos" role="tablist" aria-label="Proyectos"></nav>
     <div class="controles">
+      <button type="button" id="boton-sala" class="boton boton-sala" aria-pressed="false" aria-controls="sala-control"><span aria-hidden="true">◉</span><span class="texto-control"> Sala de control</span><span class="solo-lector"> (asuntos con datos reales:)</span> <span class="sala-contador" hidden></span></button>
       <div class="segmentado" role="group" aria-label="Tipo de vista">
         <button type="button" class="boton" data-vista="3d" aria-pressed="false">3D</button>
         <button type="button" class="boton" data-vista="2d" aria-pressed="false">Plano</button>
@@ -41,13 +42,17 @@
 
   <button type="button" id="salir-inmersivo" class="boton salir-inmersivo" data-inmersivo hidden>✕ Salir del modo inmersivo</button>
 
+  <p id="llegada" class="llegada" role="status" hidden></p>
+
   <main class="principal">
+    <section id="sala-control" class="sala-control" aria-labelledby="sala-titulo" hidden></section>
     <div id="oficina" class="oficina"></div>
     <aside id="panel" class="panel" hidden aria-label="Detalle"></aside>
   </main>
 
   <footer class="pie">
     Un personaje solo aparece trabajando si su sistema dejó un registro que lo respalde.
+    <span class="atajos">Teclas: <kbd>S</kbd> sala de control · <kbd>R</kbd> recepción · <kbd>A</kbd> siguiente alerta · <kbd>0</kbd> edificio completo · <kbd>1</kbd>–<kbd>9</kbd> departamento · <kbd>←</kbd> <kbd>→</kbd> vecino · <kbd>F</kbd> seguir personaje · <kbd>Esc</kbd> cerrar.</span>
     <a href="pruebas.html">Pruebas</a>
   </footer>
 

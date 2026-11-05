@@ -112,7 +112,9 @@ function alDia(nombre, base) {
     const sobra = await m.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     const luces = await m.locator('#pisos .piso-luz').evaluateAll((xs) => xs.filter((x) => x.getBoundingClientRect().width > 0).length);
     const textoVisible = await m.locator('#pisos .piso-estado-texto').first().evaluate((x) => x.getBoundingClientRect().width > 2);
-    ok(`celular ${nombre}: 4 puntos de estado, texto solo para lectores, selector en una fila y sin desplazamiento`, luces === 4 && !textoVisible && alto <= 60 && sobra <= 0, `${luces} puntos, ${Math.round(alto)} px, sobra ${sobra}`);
+    // K: un punto por proyecto del registro (6 desde la fase K: + CauceService y Repacar, pendientes).
+    const nPisos = JSON.parse(require('fs').readFileSync('datos/proyectos.json', 'utf8')).proyectos.length;
+    ok(`celular ${nombre}: ${nPisos} puntos de estado, texto solo para lectores, selector en una fila y sin desplazamiento`, luces === nPisos && !textoVisible && alto <= 60 && sobra <= 0, `${luces} puntos, ${Math.round(alto)} px, sobra ${sobra}`);
     if (SAL) await m.screenshot({ path: `${SAL}/selector-${nombre}.png` });
     await m.close();
   }
