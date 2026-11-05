@@ -13,7 +13,9 @@ function alDia(texto, base) {
   return texto.replace(ISO, (_, t) => `"${iso(Date.parse(t) + base - gen)}"`);
 }
 const leer = (n) => fs.readFileSync(`${D}/${n}.json`, 'utf8');
-const servir = (n, base) => (n.startsWith('real-') ? alDia(leer(n), base) : leer(n));
+// K: las DEMO también se mueven a la hora actual. Desde la fase J, una DEMO escrita en datos/reales/ (piloto vivo)
+// caduca con el reloj real; servida sin mover, esta prueba empezó a fallar sola al pasar los días (no por la fase K).
+const servir = (n, base) => alDia(leer(n), base);
 // Mismos patrones que pruebas/casos-ek-chuah.js (montos, enlaces, secretos, rutas privadas, dinero real).
 const SENSIBLE = [/\$\s?\d/, /https?:\/\//i, /token/i, /webhook/i, /(api[_-]?key|password|contrase(ñ|n)a|secret)/i, /journal/i,
   /[a-z]:\\/i, /(\\users\\|\/home\/|\/users\/|msigf)/i, /\.env\b/i, /\.db\b|\.sqlite/i, /[\w.+-]+@[\w-]+\.[a-z]{2,}/i, /\b\d{10,}\b/];

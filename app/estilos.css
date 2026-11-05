@@ -621,3 +621,6 @@ html.sala-abierta .principal { grid-template-columns: 1fr !important; }
 .chip-seguir[aria-pressed="true"] { border-color: var(--brillo); color: var(--brillo); }
 .historial { display: grid; gap: 4px; }
 .historial li { font-size: 13px; }
+.atajos { display: block; margin-top: 4px; font-size: 12px; color: var(--texto-suave); }
+.atajos kbd { font: inherit; font-size: 11px; padding: 0 5px; border: 1px solid var(--borde); border-radius: 4px; background: var(--cuarto); color: var(--texto); }
+@media (max-width: 760px), (pointer: coarse) { .atajos { display: none; } }
