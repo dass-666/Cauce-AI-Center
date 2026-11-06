@@ -1,0 +1,153 @@
+{
+  "contrato": "cauce.recomendacion.registro",
+  "version_contrato": "0.2.0",
+  "es_demo": true,
+  "eventos": [
+    {
+      "contrato": "cauce.recomendacion",
+      "version_contrato": "0.2.0",
+      "id": "rec-demo-fotos-montambre",
+      "secuencia": 1,
+      "tipo": "propuesta",
+      "en": "2026-11-03T10:00:00-06:00",
+      "por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "es_demo": true,
+      "contenido": {
+        "titulo": "[DEMO] Probar fichas con 3+ fotos en Montambre",
+        "descripcion": "Llevar la lección de Compago a un piloto pequeño en Montambre.",
+        "proyecto_destino": "montambre",
+        "lecciones": [
+          {
+            "id": "lec-demo-compago-fotos",
+            "revision": 1
+          }
+        ],
+        "reversible": true,
+        "criterio_exito": "[DEMO] Medir la misma métrica antes y después, con una muestra nueva."
+      },
+      "huella_anterior": null
+    },
+    {
+      "contrato": "cauce.recomendacion",
+      "version_contrato": "0.2.0",
+      "id": "rec-demo-fotos-montambre",
+      "secuencia": 2,
+      "tipo": "revision",
+      "en": "2026-11-03T10:05:00-06:00",
+      "por": {
+        "tipo": "proceso",
+        "id": "gerente-esceptico"
+      },
+      "dictamen": "sin_objeciones",
+      "nota": "lec-demo-compago-fotos rev. 1: sin_objeciones",
+      "es_demo": true,
+      "huella_anterior": "47ae35787d8bd404e5dfdc903339c35a3f1e3eb5cdcae2e1ce9039cefd61e2e2"
+    },
+    {
+      "contrato": "cauce.recomendacion",
+      "version_contrato": "0.2.0",
+      "id": "rec-demo-medias-ek-chuah",
+      "secuencia": 1,
+      "tipo": "propuesta",
+      "en": "2026-11-03T11:00:00-06:00",
+      "por": {
+        "tipo": "ia",
+        "id": "asistente-demo"
+      },
+      "es_demo": true,
+      "contenido": {
+        "titulo": "[DEMO] Usar el cruce 12/26 en las simulaciones",
+        "descripcion": "Adoptar la mejor combinación del backtest.",
+        "proyecto_destino": "ek-chuah",
+        "lecciones": [
+          {
+            "id": "lec-demo-ek-chuah-backtest",
+            "revision": 1
+          }
+        ],
+        "reversible": true,
+        "criterio_exito": "[DEMO] Medir la misma métrica antes y después, con una muestra nueva."
+      },
+      "huella_anterior": "5b61c983647af0c37d8218149df8ecd2e71e029bdb66b06007edc9c8d8d7b1e4"
+    },
+    {
+      "contrato": "cauce.recomendacion",
+      "version_contrato": "0.2.0",
+      "id": "rec-demo-medias-ek-chuah",
+      "secuencia": 2,
+      "tipo": "revision",
+      "en": "2026-11-03T11:05:00-06:00",
+      "por": {
+        "tipo": "proceso",
+        "id": "gerente-esceptico"
+      },
+      "dictamen": "con_objeciones",
+      "nota": "lec-demo-ek-chuah-backtest rev. 1: con_objeciones (reglas G06, G08, G09, G10, G11)",
+      "es_demo": true,
+      "huella_anterior": "ac4915f521393c0c4e21373244d79037134f9cb57bf581a43d3fbfb5c9a9bd3e"
+    },
+    {
+      "contrato": "cauce.recomendacion",
+      "version_contrato": "0.2.0",
+      "id": "rec-demo-sala-compago",
+      "secuencia": 1,
+      "tipo": "propuesta",
+      "en": "2026-11-04T09:00:00-06:00",
+      "por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "es_demo": true,
+      "contenido": {
+        "titulo": "[DEMO] Medir si la sala de control reduce asuntos olvidados",
+        "descripcion": "Contar durante dos semanas los asuntos atendidos tarde.",
+        "proyecto_destino": "compago",
+        "lecciones": [
+          {
+            "id": "lec-demo-cauce-una-pantalla",
+            "revision": 2
+          }
+        ],
+        "reversible": true,
+        "criterio_exito": "[DEMO] Medir la misma métrica antes y después, con una muestra nueva."
+      },
+      "huella_anterior": "efe6e59e1228950754e58dc6d87588fb1452a10fcbd7d1377a27a1e27881b2db"
+    },
+    {
+      "contrato": "cauce.recomendacion",
+      "version_contrato": "0.2.0",
+      "id": "rec-demo-sala-compago",
+      "secuencia": 2,
+      "tipo": "revision",
+      "en": "2026-11-04T09:05:00-06:00",
+      "por": {
+        "tipo": "proceso",
+        "id": "gerente-esceptico"
+      },
+      "dictamen": "sin_objeciones",
+      "nota": "lec-demo-cauce-una-pantalla rev. 2: sin_objeciones",
+      "es_demo": true,
+      "huella_anterior": "9fd72f7377d825d0e044171ce5b5729fe97ef3f98686b27351728b5c90cb7337"
+    },
+    {
+      "contrato": "cauce.recomendacion",
+      "version_contrato": "0.2.0",
+      "id": "rec-demo-sala-compago",
+      "secuencia": 3,
+      "tipo": "aprobacion",
+      "en": "2026-11-04T12:00:00-06:00",
+      "por": {
+        "tipo": "humano",
+        "id": "director-demo"
+      },
+      "es_demo": true,
+      "alcance": "experimento",
+      "nota": "[DEMO] Se aprueba solo el experimento de dos semanas.",
+      "huella_anterior": "149023addbc474d8349767c7a9921d7106b6ffa001bd34a8cc13c438246916b9"
+    }
+  ],
+  "descripcion": "[DEMO] Recomendaciones ficticias. Nexus solo las registra: no ejecuta nada en ningún proyecto."
+}

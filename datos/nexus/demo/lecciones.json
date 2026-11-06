@@ -1,0 +1,358 @@
+{
+  "contrato": "cauce.leccion.registro",
+  "version_contrato": "0.2.0",
+  "es_demo": true,
+  "versiones": [
+    {
+      "contrato": "cauce.leccion",
+      "version_contrato": "0.2.0",
+      "id": "lec-demo-compago-fotos",
+      "revision": 1,
+      "tipo_cambio": "alta",
+      "es_demo": true,
+      "registrado_por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "autor_conclusion": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "proyectos_destino": [
+        "montambre"
+      ],
+      "antecedentes": [],
+      "validaciones": [
+        {
+          "por": {
+            "tipo": "humano",
+            "id": "revisor-demo"
+          },
+          "en": "2026-11-02T09:00:00-06:00",
+          "ambito": "origen",
+          "proyecto": "compago",
+          "resultado": "confirma",
+          "evidencias": [
+            "e2"
+          ]
+        }
+      ],
+      "vigencia": {
+        "caduca_en": "2027-12-31T23:59:00-06:00"
+      },
+      "registrado_en": "2026-10-20T10:00:00-06:00",
+      "fecha_conclusion": "2026-10-19T18:00:00-06:00",
+      "titulo": "[DEMO] Fichas con tres o más fotos propias se aprueban más",
+      "enunciado": "En la muestra de octubre, las oportunidades con 3+ fotos propias pasaron la evaluación con más frecuencia que las de 1 foto.",
+      "proyecto_origen": "compago",
+      "naturaleza_resultado": "exito",
+      "nivel_validacion": "validada_en_origen",
+      "declara_reproducible": true,
+      "evidencias": [
+        {
+          "id": "e1",
+          "tipo": "experimento",
+          "descripcion": "[DEMO] Comparación de aprobaciones por número de fotos (120 fichas).",
+          "referencia": "demo:compago/informes/fotos-2026-10.csv",
+          "huella": "6c5ffc7748853c00650eb1c3e480c3c3d954548f94e2e9798a9c398cada3a387",
+          "procedimiento": "Contar aprobadas/total por grupo con la consulta guardada del informe.",
+          "producida_por": {
+            "tipo": "proceso",
+            "id": "informe-demo"
+          },
+          "obtenida_en": "2026-10-19T12:00:00-06:00",
+          "usa_datos_hasta": "2026-10-15T23:59:00-06:00",
+          "muestra": {
+            "id": "m-compago-oct",
+            "fuente": "compago-demo",
+            "tamano": 120,
+            "periodo": {
+              "desde": "2026-10-01T00:00:00-06:00",
+              "hasta": "2026-10-15T23:59:00-06:00"
+            }
+          },
+          "metodo": {
+            "configuraciones_probadas": 1,
+            "evaluacion": "fuera_de_muestra"
+          }
+        },
+        {
+          "id": "e2",
+          "tipo": "registro",
+          "uso": "validacion",
+          "descripcion": "[DEMO] Repetición con fichas nuevas de noviembre (80 fichas).",
+          "referencia": "demo:compago/informes/fotos-2026-11.csv",
+          "huella": "80d7352bd7cf122a628b09cb8029a71d350666c2007608455c9e31ea4bfc0d10",
+          "procedimiento": "La misma consulta sobre el periodo nuevo.",
+          "muestra": {
+            "id": "m-compago-nov",
+            "fuente": "compago-demo",
+            "tamano": 80,
+            "periodo": {
+              "desde": "2026-10-16T00:00:00-06:00",
+              "hasta": "2026-11-01T23:59:00-06:00"
+            }
+          }
+        }
+      ],
+      "huella_anterior": null
+    },
+    {
+      "contrato": "cauce.leccion",
+      "version_contrato": "0.2.0",
+      "id": "lec-demo-ek-chuah-backtest",
+      "revision": 1,
+      "tipo_cambio": "alta",
+      "es_demo": true,
+      "registrado_por": {
+        "tipo": "ia",
+        "id": "asistente-demo"
+      },
+      "autor_conclusion": {
+        "tipo": "ia",
+        "id": "asistente-demo"
+      },
+      "proyectos_destino": [],
+      "antecedentes": [],
+      "validaciones": [
+        {
+          "por": {
+            "tipo": "ia",
+            "id": "asistente-demo"
+          },
+          "en": "2026-10-25T10:30:00-06:00",
+          "ambito": "origen",
+          "proyecto": "ek-chuah",
+          "resultado": "confirma",
+          "evidencias": [
+            "e2"
+          ]
+        }
+      ],
+      "vigencia": {
+        "caduca_en": "2027-12-31T23:59:00-06:00"
+      },
+      "registrado_en": "2026-10-25T11:00:00-06:00",
+      "fecha_conclusion": "2026-10-25T10:00:00-06:00",
+      "titulo": "[DEMO] El cruce de medias 12/26 supera al índice en la simulación",
+      "enunciado": "Tras probar 40 combinaciones, la 12/26 dio el mejor rendimiento simulado del semestre.",
+      "proyecto_origen": "ek-chuah",
+      "naturaleza_resultado": "exito",
+      "nivel_validacion": "validada_en_origen",
+      "declara_reproducible": true,
+      "evidencias": [
+        {
+          "id": "e1",
+          "tipo": "experimento",
+          "descripcion": "[DEMO] Simulación histórica de 40 combinaciones; se eligió la mejor.",
+          "referencia": "demo:ek-chuah/simulaciones/medias-40.json",
+          "usa_datos_hasta": "2026-06-30T23:59:00-06:00",
+          "muestra": {
+            "id": "m-ek-sem1",
+            "fuente": "ek-chuah-demo"
+          },
+          "metodo": {
+            "configuraciones_probadas": 40,
+            "evaluacion": "en_muestra",
+            "datos_entrenamiento_hasta": "2026-06-30T23:59:00-06:00",
+            "datos_prueba_desde": "2026-03-01T00:00:00-06:00"
+          }
+        },
+        {
+          "id": "e2",
+          "tipo": "afirmacion",
+          "uso": "validacion",
+          "descripcion": "[DEMO] «Revisé la simulación y es correcta.»"
+        }
+      ],
+      "huella_anterior": "23dafb1d8e73a0e81ade0b0220715c3b295f237aaaa7821654f58d3d04096a2f"
+    },
+    {
+      "contrato": "cauce.leccion",
+      "version_contrato": "0.2.0",
+      "id": "lec-demo-tezca-local",
+      "revision": 1,
+      "tipo_cambio": "alta",
+      "es_demo": true,
+      "registrado_por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "autor_conclusion": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "proyectos_destino": [],
+      "antecedentes": [
+        {
+          "leccion_id": "lec-demo-tezca-forma",
+          "relacion": "deriva_de"
+        }
+      ],
+      "validaciones": [],
+      "vigencia": {
+        "caduca_en": "2027-12-31T23:59:00-06:00"
+      },
+      "registrado_en": "2026-10-26T09:00:00-06:00",
+      "fecha_conclusion": "2026-10-26T08:00:00-06:00",
+      "titulo": "[DEMO] Jugar de local pesa más que la forma reciente",
+      "enunciado": "Se deduce de la lección sobre la forma reciente.",
+      "proyecto_origen": "tezcatlipoca",
+      "naturaleza_resultado": "mixto",
+      "nivel_validacion": "hipotesis",
+      "declara_reproducible": false,
+      "evidencias": [],
+      "huella_anterior": "bbe924a337b99a4c4b186c831483b5e6298631463648d8f820a532c493a80f73"
+    },
+    {
+      "contrato": "cauce.leccion",
+      "version_contrato": "0.2.0",
+      "id": "lec-demo-tezca-forma",
+      "revision": 1,
+      "tipo_cambio": "alta",
+      "es_demo": true,
+      "registrado_por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "autor_conclusion": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "proyectos_destino": [],
+      "antecedentes": [
+        {
+          "leccion_id": "lec-demo-tezca-local",
+          "relacion": "apoya"
+        }
+      ],
+      "validaciones": [],
+      "vigencia": {
+        "caduca_en": "2027-12-31T23:59:00-06:00"
+      },
+      "registrado_en": "2026-10-26T09:30:00-06:00",
+      "fecha_conclusion": "2026-10-26T09:10:00-06:00",
+      "titulo": "[DEMO] La forma reciente explica los resultados",
+      "enunciado": "Confirmado porque coincide con la lección de jugar de local.",
+      "proyecto_origen": "tezcatlipoca",
+      "naturaleza_resultado": "exito",
+      "nivel_validacion": "validada_en_origen",
+      "declara_reproducible": false,
+      "evidencias": [
+        {
+          "id": "e1",
+          "tipo": "afirmacion",
+          "descripcion": "[DEMO] «Se ve claramente en los partidos.»"
+        }
+      ],
+      "huella_anterior": "da0a12fd7737502e76aff11486074a623ed4bf9967a00b3f4456eb23308e6912"
+    },
+    {
+      "contrato": "cauce.leccion",
+      "version_contrato": "0.2.0",
+      "id": "lec-demo-cauce-una-pantalla",
+      "revision": 1,
+      "tipo_cambio": "alta",
+      "es_demo": true,
+      "registrado_por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "autor_conclusion": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "proyectos_destino": [],
+      "antecedentes": [],
+      "validaciones": [],
+      "registrado_en": "2026-10-28T12:00:00-06:00",
+      "fecha_conclusion": "2026-10-28T11:00:00-06:00",
+      "titulo": "[DEMO] Ver todos los pisos en una pantalla reduce revisiones olvidadas",
+      "enunciado": "Hipótesis: la sala de control ayuda a no olvidar asuntos pendientes.",
+      "proyecto_origen": "cauce",
+      "naturaleza_resultado": "inconcluso",
+      "nivel_validacion": "hipotesis",
+      "evidencias": [],
+      "huella_anterior": "21b2802a2e9b2c4eeef971dafe3c40da26cc8bbcf3a7f926313b561fed677310"
+    },
+    {
+      "contrato": "cauce.leccion",
+      "version_contrato": "0.2.0",
+      "id": "lec-demo-cauce-una-pantalla",
+      "revision": 2,
+      "tipo_cambio": "correccion",
+      "es_demo": true,
+      "registrado_por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "autor_conclusion": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "proyectos_destino": [
+        "compago"
+      ],
+      "antecedentes": [],
+      "validaciones": [],
+      "vigencia": {
+        "caduca_en": "2027-12-31T23:59:00-06:00"
+      },
+      "registrado_en": "2026-10-29T12:00:00-06:00",
+      "fecha_conclusion": "2026-10-28T11:00:00-06:00",
+      "motivo_cambio": "Se aclara que todavía no es reproducible y se fija su caducidad.",
+      "titulo": "[DEMO] Ver todos los pisos en una pantalla reduce revisiones olvidadas",
+      "enunciado": "Hipótesis: la sala de control ayuda a no olvidar asuntos pendientes.",
+      "proyecto_origen": "cauce",
+      "naturaleza_resultado": "inconcluso",
+      "nivel_validacion": "hipotesis",
+      "declara_reproducible": false,
+      "evidencias": [],
+      "huella_anterior": "5e98c709a60173e64fd569f6e9426bc6009cd5ecd5b3abe83eaf54a9395775b9"
+    },
+    {
+      "contrato": "cauce.leccion",
+      "version_contrato": "0.2.0",
+      "id": "lec-demo-compago-resenas",
+      "revision": 1,
+      "tipo_cambio": "alta",
+      "es_demo": true,
+      "registrado_por": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "autor_conclusion": {
+        "tipo": "humano",
+        "id": "analista-demo"
+      },
+      "proyectos_destino": [],
+      "antecedentes": [],
+      "validaciones": [],
+      "vigencia": {
+        "caduca_en": "2027-12-31T23:59:00-06:00"
+      },
+      "registrado_en": "2026-10-30T16:00:00-06:00",
+      "fecha_conclusion": "2026-10-30T15:00:00-06:00",
+      "titulo": "[DEMO] Responder reseñas en menos de 24 h mejora la recompra",
+      "enunciado": "Dos registros sugieren más recompra cuando se responde rápido.",
+      "proyecto_origen": "compago",
+      "naturaleza_resultado": "exito",
+      "nivel_validacion": "hipotesis",
+      "declara_reproducible": false,
+      "evidencias": [
+        {
+          "id": "e1",
+          "tipo": "registro",
+          "descripcion": "[DEMO] Recompras con respuesta rápida."
+        },
+        {
+          "id": "e2",
+          "tipo": "registro",
+          "descripcion": "[DEMO] Recompras con respuesta lenta."
+        }
+      ],
+      "huella_anterior": "331ca5a984110e299f2db151f6d68821e536b57844d9c85c239033cfd089296d"
+    }
+  ],
+  "descripcion": "[DEMO] Lecciones ficticias para probar Nexus fase 1. No son conclusiones reales de ningún proyecto."
+}

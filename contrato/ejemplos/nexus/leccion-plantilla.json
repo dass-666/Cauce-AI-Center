@@ -1,0 +1,54 @@
+{
+  "contrato": "cauce.leccion",
+  "version_contrato": "0.2.0",
+  "id": "lec-proyecto-tema-corto",
+  "revision": 1,
+  "tipo_cambio": "alta",
+  "es_demo": false,
+  "registrado_en": "2026-11-06T10:00:00-06:00",
+  "registrado_por": {
+    "tipo": "humano",
+    "id": "tu-alias"
+  },
+  "autor_conclusion": {
+    "tipo": "humano",
+    "id": "tu-alias"
+  },
+  "fecha_conclusion": "2026-11-06T09:00:00-06:00",
+  "titulo": "Una frase con lo aprendido",
+  "enunciado": "Qué se observó, en qué condiciones y con qué alcance. Sin nombres de personas, correos ni claves.",
+  "proyecto_origen": "compago",
+  "proyectos_destino": [],
+  "naturaleza_resultado": "inconcluso",
+  "nivel_validacion": "hipotesis",
+  "declara_reproducible": false,
+  "evidencias": [
+    {
+      "id": "e1",
+      "tipo": "registro",
+      "uso": "conclusion",
+      "descripcion": "Qué es la evidencia",
+      "referencia": "ruta/o/identificador-del-archivo",
+      "procedimiento": "Cómo repetirla paso a paso (opcional)",
+      "obtenida_en": "2026-11-06T08:00:00-06:00",
+      "usa_datos_hasta": "2026-11-05T23:59:00-06:00",
+      "muestra": {
+        "id": "m-proyecto-periodo",
+        "fuente": "nombre-del-conjunto",
+        "tamano": 100,
+        "periodo": {
+          "desde": "2026-10-01T00:00:00-06:00",
+          "hasta": "2026-11-05T23:59:00-06:00"
+        },
+        "solapa_con": [],
+        "derivada_de": []
+      }
+    }
+  ],
+  "antecedentes": [],
+  "validaciones": [],
+  "vigencia": {
+    "caduca_en": "2027-05-06T00:00:00-06:00"
+  },
+  "_ayuda": "Quita este campo. Para declarar reproducible: declara_reproducible true y en la evidencia huella (SHA-256, 64 hex) + procedimiento."
+}
