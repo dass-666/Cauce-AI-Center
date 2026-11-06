@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comparar FPS</title>
+<style>
+  :root { color-scheme: dark; --fondo: #0d1220; --panel: #161d33; --texto: #e8ecf5; --suave: #9aa6c4; --borde: #2a3350; --ok: #46c37b; --mal: #ff6b6b; --aviso: #ffc857; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 14px/1.45 system-ui, sans-serif; }
+  header, section { padding: 12px 16px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 4px 0; color: var(--suave); }
+  fieldset { border: 1px solid var(--borde); border-radius: 8px; margin: 8px 0; padding: 8px 12px; }
+  label { display: inline-flex; gap: 6px; align-items: center; margin: 2px 14px 2px 0; }
+  input[type=text] { width: 260px; background: var(--panel); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 4px 6px; }
+  input[type=number] { width: 70px; background: var(--panel); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 4px 6px; }
+  button { background: #2b3a66; color: var(--texto); border: 1px solid #3d4f86; border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  button:disabled { opacity: .5; cursor: default; }
+  #estado { color: var(--aviso); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { border-bottom: 1px solid var(--borde); padding: 4px 6px; text-align: left; white-space: nowrap; }
+  td.num { text-align: right; }
+  .mejor { color: var(--ok); } .peor { color: var(--mal); }
+  #marco { position: fixed; inset: 0; z-index: 10; background: #000; display: none; }
+  #marco.visible { display: block; }
+  #marco iframe { width: 100%; height: 100%; border: 0; }
+  #marco .pastilla { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.75); padding: 4px 10px; border-radius: 6px; font-size: 13px; pointer-events: none; }
+  .tabla-envoltura { overflow-x: auto; }
+  textarea { width: 100%; height: 160px; background: var(--panel); color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; font: 12px ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Comparar FPS: versión anterior contra versión nueva</h1>
+  <p>Mide las dos versiones en ESTA computadora, con el mismo tamaño de ventana y los mismos pasos, alternándolas (A, B, A, B) para que el calentamiento del equipo no favorezca a ninguna. No envía nada a internet: solo lee el medidor interno (<code>?medir=1</code>) de cada versión.</p>
+  <p>Durante la medición la oficina ocupa toda la ventana. No muevas el ratón ni cambies de ventana: si la pestaña queda oculta el navegador pausa la animación y la medición no vale.</p>
+</header>
+<section>
+  <fieldset>
+    <legend>Versiones (rutas relativas a esta página, en el mismo servidor)</legend>
+    <label>Nueva <input type="text" id="rutaNueva" value="../"></label>
+    <label>Anterior <input type="text" id="rutaAnterior" value="../comparar/anterior/"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Escenarios</legend>
+    <div id="escenarios"></div>
+  </fieldset>
+  <fieldset>
+    <legend>Tiempos</legend>
+    <label>Segundos medidos por escenario <input type="number" id="segundos" value="20" min="5" max="60"></label>
+    <label>Calentamiento (s) <input type="number" id="calentar" value="5" min="2" max="30"></label>
+    <label>Repeticiones <input type="number" id="repeticiones" value="2" min="1" max="5"></label>
+  </fieldset>
+  <button id="empezar" type="button">Empezar medición</button>
+  <button id="copiar" type="button" disabled>Copiar resultados</button>
+  <span id="estado"></span>
+</section>
+<section>
+  <div class="tabla-envoltura"><table id="tabla"><thead><tr>
+    <th>Escenario</th><th>Versión</th><th>Rep.</th><th>cps prom.</th><th>cps mín.</th><th>peor cuadro (ms)</th><th>s bajo 50</th>
+    <th>s medidos</th><th>GPU ms</th><th>llamadas</th><th>brillo</th><th>origen</th><th>px</th><th>tamaño</th><th>nota</th>
+  </tr></thead><tbody></tbody></table></div>
+  <h2 style="font-size:15px">Resumen (promedio de repeticiones)</h2>
+  <div class="tabla-envoltura"><table id="resumen"><thead><tr><th>Escenario</th><th>Anterior cps</th><th>Nueva cps</th><th>Diferencia</th><th>Anterior mín.</th><th>Nueva mín.</th></tr></thead><tbody></tbody></table></div>
+  <h2 style="font-size:15px">Texto para copiar</h2>
+  <textarea id="texto" readonly></textarea>
+</section>
+<div id="marco"><div class="pastilla" id="pastilla"></div></div>
+<script>
+"use strict";
+// Cada escenario: parámetros extra de la dirección y qué hacer al abrir (dentro de la página medida).
+const ESCENARIOS = [
+  { id: "edificio", nombre: "Edificio, sin brillo", q: "", accion: null, marcado: true },
+  { id: "enfocado", nombre: "Edificio, enfocado en el depto. 1", q: "", accion: "tecla1", marcado: true },
+  { id: "cuarto", nombre: "Un cuarto, sin brillo", q: "", accion: "cuarto", marcado: true },
+  { id: "edificio-brillo", nombre: "Edificio con brillo (nueva: ligero; anterior: el único que tiene)", q: "", accion: "brillo", marcado: true },
+  { id: "edificio-brillo-completo", nombre: "Edificio con brillo completo en ambas (control)", q: "&brillo=completo", accion: "brillo", marcado: true },
+  { id: "cuarto-brillo", nombre: "Un cuarto con brillo", q: "", accion: "cuarto+brillo", marcado: true },
+  { id: "inmersivo", nombre: "Edificio en modo inmersivo, sin brillo", q: "", accion: "inmersivo", marcado: false },
+];
+const $ = (s) => document.querySelector(s);
+const caja = $("#escenarios");
+for (const e of ESCENARIOS) {
+  const l = document.createElement("label");
+  l.innerHTML = `<input type="checkbox" value="${e.id}" ${e.marcado ? "checked" : ""}> ${e.nombre}`;
+  caja.append(l, document.createElement("br"));
+}
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const filas = [];
+
+function limpiarPreferencias() {
+  // Las dos versiones comparten este origen: se borran sus preferencias para que cada medición empiece igual.
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith("cauce.")) localStorage.removeItem(k); } catch {}
+}
+
+async function abrir(ruta, q) {
+  const marco = $("#marco");
+  marco.querySelector("iframe")?.remove();
+  const f = document.createElement("iframe");
+  f.src = `${ruta}?medir=1&hora=11${q}`;
+  marco.prepend(f);
+  marco.classList.add("visible");
+  // Espera a que la oficina 3D esté lista (hasta 30 s).
+  for (let i = 0; i < 60; i++) {
+    await espera(500);
+    const w = f.contentWindow;
+    try { if (w.__cauce3d && w.__cauce3d.metricas().cuadros_totales > 30) return f; } catch {}
+  }
+  throw new Error(`No arrancó la vista 3D en ${ruta} (¿la ruta es correcta? ¿la vista 3D está elegida?)`);
+}
+
+async function accion(f, a) {
+  const d = f.contentDocument;
+  const brillo = () => [...d.querySelectorAll("label.interruptor")].find((l) => /Brillo/.test(l.textContent))?.click();
+  if (!a) return;
+  if (a === "tecla1") d.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
+  if (a.startsWith("cuarto")) d.querySelector('[data-modo3d="individual"]')?.click();
+  if (a.includes("brillo")) { if (a !== "brillo") await espera(1500); brillo(); }
+  if (a === "inmersivo") d.querySelector(".boton-inmersivo")?.click();
+}
+
+async function medirUno(esc, version, ruta, rep) {
+  limpiarPreferencias();
+  $("#pastilla").textContent = `${esc.nombre} · ${version} · repetición ${rep} · no muevas nada`;
+  const f = await abrir(ruta, esc.q);
+  await accion(f, esc.accion);
+  const seg = Number($("#segundos").value) || 20;
+  await espera((Number($("#calentar").value) || 5) * 1000);
+  // El medidor de la app guarda los últimos 20 s y se reinicia solo si cambia el brillo, el modo o el tamaño.
+  await espera(seg * 1000);
+  const m = f.contentWindow.__cauce3d.metricas();
+  const origen = f.contentDocument.querySelector(".vista3d-fuente")?.textContent ?? "?";
+  const nota = [m.escena_quieta && m.ahorro_quietud ? "escena quieta (no se redibuja)" : "", m.brillo === false && esc.accion?.includes("brillo") ? "brillo no encendió o se apagó" : "", m.segundos_medidos < Math.min(seg, 20) - 2 ? "pocos segundos medidos" : ""].filter(Boolean).join("; ");
+  const fila = { escenario: esc.id, nombre: esc.nombre, version, rep, prom: m.fps_promedio, min: m.fps_minimo, peor: m.peor_cuadro_ms, bajo50: m.segundos_bajo_50, seg: m.segundos_medidos, gpu: m.gpu, gpuMs: m.gpu_ms ?? "—", llamadas: m.llamadas, brillo: m.brillo ? (m.brillo_tipo ?? "completo") : "no", origen, px: m.pixelRatio, tam: m.tamano.join("×"), nota };
+  filas.push(fila);
+  pintar();
+}
+
+function pintar() {
+  const tb = $("#tabla tbody");
+  tb.replaceChildren(...filas.map((r) => {
+    const tr = document.createElement("tr");
+    for (const [v, n] of [[r.nombre], [r.version], [r.rep], [r.prom, 1], [r.min, 1], [r.peor, 1], [r.bajo50, 1], [r.seg, 1], [r.gpuMs, 1], [r.llamadas, 1], [r.brillo], [r.origen], [r.px, 1], [r.tam], [r.nota]]) {
+      const td = document.createElement("td"); td.textContent = v; if (n) td.className = "num"; tr.append(td);
+    }
+    return tr;
+  }));
+  const rs = $("#resumen tbody");
+  const ids = [...new Set(filas.map((r) => r.escenario))];
+  const prom = (xs, k) => xs.length ? Math.round(xs.reduce((a, x) => a + x[k], 0) / xs.length * 10) / 10 : null;
+  rs.replaceChildren(...ids.map((id) => {
+    const a = filas.filter((r) => r.escenario === id && r.version === "anterior");
+    const n = filas.filter((r) => r.escenario === id && r.version === "nueva");
+    const pa = prom(a, "prom"), pn = prom(n, "prom");
+    const dif = pa && pn ? Math.round((pn - pa) / pa * 1000) / 10 : null;
+    const tr = document.createElement("tr");
+    for (const [v, c] of [[filas.find((r) => r.escenario === id).nombre], [pa ?? "—"], [pn ?? "—"], [dif === null ? "—" : `${dif > 0 ? "+" : ""}${dif} %`, dif === null ? "" : dif > 2 ? "mejor" : dif < -2 ? "peor" : ""], [prom(a, "min") ?? "—"], [prom(n, "min") ?? "—"]]) {
+      const td = document.createElement("td"); td.textContent = v; if (c) td.className = c; tr.append(td);
+    }
+    return tr;
+  }));
+  const gpu = filas[0]?.gpu ?? "?";
+  $("#texto").value = `Cauce 3D · comparación de FPS · ${new Date().toISOString()}\n${navigator.userAgent}\nGPU: ${gpu}\n` +
+    ["escenario\tversion\trep\tcps_prom\tcps_min\tpeor_ms\ts_bajo_50\ts_medidos\tgpu_ms\tllamadas\tbrillo\torigen\tpx\ttamano\tnota",
+      ...filas.map((r) => [r.escenario, r.version, r.rep, r.prom, r.min, r.peor, r.bajo50, r.seg, r.gpuMs, r.llamadas, r.brillo, r.origen, r.px, r.tam, r.nota].join("\t"))].join("\n");
+  $("#copiar").disabled = filas.length === 0;
+}
+
+$("#empezar").addEventListener("click", async () => {
+  const elegidos = ESCENARIOS.filter((e) => caja.querySelector(`input[value="${e.id}"]`).checked);
+  const reps = Number($("#repeticiones").value) || 2;
+  const versiones = [["anterior", $("#rutaAnterior").value], ["nueva", $("#rutaNueva").value]];
+  filas.length = 0; pintar();
+  $("#empezar").disabled = true;
+  try {
+    for (const esc of elegidos) for (let rep = 1; rep <= reps; rep++) {
+      // Orden alternado: en la repetición impar va primero la anterior; en la par, la nueva.
+      const orden = rep % 2 ? versiones : [...versiones].reverse();
+      for (const [v, ruta] of orden) { $("#estado").textContent = `Midiendo: ${esc.nombre} (${v}, ${rep}/${reps})…`; await medirUno(esc, v, ruta, rep); }
+    }
+    $("#estado").textContent = "Listo. Copia el texto de abajo y pégalo en el hilo.";
+  } catch (e) {
+    $("#estado").textContent = `Se detuvo: ${e.message}`;
+  } finally {
+    $("#marco").classList.remove("visible");
+    $("#marco").querySelector("iframe")?.remove();
+    limpiarPreferencias();
+    $("#empezar").disabled = false;
+  }
+});
+$("#copiar").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("#texto").value); $("#copiar").textContent = "Copiado"; }
+  catch { $("#texto").select(); $("#copiar").textContent = "Selecciona y copia (Ctrl+C)"; }
+});
+</script>
+</body>
+</html>

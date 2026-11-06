@@ -7,3 +7,6 @@ __pycache__/
 Thumbs.db
 !datos/reales/.gitkeep
 r/
+
+# Rendimiento UHD: copia local de la versión anterior para comparar FPS (git worktree).
+comparar/
