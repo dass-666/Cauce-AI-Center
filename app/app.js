@@ -14,6 +14,10 @@ import { ESTADO_PISO, crearBitacora, resumirEmpresa, resumirProyecto } from "./n
 import { dibujarSala } from "./vistas/sala.js";
 import { agruparPisos } from "./nucleo/pisos.js";
 import { leerConfiguracion } from "./configuracion.js";
+import { leerNexus, resumirNexus, admisionReal, contextoGerente } from "./nexus/registro.js";
+import { verificarContinuidad, anclaDe } from "./nexus/integridad.js";
+import { evaluarLeccion } from "./nexus/gerente.js";
+import { dibujarNexus } from "./vistas/nexus.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
@@ -56,6 +60,8 @@ const opcionesVista = {
   tapan: () => [$("#panel"), ...(enInmersivo() ? [$("#conexion"), $("#salir-inmersivo"), $("#diagnostico")] : [])],
   /** Desde la vista 3D (menú del celular): abrir la sala de control. */
   alSala: () => ponerSala(true),
+  /** Nexus fase 1: oficina de supervisión. */
+  alNexus: () => ponerNexus(true),
   alFallar(motivo) {
     // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos, y se puede volver a intentar.
     avisarVista(`${motivo} Se muestra el plano 2D.`, { reintentar: true });
@@ -84,6 +90,7 @@ function vistaDeseada() {
 function ponerInmersivo(activo) {
   activo = activo && tipoVista === "3d";
   if (activo && salaAbierta()) ponerSala(false);
+  if (activo && nexusAbierto()) ponerNexus(false);
   document.documentElement.classList.toggle("inmersivo", activo);
   $("#salir-inmersivo").hidden = !activo;
   $(".boton-inmersivo").setAttribute("aria-pressed", activo ? "true" : "false");
@@ -106,7 +113,7 @@ async function cambiarVista(tipo, { forzada = false } = {}) {
       const { crearVista3D } = await import("./vistas/vista3d/escena3d.js");
       if (tipoVista !== "3d") return; // el usuario cambió mientras cargaba
       vista = crearVista3D($("#oficina"), opcionesVista);
-      if (salaAbierta()) vista.pausar?.(true);
+      if (salaAbierta() || nexusAbierto()) vista.pausar?.(true);
       avisarVista(null);
     } catch (e) {
       console.error(e);
@@ -149,11 +156,13 @@ async function iniciar() {
   await cambiarVista(vistaDeseada());
   $("#recargar").addEventListener("click", () => actualizar());
   $("#boton-sala").addEventListener("click", () => ponerSala(!salaAbierta()));
+  $("#boton-nexus").addEventListener("click", () => ponerNexus(!nexusAbierto()));
   // S abre o cierra la sala de control (fuera de campos de texto y sin teclas modificadoras).
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     if (e.target instanceof HTMLElement && e.target.closest("input, select, textarea")) return;
     if (e.key === "s" || e.key === "S") { e.preventDefault(); ponerSala(!salaAbierta()); }
+    if (e.key === "n" || e.key === "N") { e.preventDefault(); ponerNexus(!nexusAbierto()); }
   });
 
   const registro = await cargarRegistro();
@@ -167,6 +176,7 @@ async function iniciar() {
   dibujarPestanas();
   await actualizar();
   if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
+  else if (new URLSearchParams(location.search).get("nexus") === "1") ponerNexus(true);
   estado.temporizador = setInterval(() => { if (!document.hidden) actualizar(); }, INTERVALO_MS);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) actualizar(); });
   // En window (no en document): así corre después de la vista 3D, que usa Esc para volver al piso.
@@ -174,6 +184,7 @@ async function iniciar() {
     if (e.key !== "Escape" || e.defaultPrevented) return;
     // Esc primero cierra la sala, luego el detalle; con el detalle cerrado, sale del modo inmersivo.
     if (salaAbierta()) ponerSala(false);
+    else if (nexusAbierto()) ponerNexus(false);
     else if (estado.seleccion) { estado.seleccion = null; dibujar(); }
     else if (enInmersivo()) ponerInmersivo(false);
   });
@@ -185,14 +196,66 @@ const salaAbierta = () => !$("#sala-control").hidden;
 /** Abre o cierra la sala. Mientras está abierta, la vista 3D se pausa (no gasta tarjeta gráfica). */
 function ponerSala(abrir) {
   if (abrir === salaAbierta()) return;
-  if (abrir) ponerInmersivo(false);
+  if (abrir) { ponerInmersivo(false); ponerNexus(false); }
   $("#sala-control").hidden = !abrir;
   document.documentElement.classList.toggle("sala-abierta", abrir);
   $("#boton-sala").setAttribute("aria-pressed", abrir ? "true" : "false");
   guardarPreferencia("cauce.sala", abrir ? "1" : "0");
-  vista?.pausar?.(abrir);
+  vista?.pausar?.(abrir || nexusAbierto());
   if (abrir) { dibujarSalaSiAbierta(); $("#sala-titulo")?.focus({ preventScroll: true }); }
   else if (document.activeElement === document.body || $("#sala-control").contains(document.activeElement)) $("#boton-sala").focus({ preventScroll: true });
+}
+
+// ---------- Oficina Nexus (fase 1) ----------
+// Solo lee datos/nexus/: primero el registro real (local, fuera de git); si no existe, el de prueba.
+const nexusAbierto = () => !$("#nexus").hidden;
+let nexusDocs = null;
+
+function ponerNexus(abrir) {
+  if (abrir === nexusAbierto()) return;
+  if (abrir) { ponerInmersivo(false); ponerSala(false); }
+  $("#nexus").hidden = !abrir;
+  document.documentElement.classList.toggle("nexus-abierto", abrir);
+  $("#boton-nexus").setAttribute("aria-pressed", abrir ? "true" : "false");
+  vista?.pausar?.(abrir || salaAbierta());
+  if (abrir) {
+    if (!nexusDocs) dibujarNexus($("#nexus"), null, { alCerrar: () => ponerNexus(false) });
+    leerYDibujarNexus().then(() => $("#nexus-titulo")?.focus({ preventScroll: true }));
+    $("#nexus-titulo")?.focus({ preventScroll: true });
+  } else if (document.activeElement === document.body || $("#nexus").contains(document.activeElement)) $("#boton-nexus").focus({ preventScroll: true });
+}
+
+async function cargarRegistroNexus() {
+  const [lr, rr, mr] = await Promise.all([cargarJSON("datos/nexus/registro/lecciones.json"), cargarJSON("datos/nexus/registro/recomendaciones.json"), cargarJSON("datos/nexus/registro/manifiesto.json")]);
+  if (lr.tipo === "ok") return { fuente: "real", lecciones: lr.datos, recomendaciones: rr.tipo === "ok" ? rr.datos : { contrato: "cauce.nexus.registro-recomendaciones", version_contrato: "0.2", es_demo: false, entradas: [] }, manifiesto: mr.tipo === "ok" ? mr.datos : null, aviso: rr.tipo !== "ok" && rr.tipo !== "no_encontrado" ? rr.mensaje : null };
+  if (lr.tipo !== "no_encontrado") return { fuente: "real", lecciones: null, recomendaciones: null, aviso: lr.mensaje };
+  const [ld, rd] = await Promise.all([cargarJSON("datos/nexus/demo/lecciones.json"), cargarJSON("datos/nexus/demo/recomendaciones.json")]);
+  return { fuente: "demo", lecciones: ld.tipo === "ok" ? ld.datos : null, recomendaciones: rd.tipo === "ok" ? rd.datos : null, aviso: ld.tipo === "ok" ? null : ld.mensaje };
+}
+
+/** Candidatas: borradores de lecciones reales que NO están en el almacén (datos/nexus/candidatas/indice.json). */
+async function cargarCandidatas() {
+  const ind = await cargarJSON("datos/nexus/candidatas/indice.json");
+  if (ind.tipo !== "ok" || !Array.isArray(ind.datos?.archivos)) return [];
+  const leidas = await Promise.all(ind.datos.archivos.filter((a) => typeof a === "string" && /^[\w./-]+\.json$/.test(a) && !a.includes("..")).map(async (a) => ({ archivo: a, r: await cargarJSON(`datos/nexus/candidatas/${a}`) })));
+  return leidas.filter((x) => x.r.tipo === "ok").map((x) => ({ archivo: x.archivo, leccion: x.r.datos }));
+}
+
+async function leerYDibujarNexus() {
+  const [docs, politica, crudas] = await Promise.all([cargarRegistroNexus(), cargarJSON("datos/nexus/politica.json"), cargarCandidatas()]);
+  nexusDocs = docs;
+  const nx = await leerNexus({ lecciones: docs.lecciones, recomendaciones: docs.recomendaciones, politica: politica.tipo === "ok" ? politica.datos : null });
+  if (docs.aviso) nx.errores.unshift(docs.aviso);
+  const ahora = Date.now();
+  // Integridad: solo el almacén real tiene manifiesto (los datos de prueba se regeneran con herramientas/nexus-demo.mjs).
+  const integridad = docs.fuente === "real" && docs.lecciones ? await verificarContinuidad({ lecciones: docs.lecciones, recomendaciones: docs.recomendaciones }, docs.manifiesto) : null;
+  if (integridad && docs.manifiesto) integridad.ancla = await anclaDe(docs.manifiesto);
+  const ctx = contextoGerente(nx, ahora);
+  const real = docs.fuente === "real" ? nx.ultimas : new Map();
+  const candidatas = crudas.filter((x) => !real.has(x.leccion?.id)).map((x) => ({ ...x, evaluacion: evaluarLeccion(x.leccion, { ...ctx, lecciones: new Map([...real, [x.leccion?.id, x.leccion]]) }), admision: admisionReal(x.leccion, { ahora, lecciones: real }) }))
+    .filter((x) => x.evaluacion && x.leccion?.hallazgo);
+  if (!nexusAbierto()) return;
+  dibujarNexus($("#nexus"), resumirNexus(nx, { ahora }), { alCerrar: () => ponerNexus(false), fuente: docs.fuente, docLecciones: docs.lecciones, docsRegistro: docs, manifiesto: docs.manifiesto ?? null, integridad, candidatas, ahoraMs: ahora });
 }
 
 function empresaActual() {
@@ -342,6 +405,7 @@ async function actualizar() {
   const k = resumenDe(estado.modelo);
   if (resumenPisos.get(p.id) !== k) { resumenPisos.set(p.id, k); dibujarPestanas(); }
   dibujarSalaSiAbierta();
+  if (nexusAbierto()) leerYDibujarNexus();
   revisarOtrosPisos();
 }
 

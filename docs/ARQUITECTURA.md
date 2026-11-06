@@ -80,6 +80,14 @@ cámara). La recepción tiene un *directorio* (estado de cada departamento, del 
 proyecto; el color de identidad sale de `"color"` en el registro. Con «reducir movimiento» del sistema, la cámara salta
 sin viaje. Diseño de un futuro control de procesos (sin implementar): `docs/CONTROL-FUTURO.md`.
 
+**Nexus fase 1 (supervisión de conocimiento):** `app/nexus/` (sin dependencias del núcleo del contrato v1) guarda
+lecciones (`cauce.leccion` 0.2) y recomendaciones (`cauce.recomendacion` 0.2) en `datos/nexus/`, en archivos que solo
+crecen, y el gerente escéptico (`gerente.js`) les aplica las 10 reglas deterministas nexus-R 0.2. La oficina Nexus (botón ✦, tecla **N**)
+es HTML como la sala de control: funciona en 3D, en el plano y sin WebGL, y pausa la 3D mientras está abierta. Ningún
+botón aprueba ni ejecuta nada. Fase 1.5: un manifiesto de sellos aparte (`integridad.js`) detecta truncamientos, hay
+respaldos verificables y restauración sin sobrescribir, una política de aprobadores declarados (`identidad.js`) y la
+admisión al almacén real. Detalle en `docs/NEXUS-FASE-1.md`, `docs/NEXUS-FASE-1-5.md` y `contrato/NEXUS-CONTRATOS.md`.
+
 **Decoración vs. evidencia:** la luz, el reloj, las ventanas, los muebles por tema y las placas son decoración y nunca simulan trabajo; no hay personas decorativas. La torreta de un departamento solo aparece si el archivo trae alertas suyas: parpadea solo con una alerta crítica y datos vigentes; con datos vencidos queda gris.
 
 ## Naturaleza de cada puesto (fase E2)

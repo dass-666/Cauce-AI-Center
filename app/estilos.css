@@ -678,3 +678,51 @@ html.incrustado .cabecera { padding-top: 6px; padding-bottom: 6px; }
 .sala-tarjeta-compacta .sala-nota { font-size: 12px; }
 .sala-control h3[id] { scroll-margin-top: 80px; }
 .sala-accesos a.boton { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* ---------- Nexus fase 1: oficina de supervisión (reutiliza el estilo de la sala de control) ---------- */
+html.nexus-abierto #oficina, html.nexus-abierto #panel, html.nexus-abierto #conexion,
+html.nexus-abierto #banda-demo, html.nexus-abierto #diagnostico, html.nexus-abierto #aviso-vista { display: none !important; }
+html.nexus-abierto .principal { grid-template-columns: 1fr !important; }
+.nexus[hidden] { display: none; }
+.nexus { border-color: #4a3d70; }
+.nexus-demo { margin: 0; padding: 8px 12px; border-radius: 10px; background: #3a2f0b; color: #ffe08a; font-size: 13px; }
+.nexus-errores { padding: 8px 12px; border-radius: 10px; background: #3a1414; color: #ffc4c4; font-size: 13px; }
+.nexus-errores ul { margin: 4px 0 0; padding-left: 18px; }
+.nexus-tarjetas { display: grid; align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 10px; }
+.nexus-tarjeta { background: var(--cuarto); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; overflow-wrap: anywhere; }
+.nexus-tarjeta h4 { font-size: 14px; margin: 0; }
+.nexus-retirada { opacity: .6; }
+.nexus-enunciado { margin: 0; font-size: 13px; }
+.nexus-nivel { margin: 0; font-size: 12.5px; }
+.nexus-sostiene { color: var(--c-revision); }
+.nexus-chip { flex: none; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--borde); white-space: nowrap; }
+.nexus-sin_objeciones { color: #5fd38d; border-color: #2f6b47; }
+.nexus-incompleto { color: var(--c-revision); border-color: #6b5a2f; }
+.nexus-con_objeciones { color: var(--c-error); border-color: #6b2f2f; }
+.nexus-etapa-aprobada, .nexus-etapa-adoptada { color: #9ec5ff; border-color: #2f4a6b; }
+.nexus-reglas, .nexus-historial, .nexus-bloqueos { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 3px; font-size: 12.5px; }
+.nexus-historial { padding-left: 18px; list-style: decimal; }
+.nexus-bloqueos { padding-left: 14px; list-style: disc; color: var(--c-revision); }
+.nexus-regla { display: grid; grid-template-columns: 16px 1fr; gap: 4px; }
+.nexus-regla.r-cumple .nexus-icono { color: #5fd38d; }
+.nexus-regla.r-no_cumple .nexus-icono { color: var(--c-error); }
+.nexus-regla.r-no_evaluado .nexus-icono { color: var(--c-revision); }
+.nexus textarea { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, Consolas, monospace; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 8px; padding: 8px; }
+.nexus-mal { color: var(--c-error); }
+.nexus-salida ul { font-size: 12.5px; }
+.nexus summary { cursor: pointer; }
+/* Fase 1.5: fuente DEMO/REAL, integridad, filtros, candidatas e importación. Sin animaciones (Intel UHD). */
+.nexus-fuente { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+.nexus-fuente-real { background: #0f2f24; color: #b9f3d3; border: 1px solid #2f6b47; }
+.nexus-integridad { margin: 0; font-size: 12.5px; }
+.nexus-integridad ul { margin: 4px 0 0; padding-left: 18px; }
+.nexus button.sala-cifra { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.nexus .sala-cifra.nexus-activo { outline: 2px solid #9ec5ff; outline-offset: -2px; }
+.nexus-filtros { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13px; margin: 0 0 8px; }
+.nexus-filtros select { font: inherit; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 6px; }
+.nexus-falta, .nexus-admision { font-size: 12.5px; padding: 6px 8px; border-radius: 8px; background: #2a2410; color: #ffe08a; }
+.nexus-falta ul, .nexus-admision ul { margin: 4px 0 0; padding-left: 16px; }
+.nexus-admite { background: #0f2f24; color: #b9f3d3; }
+.nexus-candidata { border-style: dashed; border-color: #6b5a2f; }
+.nexus-chip-candidata { color: #ffe08a; border-color: #6b5a2f; }
+.nexus-regla.r-no_aplica .nexus-icono { color: var(--texto-suave, #9aa3b5); }
