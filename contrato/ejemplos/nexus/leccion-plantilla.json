@@ -49,6 +49,5 @@
   "validaciones": [],
   "vigencia": {
     "caduca_en": "2027-05-06T00:00:00-06:00"
-  },
-  "_ayuda": "Quita este campo. Para declarar reproducible: declara_reproducible true y en la evidencia huella (SHA-256, 64 hex) + procedimiento."
+  }
 }

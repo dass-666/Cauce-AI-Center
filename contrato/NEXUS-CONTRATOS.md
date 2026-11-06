@@ -37,7 +37,7 @@ Son **independientes** de `cauce.estado-proyecto` 1.0.0 (ese contrato no cambia)
 | `validaciones[]` | No | `{por, en, ambito: origen|destino, proyecto, resultado: confirma|refuta|inconcluso, evidencias: [ids]}`. |
 | `vigencia.caduca_en` | Recomendado | Sin él, la regla de vigencia queda «no evaluado». |
 
-Plantilla: `contrato/ejemplos/nexus/leccion-plantilla.json`.
+Plantilla: `contrato/ejemplos/nexus/leccion-plantilla.json` (válida tal cual; cambia id, textos, fechas y evidencias). Para declarar reproducible: `declara_reproducible: true` y en la evidencia `huella` (SHA-256, 64 hex) + `procedimiento`.
 
 ## `cauce.recomendacion` (cada objeto es un evento)
 
