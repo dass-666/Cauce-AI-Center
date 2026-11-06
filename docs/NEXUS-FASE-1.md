@@ -58,20 +58,16 @@ solo 10/10 → **sin objeciones**. Un control que no aplica responde `cumple` co
 1. `iniciar.bat` (o `py servir.py`) y abrir `http://127.0.0.1:8765/`. Botón **✦ Nexus** o tecla **N** (Esc o N cierra).
 2. Franja **DATOS DE PRUEBA**; 6 lecciones (1 sin objeciones, 1 incompleta, 4 con objeciones); 2 recomendaciones
    esperando decisión (una bloqueada por dinero y objeciones); 1 «Aprobada · sin ejecutar · no adoptada».
-3. *Revisar un borrador*: pegar la plantilla, escribir tu alias → dictamen «Incompleto» (falta revisión de otra persona) y descarga.
+3. *Importar una lección*: pegar la plantilla, escribir tu alias → dictamen «Incompleto» y «Admisión al almacén real: NO» (falta revisión de otra persona).
 4. Con Nexus abierto la 3D no dibuja. *Un cuarto*, la sala de control y el plano siguen igual. `pruebas.html` → 0 fallaron.
 
 ## Registrar de verdad
 
-- Con Node: `node herramientas/nexus.mjs agregar-leccion mi-leccion.json --por=diego`.
-- Sin Node (el MSI no lo tiene): oficina Nexus → *Revisar un borrador* → *Descargar registro* → guardarlo como
-  `datos/nexus/registro/lecciones.json`.
-- Aprobar una recomendación = nueva versión con `estado: aprobada`, `decision_humana` completa y evento `aprobada` de
-  una persona. A propósito **no hay botón «Aprobar»**: no hay usuarios ni firmas en la fase 1.
+Desde la fase 1.5 está en `docs/NEXUS-FASE-1-5.md`: importar con vista previa, admisión al almacén real, sellos, respaldos y aprobación con identidad declarada.
 
 ## Límites conocidos
 
-- Sin autenticación: `registrado_por` y `autor` son texto. La garantía real de «aprobación humana» llegará con CauceService.
+- Sin autenticación: `registrado_por` y `autor` son texto. La identidad es **declarada**; la autenticada llegará con CauceService.
 - Los patrones de privacidad y estrategia no garantizan ausencia de filtraciones (§7): la exportación requiere revisión humana.
-- Quitar la última entrada del almacén no rompe la cadena de huellas.
+- ~~Quitar la última entrada del almacén no rompe la cadena de huellas.~~ Resuelto en 1.5 con el manifiesto, con los límites del modelo de amenazas de `NEXUS-FASE-1-5.md`.
 - No hay exportadores automáticos ni IA (prohibidos en esta fase).

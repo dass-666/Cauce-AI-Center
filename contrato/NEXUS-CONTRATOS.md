@@ -35,9 +35,56 @@ pendiente_aprobacion → aprobada | rechazada | aplazada`, `aplazada → pendien
 - `toca_parametros_financieros` o `toca_apuestas` = **bloqueo absoluto**: Nexus nunca registra ejecución ni adopción.
 - Aprobada ≠ ejecutada ≠ adoptada ≠ desplegada; la adopción necesita referencia propia (no se deduce de la ejecución).
 
-## Almacén (fase 1)
+## Almacén (fase 1 y 1.5)
 
 Dos archivos JSON que solo crecen (`datos/nexus/registro/` real, fuera de git; `datos/nexus/demo/` de prueba). Cada
-entrada: `{registro, registrado_en, registrado_por: {tipo, identificador}, huella_anterior}`; `huella_anterior` es el
-SHA-256 del JSON canónico de la entrada previa. Borrar, editar o reordenar se detecta; **quitar la última entrada no**
-(lo cubre git o un respaldo).
+entrada: `{registro, registrado_en, registrado_por: {tipo, identificador, autenticacion?}, huella_anterior}`; `huella_anterior` es el
+SHA-256 del JSON canónico de la entrada previa. Borrar, editar o reordenar se detecta con la cadena; **quitar las últimas
+entradas** se detecta con el manifiesto (fase 1.5, abajo).
+
+- `registrado_por.autenticacion` (extensión Cauce 1.5, opcional): solo `"declarada"`. Omitirla significa lo mismo. `"autenticada"` se rechaza mientras no exista un verificador real (CauceService).
+- **Admisión al almacén real** (solo la primera versión de cada lección). Exige:
+  - que cumpla el contrato;
+  - que R01 cumpla, es decir, una revisión humana de alguien distinto del autor;
+  - que R02 y R07 cumplan;
+  - al menos una evidencia primaria con `commit` (7 a 40 caracteres hexadecimales) o `sha256`.
+
+  Lo que no cumple se queda como **candidata** en `datos/nexus/candidatas/`. Las versiones siguientes solo necesitan contrato y reglas de paso, para poder registrar también una objeción.
+
+## `cauce.nexus.manifiesto` 0.2 (fase 1.5)
+
+Archivo aparte (`datos/nexus/registro/manifiesto.json` por omisión, o `--manifiesto=` en otro disco). Tiene esta forma:
+`{contrato, version_contrato, sellos: [{sellado_en, sellado_por:{tipo, identificador, autenticacion:"declarada"}, registros:{lecciones:{n, cabeza}, recomendaciones:{n, cabeza}}, huella_anterior}]}`.
+
+- `n` es el número de entradas y `cabeza` el SHA-256 de la última entrada.
+- Los sellos forman su propia cadena.
+- El **ancla** es `«nº de sellos»:«16 hex de la huella del último sello»`. Se anota fuera del equipo.
+
+La comparación del almacén con el último sello da uno de estos estados: `integro`, `sin_sellar` (aviso), `truncado`, `reescrito`, `manifiesto_alterado` o `registro_alterado`.
+
+## `cauce.nexus.respaldo` 0.2 (fase 1.5)
+
+Cada respaldo es una carpeta `datos/nexus/respaldos/<fecha>/` con copias exactas de `lecciones.json`, `recomendaciones.json` y `manifiesto.json`. Lleva además un índice `respaldo.json`:
+`{contrato, version_contrato, creado_en, creado_por, motivo, archivos: {nombre: sha256 del texto}}`.
+
+Nunca se sobrescribe una carpeta existente. La restauración copia a `datos/nexus/restauraciones/<fecha>/` y no toca el almacén.
+
+## `cauce.nexus.politica` 0.2 (fase 1.5)
+
+`datos/nexus/politica.json` (en git) tiene la forma
+`{contrato, version_contrato, aprobadores_declarados: [alias], autenticacion: "ninguna", nota}`.
+
+Hoy el único aprobador es `diego`. En el almacén real, una decisión (aprobada, rechazada o aplazada) solo se admite si cumple todo esto:
+- la registra un aprobador declarado;
+- ese aprobador es el mismo que figura en `registrado_por`;
+- el último evento del historial lleva `motivo`.
+
+Ninguna de estas reglas es autenticación: solo deja registrado quién **dice** haber decidido.
+
+## `cauce.nexus.candidatas` 0.2 (fase 1.5)
+
+`datos/nexus/candidatas/indice.json` tiene la forma `{contrato, version_contrato, nota, archivos: ["ek-chuah/EK-L001.json", …]}`. La oficina muestra estas lecciones aparte, con la etiqueta «Candidata · no registrada». No cuentan en ninguna cifra.
+
+## Hallazgo de contrato para v0.3 (no se cambió)
+
+`muestra.naturaleza` no admite «desconocida». Una lección preparada sin acceso a los datos tiene que elegir un valor que nadie confirmó. Las candidatas Ek Chuah usan `sintetica`, el valor más restrictivo según R08, y lo declaran en `limitaciones`. La propuesta para v0.3 es agregar `desconocida`.
