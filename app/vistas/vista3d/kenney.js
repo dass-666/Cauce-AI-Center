@@ -31,6 +31,20 @@ export function rafagaDe(r) {
   return x * x * (3 - 2 * x);
 }
 
+// Rendimiento UHD: los modelos traen material PBR (MeshStandardMaterial, metalness 0). Con la luz de la oficina
+// (hemisférica + una direccional, sin reflejos de entorno) se ve casi igual con MeshLambertMaterial, que hace
+// menos cálculo por píxel y compila más rápido la primera vez. ?pbr=1 deja el material original (para comparar).
+const conPBR = typeof location !== "undefined" && new URLSearchParams(location.search).get("pbr") === "1";
+export function aLambert(m) {
+  if (!m?.isMeshStandardMaterial) return m;
+  const l = new THREE.MeshLambertMaterial({
+    name: m.name, color: m.color, map: m.map, side: m.side, transparent: m.transparent, opacity: m.opacity,
+    alphaTest: m.alphaTest, vertexColors: m.vertexColors,
+  });
+  m.dispose();
+  return l;
+}
+
 /** Descarga y guarda en memoria los modelos (uno por archivo, compartido por todos sus clones). */
 export function crearCatalogoKenney(recursos) {
   const cargador = new GLTFLoader();
@@ -42,6 +56,7 @@ export function crearCatalogoKenney(recursos) {
       promesas.set(n, cargador.loadAsync(`${CARPETA}${n}.glb`).then((gltf) => {
         gltf.scene.traverse((o) => {
           if (!o.isMesh) return;
+          if (!conPBR) o.material = aLambert(o.material); // rendimiento UHD: mismo color y textura, sombreado más barato
           recursos.agregar(o.geometry);
           for (const m of [o.material].flat()) {
             recursos.agregar(m);
