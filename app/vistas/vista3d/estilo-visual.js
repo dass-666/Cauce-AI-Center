@@ -41,7 +41,7 @@ export const PALETAS = Object.freeze({
 
 /** Paleta del estilo del proyecto; un estilo desconocido usa «general» (alimentos y servicios incluidos). */
 export function paletaDe(estilo) {
-  return PALETAS[estilo] ?? PALETAS.general;
+  return typeof estilo === "string" && Object.hasOwn(PALETAS, estilo) ? PALETAS[estilo] : PALETAS.general;
 }
 
 // Tipos de piso (cada uno es una textura compartida por todo el edificio: un material por tipo).
@@ -55,7 +55,8 @@ const PISO_POR_TEMA = Object.freeze({
 
 /** Tipo de piso de un cuarto (tema de identidad.js + estilo del proyecto). Sin regla: duela, como antes. */
 export function pisoDeTema(tema, estilo) {
-  return PISO_POR_TEMA[estilo]?.[tema] ?? "duela";
+  const tabla = typeof estilo === "string" && Object.hasOwn(PISO_POR_TEMA, estilo) ? PISO_POR_TEMA[estilo] : null;
+  return tabla && typeof tema === "string" && Object.hasOwn(tabla, tema) ? tabla[tema] : "duela";
 }
 
 /**

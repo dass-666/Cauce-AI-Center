@@ -37,7 +37,7 @@ const agente = (d, id) => d.departamentos.flatMap((x) => x.agentes).find((a) => 
   await p.goto(BASE + '?medir=1&hora=11'); await p.waitForTimeout(8000);
   const m0 = await met(p);
   ok('recursos: edificio completo con muebles nuevos en ≤ 120 llamadas de dibujo (fase K: 159)', m0.llamadas <= 120, `${m0.llamadas} llamadas, ${m0.triangulos} triángulos, ${m0.texturas} texturas`);
-  ok('recursos: texturas ≤ 26 (fase K: 20; +3 por baldosa, charcos de luz y marquesina)', m0.texturas <= 26, `${m0.texturas}`);
+  ok('recursos: texturas ≤ 32 (fase K: 20; L: +3 baldosa, charcos y marquesina; M: +6 tres pisos, atlas de pantallas, sombra de contacto y resplandor)', m0.texturas <= 32, `${m0.texturas}`);
   ok('la recepción tiene marquesina, charcos de luz y emblema', await p.evaluate(() => ['marquesina', 'charcos-luz', 'emblema', 'directorio'].length) === 4);
   ok('cámara: sin vistas guardadas al abrir; el botón «Anterior» no aparece', (await cam(p)).historial === 0 && !(await p.locator('[data-ir="anterior"]').isVisible()));
 

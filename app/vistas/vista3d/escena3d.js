@@ -30,7 +30,7 @@ import { crearMobiliario } from "./mobiliario.js";
 import { crearHistorialCamara, claveSeleccion } from "./camara-historial.js";
 import { texturaDuela as duelaM, texturaAlfombra, texturaConcreto, texturaVinil, texturaAtlasPantallas, texturaResplandor } from "./texturas.js";
 import { intensidadAmbiente } from "./estilo-visual.js";
-import { duracionViaje, suavizarViaje } from "./viaje-camara.js";
+import { duracionViaje, suavizarViaje, anguloEncuadre } from "./viaje-camara.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
 const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométrica clásica)
@@ -325,10 +325,15 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
     if (!suave) {
       const d = 60;
+      // Fase M: en pantallas angostas el edificio se gira un poco para verse más grande (anguloEncuadre).
+      const zl = zonaLibre();
+      const giro = escenario.modo === "edificio" && new URLSearchParams(location.search).get("giro") !== "0" // ?giro=0: siempre 45° (comparar)
+        ? anguloEncuadre({ w: zl.der - zl.izq, h: zl.abajo - zl.arriba }, maxX - minX + 2.9, maxZ - minZ + 2.9, ANGULO_BASE, INCLINACION)
+        : ANGULO_BASE;
       camara.position.set(
-        cx + Math.sin(ANGULO_BASE) * Math.sin(INCLINACION) * d,
+        cx + Math.sin(giro) * Math.sin(INCLINACION) * d,
         Math.cos(INCLINACION) * d,
-        cz + Math.cos(ANGULO_BASE) * Math.sin(INCLINACION) * d,
+        cz + Math.cos(giro) * Math.sin(INCLINACION) * d,
       );
       camara.far = 200;
       controles.target.set(cx, 0.5, cz);
@@ -803,7 +808,16 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       gpu_tiempo_disponible: Boolean(tiempoGpu?.disponible),
       cuadros_omitidos_por_quietud: cuadrosOmitidos,
       ahorro_quietud: ahorroQuietud,
+      // Fase M (pruebas): resplandores de pantalla a la vista (solo pantallas encendidas por evidencia) e
+      // intensidad de las pantallas ambientales (atenuadas sin datos vigentes).
+      resplandores: contarVisibles("resplandor-pantalla"),
+      ambiente: Number(compartido.matPantallaAmbiente.color.r.toFixed(2)),
     };
+  }
+  function contarVisibles(nombre) {
+    let n = 0;
+    escenario?.grupo.traverseVisible((o) => { if (o.name === nombre) n++; });
+    return n;
   }
   // Solo con ?medir=1: ayuda a las pruebas automáticas a medir y a tocar a un personaje.
   function proyectar(id) {
