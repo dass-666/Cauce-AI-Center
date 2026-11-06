@@ -190,7 +190,7 @@ No hay modelos 3D nuevos, animaciones ni servicios externos. Con Nexus abierto l
 
 ### 7.1 Regresión completa 2D/3D
 
-RESULTADO_REGRESION
+**26/26 guiones en verde** (`node pruebas/navegador/todas.cjs`, SwiftShader). Entre ellos están `regresion.cjs` (47 OK), `fase-k.cjs` (48), `fase-l.cjs` (42), `inmersivo.cjs` (34), `rendimiento-uhd.cjs` (29) y `nexus.cjs` (45). La oficina 2D/3D, «Un cuarto», la sala de control y el contrato v1 no cambiaron de comportamiento. Esto comprueba el comportamiento, **no** el rendimiento en la Intel UHD.
 
 ---
 
