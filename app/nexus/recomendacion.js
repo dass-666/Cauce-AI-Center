@@ -80,7 +80,7 @@ export function validarRecomendacion(r) {
  *  - `reglas`: peor estado por regla entre las lecciones citadas, con R07/R09/R10 de la propia recomendación.
  *  - `inconsistencias`: lo guardado en revision_esceptica que no coincide con lo recalculado (T12 → se rechaza).
  */
-export function evaluarRecomendacion(r, { lecciones = new Map(), ahora = Date.now() } = {}) {
+export function evaluarRecomendacion(r, { lecciones = new Map(), ahora = Date.now(), recomendaciones = new Map(), revisionesDesde = new Map() } = {}) {
   const bloqueos = [];
   const peor = new Map(REGLAS.map((x) => [x.id, { id: x.id, nombre: x.nombre, estado: "cumple", motivo: [], referencia: [], version: VERSION_REGLAS }]));
   const orden = { cumple: 0, no_evaluado: 1, no_cumple: 2 };
@@ -89,7 +89,7 @@ export function evaluarRecomendacion(r, { lecciones = new Map(), ahora = Date.no
     const l = lecciones.get(c?.id);
     if (!l) { bloqueos.push(`La lección ${c?.id} no está en el registro.`); for (const x of REGLAS) sumar(x.id, "no_evaluado", `${c?.id}: no está en el registro`); continue; }
     if (String(versionDe(l)) !== String(c.revision)) { bloqueos.push(`La lección ${c.id} va en la revisión «${versionDe(l)}», no en «${c.revision}».`); for (const x of REGLAS) sumar(x.id, "no_evaluado", `${c.id}: revisión citada desactualizada`); continue; }
-    for (const x of evaluarLeccion(l, { ahora, lecciones }).reglas) sumar(x.id, x.estado, `${c.id}: ${x.motivo}`, c.id);
+    for (const x of evaluarLeccion(l, { ahora, lecciones, recomendaciones, revisionDesde: revisionesDesde.get(c.id) ?? 0 }).reglas) sumar(x.id, x.estado, `${c.id}: ${x.motivo}`, c.id);
   }
   // Reglas propias de la recomendación.
   const priv = buscarDatosPrivados(r), est = buscarEstrategia(r);
@@ -129,7 +129,8 @@ export function revisionEsceptica(r, ctx) {
  * Comprueba el paso de una versión a la siguiente (historial que solo crece, transición permitida, aprobación humana).
  * @returns lista de errores (vacía si el paso es válido)
  */
-export function validarPaso(anterior, nueva, { lecciones = new Map(), ahora = Date.now() } = {}) {
+export function validarPaso(anterior, nueva, ctx = {}) {
+  const { lecciones = new Map(), ahora = Date.now() } = ctx;
   const errores = [];
   const hA = L(anterior?.historial), hN = L(nueva?.historial);
   if (anterior) {
@@ -145,14 +146,18 @@ export function validarPaso(anterior, nueva, { lecciones = new Map(), ahora = Da
     if (d.estado !== "aprobada" || !texto(d.responsable) || !esFechaConZona(d.fecha) || !texto(d.alcance) || !(esFechaODia(d.vigencia) || texto(d.vigencia))) errores.push("decision_humana aprobada necesita responsable, fecha con zona, alcance y vigencia.");
     if (proponente && mismoId(d.responsable, proponente.autor)) errores.push("Quien propone no puede aprobar su propia recomendación.");
     if (mismoId(d.responsable, "gerente-esceptico") || ultimo?.autor_tipo !== "humano") errores.push("El gerente (código) o una IA no aprueban.");
-    const ev = evaluarRecomendacion(nueva, { lecciones, ahora });
+    const ev = evaluarRecomendacion(nueva, { ...ctx, lecciones, ahora });
     if (!ev.aprobable) errores.push(`No es aprobable: ${[...ev.inconsistencias, ...ev.bloqueos.filter((b) => !b.startsWith("Bloqueo absoluto"))].join(" ")} Lo no evaluado nunca se aprueba.`);
   }
   if (nueva.estado !== "aprobada" && d.estado === "aprobada") errores.push("decision_humana dice «aprobada» pero el estado no.");
   if (nueva.estado === "pendiente_aprobacion" && !L(nueva.revision_esceptica?.reglas).length) errores.push("Para pedir aprobación hace falta la revisión escéptica.");
   if (nueva.estado !== "aprobada" && nueva.ejecucion?.estado !== "no_iniciada") errores.push("Sin aprobación humana no hay ejecución.");
+  // Aprobar no ejecuta: un cambio de ejecución o adopción es el registro de algo hecho FUERA de Nexus, por una persona, con referencia.
+  const cambioEjec = (anterior?.ejecucion?.estado ?? "no_iniciada") !== nueva.ejecucion?.estado, cambioAdop = (anterior?.adopcion?.estado ?? "no_adoptada") !== nueva.adopcion?.estado;
+  if ((cambioEjec || cambioAdop) && (ultimo?.autor_tipo !== "humano")) errores.push("Un cambio de ejecución o adopción solo lo registra una persona (Nexus no ejecuta: registra lo que se hizo fuera).");
+  if (cambioEjec && nueva.ejecucion?.estado !== "cancelada" && !L(nueva.ejecucion?.resultados).some((y) => texto(y?.referencia))) errores.push("Registrar una ejecución exige resultados con referencia a la evidencia externa.");
   if ((nueva.toca_parametros_financieros || nueva.toca_apuestas) && (nueva.ejecucion?.estado !== "no_iniciada" || nueva.adopcion?.estado !== "no_adoptada")) errores.push("Bloqueo absoluto: Nexus no registra ejecución ni adopción de algo que toca dinero o apuestas.");
-  const inc = evaluarRecomendacion(nueva, { lecciones, ahora }).inconsistencias;
+  const inc = evaluarRecomendacion(nueva, { ...ctx, lecciones, ahora }).inconsistencias;
   if (inc.length) errores.push(...inc.map((t) => `revision_esceptica: ${t}`));
   return errores;
 }

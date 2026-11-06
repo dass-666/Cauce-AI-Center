@@ -15,7 +15,7 @@ const clon = (x) => JSON.parse(JSON.stringify(x));
 const H64 = (c) => c.repeat(64);
 
 /** Lección registrable y sin objeciones; cada prueba cambia lo que necesita. */
-function leccion(cambios = {}) {
+export function leccion(cambios = {}) {
   return {
     id: "prueba-uno", esquema: "cauce.leccion", version_esquema: "0.2", tipo: "metodo",
     origen: { proyecto: "compago", componente: "revisor", version_sistema: "1.0", commit: "abc1234", tipo: "medicion" },

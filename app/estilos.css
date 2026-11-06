@@ -711,3 +711,18 @@ html.nexus-abierto .principal { grid-template-columns: 1fr !important; }
 .nexus-mal { color: var(--c-error); }
 .nexus-salida ul { font-size: 12.5px; }
 .nexus summary { cursor: pointer; }
+/* Fase 1.5: fuente DEMO/REAL, integridad, filtros, candidatas e importación. Sin animaciones (Intel UHD). */
+.nexus-fuente { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+.nexus-fuente-real { background: #0f2f24; color: #b9f3d3; border: 1px solid #2f6b47; }
+.nexus-integridad { margin: 0; font-size: 12.5px; }
+.nexus-integridad ul { margin: 4px 0 0; padding-left: 18px; }
+.nexus button.sala-cifra { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.nexus .sala-cifra.nexus-activo { outline: 2px solid #9ec5ff; outline-offset: -2px; }
+.nexus-filtros { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13px; margin: 0 0 8px; }
+.nexus-filtros select { font: inherit; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 6px; }
+.nexus-falta, .nexus-admision { font-size: 12.5px; padding: 6px 8px; border-radius: 8px; background: #2a2410; color: #ffe08a; }
+.nexus-falta ul, .nexus-admision ul { margin: 4px 0 0; padding-left: 16px; }
+.nexus-admite { background: #0f2f24; color: #b9f3d3; }
+.nexus-candidata { border-style: dashed; border-color: #6b5a2f; }
+.nexus-chip-candidata { color: #ffe08a; border-color: #6b5a2f; }
+.nexus-regla.r-no_aplica .nexus-icono { color: var(--texto-suave, #9aa3b5); }

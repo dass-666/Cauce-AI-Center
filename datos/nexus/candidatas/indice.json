@@ -1,0 +1,10 @@
+{
+  "contrato": "cauce.nexus.candidatas",
+  "version_contrato": "0.2",
+  "nota": "Lecciones candidatas FUERA del almacén real. Se muestran en la oficina Nexus como «Candidata», nunca como registradas.",
+  "archivos": [
+    "ek-chuah/EK-L001.json",
+    "ek-chuah/EK-L003.json",
+    "ek-chuah/EK-L007.json"
+  ]
+}

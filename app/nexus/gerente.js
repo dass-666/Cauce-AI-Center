@@ -28,7 +28,12 @@ const EVIDENCIA_IA = /^(texto_ia|inventario_ia|resumen_ia|auditoria_ia|memoria_i
 /** Estados de proceso, no entregables: «la tarea dijo succeeded», «CI verde», «hay un PR» (R09). */
 const ESTADO_PROCESO = /^(estado_tarea|ci|pr|etiqueta)$/;
 const ENTREGABLE = /^(informe|entregable|artefacto|resultado_verificado|verificacion_despliegue|despliegue)$/;
-const primaria = (ev) => ev && !EVIDENCIA_IA.test(ev.tipo ?? "");
+/** Una recomendación es una propuesta derivada de lecciones: nunca es evidencia primaria (fase 1.5, bloque E). */
+const REF_RECOMENDACION = /^recomendaci[oó]n:/i;
+const esDeRecomendacion = (ev) => /^recomendacion/.test(ev?.tipo ?? "") || REF_RECOMENDACION.test(String(ev?.referencia ?? "").trim());
+const primaria = (ev) => ev && !EVIDENCIA_IA.test(ev.tipo ?? "") && !esDeRecomendacion(ev);
+/** Decisiones de revisión que NO respaldan la lección (una persona la revisó y objetó). */
+const DECISION_CONTRARIA = /rechaz|objec|refut|no[ _]valid|devuelt/i;
 
 /** Detalles de estrategia o de cuentas que no deben salir de un proyecto (R07, T13). Términos con cifra. */
 const ESTRATEGIA = [
@@ -48,12 +53,14 @@ export function buscarEstrategia(valor, ruta = "") {
 /**
  * Evalúa una lección con nexus-R 0.2.
  * @param leccion   cauce.leccion 0.2 (puede venir mal formada: nunca lanza)
- * @param ctx       { ahora: ms|Date, lecciones: Map(id → lección vigente) }
+ * @param ctx       { ahora: ms|Date, lecciones: Map(id → lección vigente), recomendaciones: Map(id → recomendación),
+ *                    revisionDesde: nº de revisiones que ya existían cuando cambió por última vez la evidencia (las
+ *                    anteriores no cuentan como revisión de lo que hoy dice la lección; lo calcula el registro) }
  */
-export function evaluarLeccion(leccion, { ahora = Date.now(), lecciones = new Map() } = {}) {
+export function evaluarLeccion(leccion, { ahora = Date.now(), lecciones = new Map(), recomendaciones = new Map(), revisionDesde = 0 } = {}) {
   const ahoraMs = ahora instanceof Date ? ahora.getTime() : Number(ahora);
   const l = leccion && typeof leccion === "object" && !Array.isArray(leccion) ? leccion : {};
-  const f = { R01, R02, R03: (x) => R03(x, lecciones), R04, R05: (x) => R05(x, ahoraMs), R06: (x) => R06(x, lecciones), R07, R08, R09, R10 };
+  const f = { R01: (x) => R01(x, revisionDesde), R02, R03: (x) => R03(x, lecciones, recomendaciones), R04, R05: (x) => R05(x, ahoraMs), R06: (x) => R06(x, lecciones), R07, R08, R09, R10 };
   const reglas = REGLAS.map((r) => {
     let s;
     try { s = f[r.id](l); } catch (err) { s = { estado: "no_evaluado", motivo: `No se pudo evaluar (${err.message}).` }; }
@@ -65,21 +72,27 @@ export function evaluarLeccion(leccion, { ahora = Date.now(), lecciones = new Ma
   return { leccion_id: l.id ?? null, version: versionDe(l), reglas, dictamen: dictaminar(reglas), version_reglas: VERSION_REGLAS };
 }
 
-/** Cualquier no_cumple → con objeciones; si no, cualquier cosa que no sea cumple → incompleto; solo 10/10 → sin objeciones. */
+/**
+ * Cualquier no_cumple → con objeciones; si no, cualquier cosa que no sea cumple → incompleto; solo 10/10 → sin objeciones.
+ * Las reglas que no aplican se listan aparte (`no_aplica`, con su motivo en la regla) para que la persona las vea: §5
+ * pide que un control no aplicable tenga justificación y revisión, no que se convierta en silencio en «cumple».
+ */
 export function dictaminar(reglas) {
   const no = reglas.filter((r) => r.estado === "no_cumple").map((r) => r.id);
   const pendientes = reglas.filter((r) => r.estado !== "cumple" && r.estado !== "no_cumple").map((r) => r.id);
   const estado = no.length ? "con_objeciones" : pendientes.length ? "incompleto" : "sin_objeciones";
-  return { estado, no_cumple: no, no_evaluado: pendientes, apto_para_decision_humana: estado === "sin_objeciones" };
+  const noAplica = reglas.filter((r) => r.estado === "cumple" && r.aplica === false).map((r) => r.id);
+  return { estado, no_cumple: no, no_evaluado: pendientes, no_aplica: noAplica, cumplen: reglas.filter((r) => r.estado === "cumple").length - noAplica.length, apto_para_decision_humana: estado === "sin_objeciones" };
 }
 
 const C = (motivo, referencia = [], extra = {}) => ({ estado: "cumple", motivo, referencia, ...extra });
 const N = (motivo, referencia = []) => ({ estado: "no_cumple", motivo, referencia });
 const E = (motivo, referencia = []) => ({ estado: "no_evaluado", motivo, referencia });
-const revisoresIndependientes = (l) => L(l.revisiones).filter((r) => r && !mismoId(r.autor, l.autor?.identificador));
+const revisoresIndependientes = (l, desde = 0) => L(l.revisiones).filter((r, i) => i >= desde && r && !mismoId(r.autor, l.autor?.identificador) && !DECISION_CONTRARIA.test(r.decision ?? ""));
 
 // R01 — procedencia, autoría y revisor independiente. Texto de IA no acredita hechos; IA no se valida a sí misma.
-function R01(l) {
+// Solo cuenta una revisión humana ajena POSTERIOR al último cambio de la evidencia (desde) y que no la objete.
+function R01(l, desde = 0) {
   const faltan = [];
   if (!texto(l.origen?.proyecto)) faltan.push("origen.proyecto");
   if (!texto(l.origen?.version_sistema) && !texto(l.origen?.commit)) faltan.push("origen.version_sistema o commit");
@@ -88,11 +101,15 @@ function R01(l) {
   if (faltan.length) return N(`Falta procedencia: ${faltan.join(", ")}.`, faltan);
   const validada = VALIDADA.includes(l.validacion?.estado);
   if (validada && l.origen.tipo === "texto_ia") return N("El origen es texto de IA: no acredita hechos y no puede estar validada.", ["origen.tipo"]);
-  const ind = revisoresIndependientes(l);
+  const ind = revisoresIndependientes(l, desde);
+  const ajenasHumanas = L(l.revisiones).map((r, i) => ({ r, i })).filter(({ r }) => r?.autor_tipo === "humano" && !mismoId(r.autor, l.autor?.identificador));
+  const ultimaAjena = ajenasHumanas.filter(({ i }) => i >= desde).at(-1)?.r;
+  if (ultimaAjena && DECISION_CONTRARIA.test(ultimaAjena.decision ?? "")) return N(`La última revisión humana independiente (${ultimaAjena.autor}, ${ultimaAjena.version}) dice «${ultimaAjena.decision}»: una objeción no cuenta como respaldo.`, ["revisiones"]);
   const autoIa = L(l.revisiones).filter((r) => r?.autor_tipo === "ia" && l.autor?.tipo === "ia" && mismoId(r.autor, l.autor.identificador));
   if (validada && autoIa.length) return N(`La IA autora (${l.autor.identificador}) aparece como revisora de su propia lección: no es validación independiente (T20).`, ["revisiones"]);
   const humanos = ind.filter((r) => r.autor_tipo === "humano");
   if (validada && l.autor?.tipo === "ia" && !humanos.length) return N("Lección de IA marcada como validada sin revisión humana independiente.", ["revisiones"]);
+  if (!humanos.length && ajenasHumanas.some(({ i }) => i < desde)) return E(`La evidencia cambió después de la última revisión humana independiente (${ajenasHumanas.filter(({ i }) => i < desde).at(-1).r.version}): hace falta una revisión nueva de lo que la lección dice hoy.`, ["revisiones", "evidencia"]);
   if (!humanos.length) return E("Falta una revisión humana de alguien distinto del autor.", ["revisiones"]);
   return C(`Procedencia completa; revisión humana independiente de ${humanos.map((r) => r.autor).join(", ")}.`, ["origen", "autor", "procedencia", "revisiones"]);
 }
@@ -102,7 +119,7 @@ function R02(l) {
   const ev = L(l.evidencia);
   if (!ev.length) return N("Sin evidencia: no hay fuente primaria (T01).", ["evidencia"]);
   const prim = ev.filter(primaria);
-  if (!prim.length) return N(`Toda la evidencia es texto o inventario de IA (${ev.map((x) => x.tipo).join(", ")}): no es fuente primaria (T01).`, ["evidencia"]);
+  if (!prim.length) return N(`Ninguna evidencia es primaria (${ev.map((x) => x.tipo).join(", ")}): el texto o inventario de IA y las recomendaciones no son fuente primaria (T01).`, ["evidencia"]);
   if (l.origen?.tipo === "texto_ia" && prim.every((x) => x.ubicacion === "fuera_de_repo" && !x.sha256)) return N("Origen texto de IA y ninguna evidencia primaria con huella.", ["evidencia"]);
   const sinRef = ev.filter((x) => !texto(x.referencia) || !texto(x.ubicacion));
   if (sinRef.length) return N("Hay evidencia sin referencia o ubicación.", ["evidencia"]);
@@ -127,7 +144,16 @@ export function cicloDesde(id, lecciones, inicial) {
   }
   return { ciclo: null, faltan };
 }
-function R03(l, lecciones) {
+function R03(l, lecciones, recomendaciones = new Map()) {
+  // Una recomendación que nació de esta lección (directa o indirectamente) no puede volver como su evidencia o validación.
+  const refsRec = [...L(l.evidencia).map((x) => x?.referencia), ...L(l.validacion?.validado_en).map((v) => v?.prueba_ref)]
+    .map((x) => String(x ?? "").trim()).filter((x) => REF_RECOMENDACION.test(x)).map((x) => x.replace(REF_RECOMENDACION, "").trim());
+  for (const id of refsRec) {
+    const rec = recomendaciones.get(id);
+    if (!rec) return E(`Cita la recomendación ${id}, que no está en el registro: no se puede descartar que derive de esta lección.`, ["evidencia"]);
+    const citadas = L(rec.lecciones).map((c) => c?.id).filter(Boolean);
+    if (citadas.includes(l.id) || cicloDesde(l.id, lecciones, citadas).ciclo) return N(`Circularidad: la recomendación ${id} nació de esta lección y no puede volver como evidencia de su propio origen.`, ["evidencia", "validacion.validado_en"]);
+  }
   const vistos = new Map();
   const dup = [];
   L(l.evidencia).forEach((x, i) => { const k = claveEv(x); if (vistos.has(k)) dup.push(`evidencia[${vistos.get(k)}] = evidencia[${i}]`); else vistos.set(k, i); });
@@ -182,11 +208,12 @@ function R05(l, ahoraMs) {
   if (!v) return N("vigente_hasta inválida o ausente.", ["vigente_hasta"]);
   if (v[1] < ahoraMs) return N(`Caducó (vigente_hasta ${l.vigente_hasta}): revisar antes de usarla (T11).`, ["vigente_hasta"]);
   if (l.validacion?.estado === "caducada") return N("La propia lección se declara caducada.", ["validacion.estado"]);
+  if (l.validacion?.estado === "refutada") return N("La lección está refutada: se conserva en el historial pero no respalda nada.", ["validacion.estado"]);
   const ev = L(l.evidencia).filter(primaria);
   const conArtefacto = ev.filter((x) => texto(x.sha256) || texto(x.commit));
   const reproducidas = ev.filter((x) => x.reproduccion_independiente && texto(x.reproduccion_independiente.referencia) && !mismoId(x.reproduccion_independiente.quien, l.autor?.identificador));
   if (VALIDADA.includes(l.validacion?.estado) && !conArtefacto.length && !reproducidas.length) return N("Marcada como validada sin artefacto (huella o commit) ni reproducción independiente.", ["evidencia"]);
-  if (!conArtefacto.length) return E("Ninguna evidencia trae huella SHA-256 ni commit: no se puede comprobar que sea la misma al revisarla.", ["evidencia.sha256", "evidencia.commit"]);
+  if (!conArtefacto.length) return E("Ninguna evidencia primaria trae huella SHA-256 ni commit: no se puede comprobar que sea la misma al revisarla.", ["evidencia.sha256", "evidencia.commit"]);
   const declarada = ev.filter((x) => x.reproducible_declarado === true && !x.reproduccion_independiente);
   return C(`${conArtefacto.length} evidencia(s) con huella o commit; vigente hasta ${l.vigente_hasta}.${reproducidas.length ? ` Reproducida por terceros: ${reproducidas.length}.` : ""}${declarada.length ? ` ${declarada.length} solo declarada(s) reproducible(s): no reproducida(s) (Nexus no las ejecutó).` : ""}`, ["evidencia", "vigente_hasta"]);
 }
@@ -253,6 +280,7 @@ function R08(l) {
   const est = L(l.evidencia).filter((x) => x?.base_conocimiento === "estimated" && (x.fraccion_estimada ?? 1) >= 0.5);
   if (est.length && c.nivel === "alta") return N("La mayor parte de las fechas de disponibilidad son estimadas: limita la confianza (T21).", ["evidencia.fraccion_estimada"]);
   if (c.nivel === "alta" && !Number.isInteger(m.n_efectivo)) return E("Confianza alta sin n_efectivo: no se puede juzgar.", ["muestra.n_efectivo"]);
+  if (c.nivel === "media" && c.objeto !== "metodo" && !Number.isInteger(m.n_efectivo)) return E(`Confianza media en un efecto sin n_efectivo: con muestras dependientes el conteo bruto (${m.n ?? "?"}) inflaría la confianza (§3).`, ["muestra.n_efectivo"]);
   if (c.nivel === "alta" && c.objeto !== "metodo" && Number.isInteger(m.n_efectivo) && m.n_efectivo < 30) return N(`Confianza alta en un efecto con n_efectivo=${m.n_efectivo}.`, ["muestra.n_efectivo"]);
   return C(`Confianza «${c.nivel}» sobre «${c.objeto}» coherente con datos «${nat}» y resultado «${nr}»${m.seleccion_en_muestra ? " (selección en muestra: solo como limitación)" : ""}.`, ["muestra", "confianza"]);
 }

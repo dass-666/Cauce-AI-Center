@@ -14,3 +14,7 @@ comparar/
 # Nexus: el registro real de lecciones y recomendaciones es local (los datos de prueba están en datos/nexus/demo/).
 datos/nexus/registro/*
 !datos/nexus/registro/LEEME.md
+# Nexus fase 1.5: respaldos y restauraciones del almacén real (locales, como el registro).
+datos/nexus/respaldos/
+datos/nexus/respaldos-demo/
+datos/nexus/restauraciones/

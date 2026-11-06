@@ -133,7 +133,7 @@ export async function construirDemo() {
     "2026-11-05T11:00:00-06:00", "2026-11-05T11:05:00-06:00", "2026-11-05T11:10:00-06:00");
   await agregar({ ...c, estado: "aprobada",
     decision_humana: { estado: "aprobada", responsable: "director-demo", fecha: "2026-11-05T12:00:00-06:00", alcance: "[DEMO] solo el experimento aislado de 2 semanas", vigencia: "2026-12-31", condiciones: ["sin escritura en Compago"], referencia: "demo:acta-001" },
-    historial: [...c.historial, { evento: "aprobada", fecha: "2026-11-05T12:00:00-06:00", autor_tipo: "humano", autor: "director-demo" }] }, "2026-11-05T12:00:00-06:00", H("director-demo"));
+    historial: [...c.historial, { evento: "aprobada", fecha: "2026-11-05T12:00:00-06:00", autor_tipo: "humano", autor: "director-demo", motivo: "[DEMO] 10/10 reglas; solo experimento aislado y reversible" }] }, "2026-11-05T12:00:00-06:00", H("director-demo"));
   // D. Borrador con valores pendientes (forma del ejemplo §4.1): no aprobable.
   await agregar(rec({ id: "demo-rec-borrador", estado: "propuesta", destino: { proyecto: "tezcatlipoca", componente: "evaluacion-conteos-aislada" }, lecciones: [{ id: "demo-tezca-filas", revision: "r2" }],
     problema: "[DEMO] Borrador.", hipotesis: "[DEMO] Por definir.", accion_propuesta: "[DEMO] Diseñar comparación solo si hay respaldo reproducible.",

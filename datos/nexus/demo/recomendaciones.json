@@ -1445,7 +1445,8 @@
             "evento": "aprobada",
             "fecha": "2026-11-05T12:00:00-06:00",
             "autor_tipo": "humano",
-            "autor": "director-demo"
+            "autor": "director-demo",
+            "motivo": "[DEMO] 10/10 reglas; solo experimento aislado y reversible"
           }
         ]
       },
@@ -1534,7 +1535,7 @@
         "tipo": "humano",
         "identificador": "analista-demo"
       },
-      "huella_anterior": "aea597061ee1ce498313e96ae36143050f2e30a91df9eafd644ce0766ca7b660"
+      "huella_anterior": "f7f4a7e622175365d7167e1d75c9e4c8d7dc3b58d2748429e66854c1113996f5"
     }
   ],
   "descripcion": "[DEMO] Recomendaciones ficticias. Nexus solo las registra: no ejecuta nada."

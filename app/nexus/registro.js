@@ -4,10 +4,11 @@
 // editar o reordenar rompe la cadena y se detecta. Una versión nueva de una lección debe anexar revisiones; de una
 // recomendación, anexar eventos al historial. Nada aquí escribe en disco: se devuelve el documento nuevo.
 
-import { huellaDe, esFechaConZona, esActor } from "./comun.js";
+import { huellaDe, esFechaConZona, esActor, jsonCanonico, mismoId } from "./comun.js";
 import { validarLeccion, versionDe } from "./leccion.js";
 import { evaluarLeccion } from "./gerente.js";
 import { validarRecomendacion, validarPaso, evaluarRecomendacion, situacion } from "./recomendacion.js";
+import { revisarDecision } from "./identidad.js";
 
 export const REGISTRO = { lecciones: "cauce.nexus.registro-lecciones", recomendaciones: "cauce.nexus.registro-recomendaciones" };
 
@@ -31,9 +32,9 @@ const lista = (doc, tipo) => (doc && doc.contrato === REGISTRO[tipo] && Array.is
 
 /** Lecciones vigentes en un instante (las registradas hasta entonces), para juzgar una decisión en su momento. */
 function leccionesHasta(entradasLecciones, hastaMs = Infinity) {
-  const m = new Map();
-  for (const e of entradasLecciones) if (Date.parse(e.registrado_en) <= hastaMs && e.registro?.id) m.set(e.registro.id, e.registro);
-  return m;
+  const m = new Map(), h = new Map();
+  for (const e of entradasLecciones) if (Date.parse(e.registrado_en) <= hastaMs && e.registro?.id) { m.set(e.registro.id, e.registro); h.set(e.registro.id, [...(h.get(e.registro.id) ?? []), e]); }
+  return { lecciones: m, revisionesDesde: revisionesDesde(h), ahora: hastaMs };
 }
 
 function revisarSobre(e, i) {
@@ -42,6 +43,13 @@ function revisarSobre(e, i) {
   for (const k of Object.keys(e)) if (!["registro", "registrado_en", "registrado_por", "huella_anterior"].includes(k)) errores.push(`Entrada ${i + 1}: clave desconocida ${k}.`);
   if (!esFechaConZona(e.registrado_en)) errores.push(`Entrada ${i + 1}: registrado_en «${e.registrado_en}» debe tener zona horaria (T17).`);
   if (!esActor(e.registrado_por)) errores.push(`Entrada ${i + 1}: registrado_por necesita {tipo: humano|codigo|ia, identificador}.`);
+  else {
+    for (const k of Object.keys(e.registrado_por)) if (!["tipo", "identificador", "autenticacion"].includes(k)) errores.push(`Entrada ${i + 1}: registrado_por.${k} es desconocida.`);
+    const a = e.registrado_por.autenticacion;
+    // Fase 1.5: no hay autenticación. Una entrada solo puede decir que su identidad es DECLARADA (o no decir nada,
+    // que significa lo mismo). «autenticada» se rechaza hasta que exista un verificador real (CauceService).
+    if (a !== undefined && a !== "declarada") errores.push(`Entrada ${i + 1}: registrado_por.autenticacion «${a}» no se admite: sin autenticación configurada toda identidad es «declarada».`);
+  }
   return errores;
 }
 
@@ -49,7 +57,7 @@ function revisarSobre(e, i) {
  * Lee ambos registros. Nunca lanza: lo que esté mal va a `errores` y esa entrada no se usa.
  * @returns { ultimas: Map(id → lección), historial: Map(id → [versiones]), recomendaciones: [{registro, versiones, errores}], errores, es_demo }
  */
-export async function leerNexus({ lecciones, recomendaciones }) {
+export async function leerNexus({ lecciones, recomendaciones, politica = null }) {
   const errores = [];
   const eL = lista(lecciones, "lecciones");
   const eR = recomendaciones ? lista(recomendaciones, "recomendaciones") : [];
@@ -71,12 +79,28 @@ export async function leerNexus({ lecciones, recomendaciones }) {
     const err = [...revisarSobre(e, i), ...validarRecomendacion(e?.registro).errores];
     const id = e?.registro?.id ?? "?";
     const previas = porId.get(id) ?? [];
-    if (!err.length) err.push(...validarPaso(previas.at(-1)?.registro ?? null, e.registro, { lecciones: leccionesHasta(validas, Date.parse(e.registrado_en)), ahora: Date.parse(e.registrado_en) }));
+    if (!err.length) err.push(...validarPaso(previas.at(-1)?.registro ?? null, e.registro, leccionesHasta(validas, Date.parse(e.registrado_en))),
+      ...revisarDecision(previas.at(-1)?.registro ?? null, e.registro, e, { es_demo: recomendaciones?.es_demo === true, politica }));
     if (err.length) { errores.push(`Recomendación ${id} (entrada ${i + 1}): ${err.join(" ")}`); return; }
     porId.set(id, [...previas, e]);
   });
   const recs = [...porId.values()].map((v) => ({ registro: v.at(-1).registro, versiones: v }));
-  return { ultimas, historial, recomendaciones: recs, errores, es_demo: lecciones?.es_demo === true || recomendaciones?.es_demo === true };
+  return { ultimas, historial, recomendaciones: recs, errores, es_demo: lecciones?.es_demo === true || recomendaciones?.es_demo === true, desde: revisionesDesde(historial) };
+}
+
+/** Lo que la revisión respalda: si cambia, las revisiones anteriores ya no revisaron lo que la lección dice hoy. */
+const MATERIAL = ["hallazgo", "origen", "evidencia", "procedencia", "muestra", "confianza", "antecedentes", "fecha_hallazgo", "tipo"];
+export const contenidoMaterial = (l) => jsonCanonico(Object.fromEntries(MATERIAL.map((k) => [k, l?.[k] ?? null])));
+
+/** Por lección: cuántas revisiones existían cuando cambió por última vez su contenido material (0 = nunca cambió). */
+export function revisionesDesde(historial) {
+  const m = new Map();
+  for (const [id, versiones] of historial) {
+    let desde = 0;
+    for (let i = 1; i < versiones.length; i++) if (contenidoMaterial(versiones[i].registro) !== contenidoMaterial(versiones[i - 1].registro)) desde = versiones[i - 1].registro.revisiones.length;
+    m.set(id, desde);
+  }
+  return m;
 }
 
 /** Una versión nueva de lección: mismo id, revisiones anexadas (las anteriores intactas), sin revivir una caducada/refutada. */
@@ -102,26 +126,58 @@ async function agregar(doc, tipo, sobre, comprobar) {
   return { ok: true, doc: { ...doc, entradas: [...ent, limpio] }, errores: [] };
 }
 
-/** Agrega una versión de lección: {registro, registrado_en, registrado_por}. */
+/**
+ * ¿Puede una lección NUEVA entrar al almacén real? (fase 1.5, decisión de Diego): debe cumplir el contrato, tener
+ * procedencia verificable y una revisión humana independiente documentada. Si no, se queda como candidata fuera.
+ * Registrarla no la valida: el gerente sigue mostrando sus objeciones. Las versiones siguientes (p. ej. una revisión
+ * que la objeta) solo necesitan contrato y reglas de paso, para que el desacuerdo también quede registrado.
+ * @returns { admisible, motivos[], cumple[], evaluacion }
+ */
+export function admisionReal(leccion, { ahora = Date.now(), lecciones = new Map(), registrado_por = null } = {}) {
+  const motivos = [], cumple = [];
+  const forma = validarLeccion(leccion).errores;
+  if (forma.length) motivos.push(`No cumple el contrato cauce.leccion 0.2 (${forma.length} error(es)): ${forma.slice(0, 3).join(" ")}${forma.length > 3 ? " …" : ""}`);
+  else cumple.push("Cumple el contrato cauce.leccion 0.2.");
+  if (String(leccion?.id ?? "").startsWith("demo-")) motivos.push("Un id «demo-…» es de prueba y no entra al almacén real.");
+  if (registrado_por && registrado_por.tipo !== "humano") motivos.push("En el almacén real solo una persona incorpora lecciones.");
+  const ev = evaluarLeccion(leccion, { ahora, lecciones });
+  const r = (id) => ev.reglas.find((x) => x.id === id);
+  const exigir = (id, que) => (r(id).estado === "cumple" ? cumple.push(`${que}: ${r(id).motivo}`) : motivos.push(`${que} (${id}, ${r(id).estado}): ${r(id).motivo}`));
+  exigir("R01", "Procedencia y revisión humana independiente documentada");
+  exigir("R02", "Evidencia primaria con referencia");
+  exigir("R07", "Sin datos privados ni estrategia");
+  const L = Array.isArray(leccion?.evidencia) ? leccion.evidencia : [];
+  if (!L.some((x) => x && (/^[0-9a-f]{64}$/.test(x.sha256 ?? "") || (typeof x.commit === "string" && /^[0-9a-f]{7,40}$/i.test(x.commit))) && !/^(texto_ia|inventario_ia|resumen_ia|auditoria_ia|memoria_ia)$/.test(x.tipo ?? "")))
+    motivos.push("Procedencia no verificable: ninguna evidencia primaria trae commit o huella SHA-256 para comprobar que es la misma.");
+  else cumple.push("Hay evidencia primaria con commit o huella SHA-256.");
+  return { admisible: motivos.length === 0, motivos, cumple, evaluacion: ev };
+}
+
+/** Agrega una versión de lección: {registro, registrado_en, registrado_por}. En el almacén real, la primera versión pasa por admisionReal. */
 export function agregarLeccion(doc, sobre) {
   return agregar(doc, "lecciones", sobre, async (s, ent) => {
     const err = validarLeccion(s.registro).errores;
     if (err.length) return err;
     if (s.registro.id.startsWith("demo-") !== (doc.es_demo === true)) return [doc.es_demo ? "Registro de prueba: el id debe empezar con «demo-»." : "Registro real: un id «demo-…» no se admite."];
     const previa = [...ent].reverse().find((e) => e.registro?.id === s.registro.id)?.registro;
-    return previa ? pasoLeccion(previa, s.registro) : [];
+    if (previa) return pasoLeccion(previa, s.registro);
+    if (doc.es_demo === true) return [];
+    const ultimas = new Map(ent.map((e) => [e.registro?.id, e.registro]));
+    const adm = admisionReal(s.registro, { ahora: Date.parse(s.registrado_en), lecciones: ultimas, registrado_por: s.registrado_por });
+    return adm.admisible ? [] : ["No entra al almacén real (se queda como candidata):", ...adm.motivos];
   });
 }
 
 /** Agrega una versión de recomendación, con sus reglas de paso (aprobación humana, bloqueos, T12). */
-export function agregarRecomendacion(docRec, sobre, docLecciones) {
+export function agregarRecomendacion(docRec, sobre, docLecciones, { politica = null } = {}) {
   return agregar(docRec, "recomendaciones", sobre, async (s, ent) => {
     const err = validarRecomendacion(s.registro).errores;
     if (err.length) return err;
     if (s.registro.id.startsWith("demo-") !== (docRec.es_demo === true)) return [docRec.es_demo ? "Registro de prueba: el id debe empezar con «demo-»." : "Registro real: un id «demo-…» no se admite."];
     const previa = [...ent].reverse().find((e) => e.registro?.id === s.registro.id)?.registro ?? null;
     const nx = await leerNexus({ lecciones: docLecciones, recomendaciones: null });
-    return validarPaso(previa, s.registro, { lecciones: leccionesHasta([...nx.historial.values()].flat(), Date.parse(s.registrado_en)), ahora: Date.parse(s.registrado_en) });
+    return [...validarPaso(previa, s.registro, leccionesHasta([...nx.historial.values()].flat(), Date.parse(s.registrado_en))),
+      ...revisarDecision(previa, s.registro, s, { es_demo: docRec.es_demo === true, politica })];
   });
 }
 
@@ -135,12 +191,16 @@ export function consultarLecciones(nexus, { proyecto = null, estado = null, text
 }
 
 /** Modelo para la oficina Nexus: todo lo que se muestra sale de aquí. */
+/** Contexto completo para evaluar con el gerente (lecciones, recomendaciones y desde qué revisión cuenta cada una). */
+export const contextoGerente = (nexus, ahora) => ({ ahora, lecciones: nexus.ultimas, recomendaciones: new Map(nexus.recomendaciones.map((x) => [x.registro.id, x.registro])), revisionesDesde: nexus.desde ?? new Map() });
+
 export function resumirNexus(nexus, { ahora = Date.now() } = {}) {
   const ahoraMs = ahora instanceof Date ? ahora.getTime() : ahora;
-  const lecciones = consultarLecciones(nexus).map((l) => ({ leccion: l, versiones: nexus.historial.get(l.id)?.length ?? 1, evaluacion: evaluarLeccion(l, { ahora: ahoraMs, lecciones: nexus.ultimas }) }));
+  const ctx = contextoGerente(nexus, ahoraMs);
+  const lecciones = consultarLecciones(nexus).map((l) => ({ leccion: l, versiones: nexus.historial.get(l.id)?.length ?? 1, evaluacion: evaluarLeccion(l, { ...ctx, revisionDesde: ctx.revisionesDesde.get(l.id) ?? 0 }) }));
   const alertas = lecciones.flatMap((x) => x.evaluacion.reglas.filter((r) => r.estado === "no_cumple").map((r) => ({ leccion_id: x.leccion.id, regla: r })));
   const recomendaciones = nexus.recomendaciones.map(({ registro: r, versiones }) => {
-    const ev = evaluarRecomendacion(r, { lecciones: nexus.ultimas, ahora: ahoraMs });
+    const ev = evaluarRecomendacion(r, ctx);
     return { registro: r, versiones: versiones.length, evaluacion: ev, situacion: situacion(r), espera_decision: r.estado === "pendiente_aprobacion" };
   });
   const cuenta = (f) => lecciones.filter(f).length;

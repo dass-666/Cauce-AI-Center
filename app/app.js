@@ -14,7 +14,9 @@ import { ESTADO_PISO, crearBitacora, resumirEmpresa, resumirProyecto } from "./n
 import { dibujarSala } from "./vistas/sala.js";
 import { agruparPisos } from "./nucleo/pisos.js";
 import { leerConfiguracion } from "./configuracion.js";
-import { leerNexus, resumirNexus } from "./nexus/registro.js";
+import { leerNexus, resumirNexus, admisionReal, contextoGerente } from "./nexus/registro.js";
+import { verificarContinuidad, anclaDe } from "./nexus/integridad.js";
+import { evaluarLeccion } from "./nexus/gerente.js";
 import { dibujarNexus } from "./vistas/nexus.js";
 
 const INTERVALO_MS = 30_000;
@@ -224,20 +226,36 @@ function ponerNexus(abrir) {
 }
 
 async function cargarRegistroNexus() {
-  const [lr, rr] = await Promise.all([cargarJSON("datos/nexus/registro/lecciones.json"), cargarJSON("datos/nexus/registro/recomendaciones.json")]);
-  if (lr.tipo === "ok") return { fuente: "real", lecciones: lr.datos, recomendaciones: rr.tipo === "ok" ? rr.datos : null, aviso: lr.tipo === "ok" && rr.tipo !== "ok" && rr.tipo !== "no_encontrado" ? rr.mensaje : null };
+  const [lr, rr, mr] = await Promise.all([cargarJSON("datos/nexus/registro/lecciones.json"), cargarJSON("datos/nexus/registro/recomendaciones.json"), cargarJSON("datos/nexus/registro/manifiesto.json")]);
+  if (lr.tipo === "ok") return { fuente: "real", lecciones: lr.datos, recomendaciones: rr.tipo === "ok" ? rr.datos : { contrato: "cauce.nexus.registro-recomendaciones", version_contrato: "0.2", es_demo: false, entradas: [] }, manifiesto: mr.tipo === "ok" ? mr.datos : null, aviso: rr.tipo !== "ok" && rr.tipo !== "no_encontrado" ? rr.mensaje : null };
   if (lr.tipo !== "no_encontrado") return { fuente: "real", lecciones: null, recomendaciones: null, aviso: lr.mensaje };
   const [ld, rd] = await Promise.all([cargarJSON("datos/nexus/demo/lecciones.json"), cargarJSON("datos/nexus/demo/recomendaciones.json")]);
   return { fuente: "demo", lecciones: ld.tipo === "ok" ? ld.datos : null, recomendaciones: rd.tipo === "ok" ? rd.datos : null, aviso: ld.tipo === "ok" ? null : ld.mensaje };
 }
 
+/** Candidatas: borradores de lecciones reales que NO están en el almacén (datos/nexus/candidatas/indice.json). */
+async function cargarCandidatas() {
+  const ind = await cargarJSON("datos/nexus/candidatas/indice.json");
+  if (ind.tipo !== "ok" || !Array.isArray(ind.datos?.archivos)) return [];
+  const leidas = await Promise.all(ind.datos.archivos.filter((a) => typeof a === "string" && /^[\w./-]+\.json$/.test(a) && !a.includes("..")).map(async (a) => ({ archivo: a, r: await cargarJSON(`datos/nexus/candidatas/${a}`) })));
+  return leidas.filter((x) => x.r.tipo === "ok").map((x) => ({ archivo: x.archivo, leccion: x.r.datos }));
+}
+
 async function leerYDibujarNexus() {
-  const docs = await cargarRegistroNexus();
+  const [docs, politica, crudas] = await Promise.all([cargarRegistroNexus(), cargarJSON("datos/nexus/politica.json"), cargarCandidatas()]);
   nexusDocs = docs;
-  const nx = await leerNexus({ lecciones: docs.lecciones, recomendaciones: docs.recomendaciones });
+  const nx = await leerNexus({ lecciones: docs.lecciones, recomendaciones: docs.recomendaciones, politica: politica.tipo === "ok" ? politica.datos : null });
   if (docs.aviso) nx.errores.unshift(docs.aviso);
+  const ahora = Date.now();
+  // Integridad: solo el almacén real tiene manifiesto (los datos de prueba se regeneran con herramientas/nexus-demo.mjs).
+  const integridad = docs.fuente === "real" && docs.lecciones ? await verificarContinuidad({ lecciones: docs.lecciones, recomendaciones: docs.recomendaciones }, docs.manifiesto) : null;
+  if (integridad && docs.manifiesto) integridad.ancla = await anclaDe(docs.manifiesto);
+  const ctx = contextoGerente(nx, ahora);
+  const real = docs.fuente === "real" ? nx.ultimas : new Map();
+  const candidatas = crudas.filter((x) => !real.has(x.leccion?.id)).map((x) => ({ ...x, evaluacion: evaluarLeccion(x.leccion, { ...ctx, lecciones: new Map([...real, [x.leccion?.id, x.leccion]]) }), admision: admisionReal(x.leccion, { ahora, lecciones: real }) }))
+    .filter((x) => x.evaluacion && x.leccion?.hallazgo);
   if (!nexusAbierto()) return;
-  dibujarNexus($("#nexus"), resumirNexus(nx, { ahora: Date.now() }), { alCerrar: () => ponerNexus(false), fuente: docs.fuente, docLecciones: docs.lecciones });
+  dibujarNexus($("#nexus"), resumirNexus(nx, { ahora }), { alCerrar: () => ponerNexus(false), fuente: docs.fuente, docLecciones: docs.lecciones, docsRegistro: docs, manifiesto: docs.manifiesto ?? null, integridad, candidatas, ahoraMs: ahora });
 }
 
 function empresaActual() {
