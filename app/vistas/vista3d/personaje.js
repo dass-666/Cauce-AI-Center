@@ -94,7 +94,7 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
   torso.add(cabeza);
 
   const sombra = new THREE.Mesh(geo.sombra, recursos.agregar(new THREE.MeshBasicMaterial({
-    map: texturaSombra, transparent: true, depthWrite: false, opacity: 0.55,
+    map: texturaSombra, transparent: true, depthWrite: false, opacity: 0.55, userData: { sinBrillo: true },
   })));
   sombra.position.y = 0.012;
   raiz.add(sombra);

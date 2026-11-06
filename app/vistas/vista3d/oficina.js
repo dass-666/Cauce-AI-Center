@@ -249,6 +249,10 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
       for (const per of personajes) per.paso(dt, reloj);
       torreta.paso(reloj);
     },
+    /** Rendimiento UHD: ¿algo del cuarto se mueve? (personaje a la vista, entrando o saliendo, o torreta que parpadea) */
+    enMovimiento() {
+      return torreta.parpadea || personajes.some((p) => p.raiz.visible || p.accion === "entrar" || p.accion === "salir");
+    },
     seleccionar(sel) {
       for (const per of personajes) per.seleccionar(sel?.tipo === "agente" && sel.id === per.id);
       letrero.resaltar(sel?.tipo === "departamento" && sel.id === dep.id);
@@ -406,6 +410,7 @@ function crearTorreta(recursos, caja) {
       material.color.setHex(vigentes ? color : 0x6b6f7a); // datos viejos: torreta gris, sin parpadeo
       if (!vigentes) material.color.lerp(new THREE.Color(color), 0.35);
     },
+    get parpadea() { return parpadea && grupo.visible; },
     paso(reloj) {
       if (parpadea) material.color.setHex(Math.floor(reloj * 2) % 2 ? color : 0x3a1010);
     },

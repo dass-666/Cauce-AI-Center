@@ -51,7 +51,7 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
   m.acento = m.remate; // color de identidad del proyecto (cambia en actualizar)
   m.pantallaLampara = M(0xffe6b8);
   // Las ventanas muestran el color del cielo según la hora (iluminacion.js): no se fusionan con lo demás.
-  const matVentana = recursos.agregar(new THREE.MeshBasicMaterial({ color: OFICINA.vidrio }));
+  const matVentana = recursos.agregar(new THREE.MeshBasicMaterial({ color: OFICINA.vidrio, userData: { sinBrillo: true } })); // el vidrio no brilla (brillo ligero)
   const luzPasillo = recursos.agregar(new THREE.MeshBasicMaterial({ color: OFICINA.brillo }));
 
   // Losa, piso general y piso de la recepción.

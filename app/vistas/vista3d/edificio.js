@@ -90,6 +90,11 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
       arquitectura?.paso();
       return animados;
     },
+    /** Rendimiento UHD: ¿hay algo que se mueva en algún cuarto? Si no, la imagen no cambia entre cuadros. */
+    enMovimiento() {
+      for (const c of cuartos.values()) if (c.oficina.enMovimiento()) return true;
+      return false;
+    },
     /** Fase L: dónde está el escritorio de un agente (aunque no tenga personaje), en coordenadas de la escena. */
     posicionPuesto(id) {
       for (const c of cuartos.values()) {

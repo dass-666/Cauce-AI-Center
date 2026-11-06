@@ -17,6 +17,9 @@ import { vecinoDe, resumenDepartamento } from "./navegacion.js";
 import { siguienteConAtencion } from "../../nucleo/sala.js";
 import { crearMinimapa } from "./minimapa.js";
 import { crearBrillo } from "./brillo.js";
+import { tipoBrillo } from "./brillo-tipo.js";
+import { hayQueDibujar } from "./ciclo.js";
+import { crearTiempoGpu } from "./tiempo-gpu.js";
 import { escucharDeslizar } from "./gestos.js";
 import { calcularEncuadre, aPixeles, dentro } from "./encuadre.js";
 import { crearCapaEtiquetas } from "./etiquetas-dom.js";
@@ -42,7 +45,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     antialias: !movil,
     powerPreference: movil ? "low-power" : "high-performance",
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, movil ? 1.25 : 2));
+  // Rendimiento UHD: ?px=1 (o 1.25, 1.5, 2) fija la densidad de píxeles para diagnosticar si el límite son los
+  // píxeles (escala de Windows al 125–150 %). Sin el parámetro, como siempre.
+  const pxPedido = Number(new URLSearchParams(location.search).get("px"));
+  const pxMaximo = movil ? 1.25 : 2;
+  renderer.setPixelRatio(pxPedido >= 0.5 && pxPedido <= 2 ? pxPedido : Math.min(window.devicePixelRatio || 1, pxMaximo));
   renderer.info.autoReset = false;
 
   const raiz = el("div", { clase: "vista3d", role: "group", "aria-label": "Oficina 3D" });
@@ -130,6 +137,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     compartido.matPiso.emissive.setRGB(0.16 * luzActual.noche, 0.11 * luzActual.noche, 0.06 * luzActual.noche);
     for (const m of compartido.anillosEstado.values()) m.opacity = 0.5 + 0.35 * luzActual.noche;
     escenario?.aplicarLuz(luzActual);
+    redibujar = true;
     luzFija.parentElement.title = luzFija.checked ? "Luz fija activada" : `Luz de la hora local (${luzActual.nombre}). Marca para dejarla fija.`;
   }
   const relojLuz = setInterval(aplicarLuz, 60_000);
@@ -157,7 +165,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   const compartido = {
     geoPersonaje: crearGeometriasPersonaje(compartidos),
     texturaSombra,
-    matSombra: compartidos.agregar(new THREE.MeshBasicMaterial({ map: texturaSombra, transparent: true, depthWrite: false, opacity: 0.4 })),
+    matSombra: compartidos.agregar(Object.assign(new THREE.MeshBasicMaterial({ map: texturaSombra, transparent: true, depthWrite: false, opacity: 0.4 }), { userData: { sinBrillo: true } })),
     geoSombraEscritorio: compartidos.agregar(new THREE.PlaneGeometry(1.8, 1.4).rotateX(-Math.PI / 2)),
     burbujas: crearBurbujas(compartidos, ESTADOS),
     catalogo: crearCatalogoKenney(compartidos),
@@ -190,17 +198,27 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let depMostrado = null;
   let mitadAlto = 4;
   let destruida = false;
+  const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0";
+  let redibujar = true;      // algo cambió fuera del ciclo (datos, tamaño, luz, brillo): dibujar el próximo cuadro
+  let ultimoRender = 0;
+  let cuadrosOmitidos = 0;
+  let ultimoTextoMedir = 0;
 
   // --- Brillo (bloom): brillo.js. Solo escritorio, apagado por defecto. ---
   const brilloFx = crearBrillo({ renderer, escena, camara, alCambiar: () => ajustarTamano() });
   brillo.checked = !movil && leer("cauce.brillo3d") === "1"; // apagado por defecto: se enciende a mano
+  // Rendimiento UHD: «ligero» (por defecto) o «completo» (el anterior). ?brillo=completo para comparar.
+  const tipoDeBrillo = tipoBrillo(location.search, leer("cauce.brillo3d.tipo"));
+  if (new URLSearchParams(location.search).has("brillo")) guardar("cauce.brillo3d.tipo", tipoDeBrillo);
   brillo.addEventListener("change", () => {
     guardar("cauce.brillo3d", brillo.checked ? "1" : "0");
     aplicarBrillo();
   });
   async function aplicarBrillo() {
     // Si falla la descarga, queda apagado: la oficina funciona igual sin brillo.
-    if (await brilloFx.activar(brillo.checked && !movil) === "fallo") brillo.checked = false;
+    if (await brilloFx.activar(brillo.checked && !movil, tipoDeBrillo) === "fallo") brillo.checked = false;
+    redibujar = true;
+    if (brilloFx.activo && escenario) brilloFx.marcar(escenario.grupo);
   }
   aplicarBrillo();
 
@@ -209,6 +227,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const w = Math.max(1, raiz.clientWidth);
     const h = Math.max(1, raiz.clientHeight);
     renderer.setSize(w, h, false);
+    redibujar = true;
     brilloFx.setSize(w, h);
     const aspecto = w / h;
     camara.top = mitadAlto;
@@ -275,6 +294,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
    */
   function encuadrar({ suave = false } = {}) {
     if (!escenario) return;
+    redibujar = true;
     const { minX, maxX, minZ, maxZ } = escenario.limites;
     const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
     if (!suave) {
@@ -593,6 +613,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let reloj = 0;
   let ultimaZona = 0;
   const medidor = crearMedidor({ ventana: 20 });
+  const tiempoGpu = medir ? crearTiempoGpu(renderer.getContext()) : null; // solo con ?medir=1
   let brilloApagadoSolo = null;
 
   function cuadro(t) {
@@ -602,21 +623,41 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const dt = anterior ? Math.min(0.1, (t - anterior) / 1000) : 0;
     anterior = t;
     reloj += dt;
+    const camaraAnimada = Boolean(animCam || siguiendo);
     moverCamara(dt);
     seguirCamara(dt);
-    controles.update();
+    const camaraCambio = controles.update() || camaraAnimada;
+    if (escenario) ultimoAnimados = escenario.paso(dt, reloj, hzDe);
+    // Rendimiento UHD: si nada se mueve (sin personajes a la vista, cámara quieta, sin torreta que parpadee y sin
+    // cambios de datos, tamaño o luz), la imagen sería idéntica: no se vuelve a dibujar. Por seguridad se
+    // redibuja al menos una vez por segundo (p. ej. el reloj de pared). Con ?quieta=0 se desactiva para medir.
+    if (!hayQueDibujar({ ahorro: ahorroQuietud, camaraCambio, redibujar, hayEscenario: Boolean(escenario), enMovimiento: escenario?.enMovimiento() ?? true, msDesdeUltimo: t - ultimoRender })) {
+      cuadrosOmitidos++; medidor.pausa();
+      // Con ?medir=1 el recuadro se actualiza igual (si no, seguiría mostrando la vista anterior).
+      if (medir && t - ultimoTextoMedir > 500) { ultimoTextoMedir = t; medidasTexto.textContent = textoMedicion(metricas()); }
+      return;
+    }
+    let forzado = redibujar;
+    redibujar = false;
+    ultimoRender = t;
     if (escenario) {
-      ultimoAnimados = escenario.paso(dt, reloj, hzDe);
-      if (t - ultimaZona > 300) { ultimaZona = t; zonaLibreCache = zonaLibre(); }
+      if (t - ultimaZona > 300) {
+        ultimaZona = t;
+        const z = zonaLibre();
+        if (!zonaLibreCache || ["w", "h", "arriba", "abajo", "izq", "der"].some((k) => z[k] !== zonaLibreCache[k])) forzado = true;
+        zonaLibreCache = z;
+      }
       colocarTarjeta();
       if (escenario.modo === "edificio") {
-        colocarEtiquetas();
+        // Las etiquetas solo dependen de la cámara y de la zona libre: si no cambiaron, se quedan donde están.
+        if (camaraCambio || forzado) colocarEtiquetas();
         if (t - ultimoMinimapa > 250) { ultimoMinimapa = t; dibujarMinimapa(); }
       }
     }
     renderer.info.reset();
-    if (brilloFx.composer) brilloFx.composer.render(dt);
-    else renderer.render(escena, camara);
+    tiempoGpu?.empezar();
+    if (!brilloFx.render(dt)) renderer.render(escena, camara);
+    tiempoGpu?.terminar();
     contarCuadro(t);
   }
   // Optimización: el departamento enfocado se anima en cada cuadro; los demás menos veces por
@@ -637,13 +678,14 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const w = raiz.clientWidth, h = raiz.clientHeight;
     // En celular la barra de abajo es fija: ninguna etiqueta debe quedar debajo de ella (ni al bajar la página).
     const limite = barraMovil && !barraMovil.nodo.hidden ? Math.min(h, cajaEnRaiz(barraMovil.nodo.querySelector(".movil-barra")).arriba - 4) : h;
-    capaEtiquetas.colocar(camara, escenario, { w, h: limite, alto: h, arriba: zonaLibre().arriba });
+    capaEtiquetas.colocar(camara, escenario, { w, h: limite, alto: h, arriba: (zonaLibreCache ?? zonaLibre()).arriba });
   }
 
   let pausada = false; // la sala de control tapa la vista: no se dibuja (fase K)
   function arrancar() {
     if (destruida || pausada || idCuadro || document.hidden) return;
     anterior = 0;
+    redibujar = true;
     medidor.pausa();
     idCuadro = requestAnimationFrame(cuadro);
   }
@@ -657,17 +699,17 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   function contarCuadro(t) {
     // Cada medición es de una sola configuración: si cambia el brillo, el modo, el enfoque o el
     // tamaño del lienzo, la ventana de 20 s empieza de nuevo.
-    medidor.vigilar(firmaMedicion({
+    if (medidor.vigilar(firmaMedicion({
       brillo: brillo.checked ? "brillo" : "sin brillo",
       modo: escenario?.modo ?? modo,
       enfoque: escenario?.modo === "edificio" ? (enfocado ?? "") : "",
       tamano: `${lienzo.width}x${lienzo.height}`,
-    }), t);
+    }), t)) tiempoGpu?.reiniciar();
     if (!medidor.cuadro(t)) return;
     const cps = medidor.valor;
     // Si con brillo el equipo no sostiene 40 cuadros por segundo, se apaga solo (no se guarda:
     // la próxima visita lo vuelve a intentar). Con ?medir=1 no se apaga, para poder medir su costo.
-    if (brilloFx.composer && !medir && t - brilloFx.desde > 3000 && cps < 40) {
+    if (brilloFx.activo && !medir && t - brilloFx.desde > 3000 && cps < 40) {
       brillo.checked = false;
       brilloApagadoSolo = cps;
       brillo.parentElement.title = `Se apagó solo: el equipo iba a ${cps} cuadros por segundo`;
@@ -681,8 +723,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     return `${i.fps} cps (prom. ${i.fps_promedio}, mín. ${i.fps_minimo} en ${i.segundos_medidos} s) · peor cuadro ${i.peor_cuadro_ms} ms · ${i.segundos_bajo_50} s bajo 50 cps\n` +
       `${vista}, ${i.personajes} personajes · ventana reiniciada por: ${i.reiniciado_por}\n` +
       `${i.llamadas} llamadas · ${i.triangulos} triángulos · ${i.geometrias} geometrías · ${i.texturas} texturas\n` +
-      `px ${i.pixelRatio} · ${i.tamano.join("×")} · brillo ${i.brillo ? "encendido" : i.brillo_apagado_solo ? `apagado solo (${i.brillo_apagado_solo} cps)` : "apagado"}` +
-      `${i.movil ? " · modo celular" : ""}\nGPU: ${i.gpu}`;
+      `px ${i.pixelRatio} · ${i.tamano.join("×")} · brillo ${i.brillo ? `encendido (${i.brillo_tipo})` : i.brillo_apagado_solo ? `apagado solo (${i.brillo_apagado_solo} cps)` : "apagado"}` +
+      `${i.movil ? " · modo celular" : ""}` +
+      `\nTarjeta gráfica: ${i.gpu_ms !== null ? `${i.gpu_ms} ms por cuadro (peor ${i.gpu_ms_peor} ms)` : i.gpu_tiempo_disponible ? "midiendo…" : "tiempo no disponible en este navegador"}` +
+      `${i.escena_quieta && i.ahorro_quietud ? `\nEscena quieta: no se redibuja (${i.cuadros_omitidos_por_quietud} cuadros ahorrados); los cps no aplican` : ""}\nGPU: ${i.gpu}`;
   }
   let gpu = null;
   function nombreGpu() {
@@ -713,7 +757,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       texturas: renderer.info.memory.textures,
       pixelRatio: renderer.getPixelRatio(),
       movil,
-      brillo: Boolean(brilloFx.composer),
+      brillo: brilloFx.activo,
+      brillo_tipo: brilloFx.tipo,
       tamano: [lienzo.width, lienzo.height],
       cuadros_totales: r.cuadros_totales,
       departamento: depMostrado,
@@ -723,6 +768,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       modo: escenario?.modo ?? modo,
       personajes: escenario ? escenario.personajes().length : 0,
       animados_ultimo_cuadro: ultimoAnimados,
+      escena_quieta: Boolean(escenario) && !escenario.enMovimiento(),
+      gpu_ms: tiempoGpu?.resumen()?.promedio_ms ?? null,
+      gpu_ms_peor: tiempoGpu?.resumen()?.peor_ms ?? null,
+      gpu_tiempo_disponible: Boolean(tiempoGpu?.disponible),
+      cuadros_omitidos_por_quietud: cuadrosOmitidos,
+      ahorro_quietud: ahorroQuietud,
     };
   }
   // Solo con ?medir=1: ayuda a las pruebas automáticas a medir y a tocar a un personaje.
@@ -767,6 +818,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {
     modelo = m;
+    redibujar = true;
     const selAntes = ultimaSel;
     seleccion = sel;
     const deps = m.departamentos;
@@ -871,6 +923,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     dibujarMinimapa();
     actualizarBarraMovil();
     escenario?.seleccionar(sel);
+    if (brilloFx.activo && escenario) brilloFx.marcar(escenario.grupo); // qué brilla en el modo ligero
     actualizarEtiquetas(visibles, sel);
     ultimaSel = sel;
     dibujarTarjeta(m, sel);
@@ -993,6 +1046,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     quitarOficina();
     compartidos.liberar();
     brilloFx.destruir();
+    tiempoGpu?.destruir();
     controles.dispose();
     renderer.dispose();
     renderer.forceContextLoss();
