@@ -28,6 +28,9 @@ import { Recursos } from "./recursos.js";
 import { crearMedidor, firmaMedicion } from "./medidor.js";
 import { crearMobiliario } from "./mobiliario.js";
 import { crearHistorialCamara, claveSeleccion } from "./camara-historial.js";
+import { texturaDuela as duelaM, texturaAlfombra, texturaConcreto, texturaVinil, texturaAtlasPantallas, texturaResplandor } from "./texturas.js";
+import { intensidadAmbiente } from "./estilo-visual.js";
+import { duracionViaje, suavizarViaje } from "./viaje-camara.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
 const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométrica clásica)
@@ -134,7 +137,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     escena.background.setHex(luzActual.fondo);
     // De noche: las oficinas "con la luz encendida" (piso un poco más cálido que el pasillo) y anillos
     // de estado más visibles. No se tocan los materiales de los personajes.
-    compartido.matPiso.emissive.setRGB(0.16 * luzActual.noche, 0.11 * luzActual.noche, 0.06 * luzActual.noche);
+    for (const mp of Object.values(compartido.pisos)) mp.emissive.setRGB(0.16 * luzActual.noche, 0.11 * luzActual.noche, 0.06 * luzActual.noche);
     for (const m of compartido.anillosEstado.values()) m.opacity = 0.5 + 0.35 * luzActual.noche;
     escenario?.aplicarLuz(luzActual);
     redibujar = true;
@@ -152,6 +155,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   controles.maxAzimuthAngle = ANGULO_BASE + 0.8;
   controles.minZoom = 0.7;
   controles.maxZoom = 3;
+  // Fase M: con la rueda, el acercamiento va hacia donde apunta el ratón (no siempre al centro).
+  controles.zoomToCursor = !movil;
   if (movil) {
     // En celular la vista no gira: un dedo que se desliza a los lados cambia de departamento;
     // dos dedos acercan, alejan y mueven. En escritorio el giro sigue libre.
@@ -171,7 +176,16 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     catalogo: crearCatalogoKenney(compartidos),
     // Placa «HUMANO» de los puestos de personas (una textura para todo el edificio).
     matPlacaHumano: compartidos.agregar(new THREE.MeshBasicMaterial({ map: compartidos.agregar(texturaPlaca("HUMANO")), toneMapped: false })),
-    matPiso: compartidos.agregar(new THREE.MeshLambertMaterial({ map: compartidos.agregar(texturaDuela()) })),
+    // Fase M: pisos por tipo de trabajo (estilo-visual.js → pisoDeTema). Uno por tipo para todo el edificio.
+    pisos: {
+      duela: compartidos.agregar(new THREE.MeshLambertMaterial({ map: compartidos.agregar(duelaM()) })),
+      alfombra: compartidos.agregar(new THREE.MeshLambertMaterial({ map: compartidos.agregar(texturaAlfombra()) })),
+      concreto: compartidos.agregar(new THREE.MeshLambertMaterial({ map: compartidos.agregar(texturaConcreto()) })),
+      vinil: compartidos.agregar(new THREE.MeshLambertMaterial({ map: compartidos.agregar(texturaVinil()) })),
+    },
+    // Fase M: pantallas ambientales (pictogramas sin cifras). Sin luz propia: se atenúan con el color del material
+    // cuando el piso no tiene datos vigentes (intensidadAmbiente). No brillan con el brillo ligero.
+    matPantallaAmbiente: compartidos.agregar(new THREE.MeshBasicMaterial({ map: compartidos.agregar(texturaAtlasPantallas()), toneMapped: false, userData: { sinBrillo: true } })),
     // Un material por estado para el anillo bajo cada personaje (opacidad según la hora).
     anillosEstado: new Map(Object.entries(COLOR_ESTADO).map(([estado, color]) =>
       [estado, compartidos.agregar(new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false }))])),
@@ -181,6 +195,18 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     geoToque: compartidos.agregar(new THREE.BoxGeometry(1.4, 1.1, 1.9)),
     matToque: compartidos.agregar(new THREE.MeshBasicMaterial({ visible: false })),
     quieto: () => menosMovimiento.matches,
+  };
+  compartido.matPiso = compartido.pisos.duela; // el piso de siempre (cuartos sin tipo de piso)
+  // Fase M: resplandor de la pantalla sobre el escritorio, solo cuando la pantalla está encendida por evidencia
+  // (mismo color que la pantalla). Un material por color, compartido por todo el edificio.
+  const texturaBrillo = compartidos.agregar(texturaResplandor());
+  const resplandores = new Map();
+  compartido.geoResplandor = compartidos.agregar(new THREE.PlaneGeometry(1.1, 0.8).rotateX(-Math.PI / 2));
+  compartido.resplandor = (color) => {
+    if (!resplandores.has(color)) resplandores.set(color, compartidos.agregar(new THREE.MeshBasicMaterial({
+      map: texturaBrillo, color, transparent: true, depthWrite: false, opacity: 0.42, blending: THREE.AdditiveBlending, toneMapped: false, userData: { sinBrillo: true },
+    })));
+    return resplandores.get(color);
   };
 
   let escenario = null;    // edificio completo o un solo cuarto (edificio.js)
@@ -515,8 +541,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
 
   function moverCamara(dt) {
     if (!animCam) return;
-    animCam.t = menosMovimiento.matches ? 1 : Math.min(1, animCam.t + dt / 0.6); // "reducir movimiento" del sistema: sin viaje de cámara
-    const k = animCam.t * animCam.t * (3 - 2 * animCam.t);
+    // Fase M: la duración depende de la distancia y del cambio de acercamiento (0.45–0.9 s), con arranque y
+    // frenado suaves. «Reducir movimiento» del sistema: sin viaje de cámara.
+    animCam.duracion ??= duracionViaje(animCam.desde.distanceTo(animCam.hacia), animCam.zoomDesde, animCam.zoomHacia);
+    animCam.t = menosMovimiento.matches ? 1 : Math.min(1, animCam.t + dt / animCam.duracion);
+    const k = suavizarViaje(animCam.t);
     const nuevo = animCam.desde.clone().lerp(animCam.hacia, k);
     camara.position.add(nuevo.clone().sub(controles.target));
     controles.target.copy(nuevo);
@@ -823,6 +852,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     seleccion = sel;
     const deps = m.departamentos;
     raiz.dataset.conexion = m.conexion;
+    // Fase M: pantallas ambientales atenuadas si el piso no tiene datos vigentes (no sugieren que «todo funciona»).
+    const ambiente = intensidadAmbiente(m);
+    compartido.matPantallaAmbiente.color.setScalar(ambiente);
+    raiz.dataset.ambiente = String(ambiente);
     // Sin archivo leído no hay origen que mostrar: "REAL" solo cuando de verdad llegó un archivo real.
     const origen = m.es_demo ? "demo" : m.generado_en ? "real" : "sin";
     fuente.textContent = { demo: "DEMO", real: "REAL", sin: "SIN DATOS" }[origen];
@@ -1102,24 +1135,4 @@ function texturaRadial() {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(c);
-}
-
-/** Duela de madera dibujada una vez en un lienzo (sin imágenes descargadas). */
-function texturaDuela() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 128;
-  const ctx = c.getContext("2d");
-  const tonos = ["#a07a52", "#9a7450", "#a68058", "#97714c"];
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = tonos[i];
-    ctx.fillRect(0, i * 32, 128, 32);
-    ctx.fillStyle = "rgba(60,40,20,0.35)";
-    ctx.fillRect(0, i * 32, 128, 2);
-    ctx.fillRect(((i * 53) % 96) + 16, i * 32, 2, 32); // junta entre tablas
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
-  return t;
 }

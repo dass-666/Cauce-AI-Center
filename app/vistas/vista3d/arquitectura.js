@@ -10,6 +10,8 @@ import { dibujarIcono, hex } from "./iconos.js";
 import { fusionarEstaticos } from "./oficina.js";
 import { crearMobiliario } from "./mobiliario.js";
 import { estiloDe } from "./identidad.js";
+import { paletaDe } from "./estilo-visual.js";
+import { texturaSombraContacto } from "./texturas.js";
 
 const ALTO_EXTERIOR = 2.1;
 const VENTANA = { abajo: 0.75, arriba: 1.75, ancho: 1.6, pilar: 0.45 };
@@ -21,6 +23,7 @@ const VENTANA = { abajo: 0.75, arriba: 1.75, ancho: 1.6, pilar: 0.45 };
 export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyecto = null } = {}) {
   mob ??= crearMobiliario(recursos);
   const estilo = estiloDe(proyecto);
+  const pal = paletaDe(proyecto?.estilo); // fase M: paleta del proyecto (muros exteriores, pasillos, banqueta)
   const grupo = new THREE.Group();
   const M = (color, extra = {}) => recursos.agregar(new THREE.MeshLambertMaterial({ color, ...extra }));
   const caja = (w, h, d) => recursos.agregar(new THREE.BoxGeometry(w, h, d));
@@ -28,21 +31,27 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
   const W = plano.ancho, F = plano.fondo, E = 1.2;
 
   const m = {
-    losa: M(OFICINA.base),
-    pasillo: M(0x3a4258),
+    losa: M(pal.losa),
+    pasillo: M(pal.pasillo),
+    pasilloFranja: M(pal.pasilloFranja),
+    banqueta: M(pal.banqueta),
     recepcion: M(0x4a5474),
-    muro: M(0x323d60),
+    muro: M(pal.exterior),
+    muroBase: M(pal.exteriorBase),
     remate: M(COLOR_IDENTIDAD), // color de identidad del proyecto (se cambia en actualizar)
-    columna: M(0x283252),
-    madera: M(OFICINA.madera),
-    maderaOscura: M(OFICINA.maderaOscura),
-    sofa: M(0x5a6fa8),
+    columna: M(pal.exteriorBase),
+    madera: M(pal.madera),
+    maderaOscura: M(pal.maderaOscura),
+    sofa: M(pal.tela),
     maceta: M(OFICINA.maceta),
     hojas: M(OFICINA.planta),
-    tapete: M(0x2a3150),
-    metal: M(OFICINA.metal),
-    silla: M(OFICINA.silla),
+    hojasOscuras: M(0x2f6e45),
+    tronco: M(0x5a4030),
+    tapete: M(pal.tapete),
+    metal: M(pal.metal),
+    silla: M(pal.silla),
     claro: M(0xdfe4ee),
+    corniza: M(pal.muroRemate ?? 0xe6e2da),
     vidrio: recursos.agregar(new THREE.MeshLambertMaterial({ color: OFICINA.vidrio, transparent: true, opacity: 0.18, depthWrite: false })),
   };
   m.remate.userData.vivo = true; // cambia al color de identidad del proyecto: no se fusiona por color de vértice
@@ -56,7 +65,11 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
 
   // Losa, piso general y piso de la recepción.
   poner(caja(W + E * 2, 0.4, F + E * 2), m.losa, 0, -0.25, 0);
+  // Fase M: banqueta clara alrededor (el edificio se lee como una pieza sobre su terreno) con borde oscuro.
+  poner(caja(W + E * 2 - 0.16, 0.02, F + E * 2 - 0.16), m.banqueta, 0, -0.045, 0);
   poner(caja(W + 0.6, 0.04, F + 0.6), m.pasillo, 0, -0.06, 0);
+  // Pasillos con una franja central más clara (alfombra de tránsito) que orienta el recorrido.
+  for (const p of plano.pasillos) poner(caja(p.ancho - 0.6, 0.012, 1.1), m.pasilloFranja, p.x, -0.034, p.z);
   const r = plano.recepcion;
   if (r) {
     // Fase L: piso de baldosa con los tonos del estilo del proyecto (una textura chica que se repite).
@@ -78,6 +91,11 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
     poner(geo(largo, VENTANA.abajo), m.muro, ...en(0, VENTANA.abajo / 2));
     poner(geo(largo, ALTO_EXTERIOR - VENTANA.arriba), m.muro, ...en(0, (ALTO_EXTERIOR + VENTANA.arriba) / 2));
     poner(geo(largo + 0.1, 0.08), m.remate, ...en(0, ALTO_EXTERIOR + 0.04));
+    // Fase M: zócalo oscuro afuera, cornisa clara arriba y alféizar bajo las ventanas: el muro tiene acabados.
+    const gruesa = (l, h, d) => (eje === "x" ? caja(l, h, d) : caja(d, h, l));
+    poner(gruesa(largo + 0.04, 0.22, t + 0.06), m.muroBase, ...en(0, 0.11));
+    poner(gruesa(largo + 0.16, 0.06, t + 0.14), m.corniza, ...en(0, ALTO_EXTERIOR + 0.11));
+    poner(gruesa(largo, 0.04, t + 0.1), m.corniza, ...en(0, VENTANA.abajo - 0.02));
     const altoV = VENTANA.arriba - VENTANA.abajo;
     poner(eje === "x" ? caja(largo, altoV, 0.04) : caja(0.04, altoV, largo), matVentana, ...en(0, VENTANA.abajo + altoV / 2));
     const paso = VENTANA.ancho + VENTANA.pilar;
@@ -98,6 +116,30 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
   }
   poner(caja(0.18, 0.25, F + 1.0), m.muro, W / 2 + 0.5, 0.125, 0);
   poner(caja(2.4, 0.02, 1.0), m.tapete, (entrada.desde + entrada.hasta) / 2, 0.0, F / 2 + 0.3);
+  // Fase M: frente del edificio: escalón de la entrada, árboles en jardineras, bancas y faroles (decoración fija).
+  {
+    const cx = (entrada.desde + entrada.hasta) / 2;
+    poner(caja(3.2, 0.06, 0.5), m.corniza, cx, -0.02, F / 2 + 1.0);
+    const zF = F / 2 + 0.85;
+    const geoJ = caja(0.7, 0.3, 0.7), geoT = caja(0.1, 0.5, 0.1);
+    const copa = recursos.agregar(new THREE.IcosahedronGeometry(0.42, 0)), copa2 = recursos.agregar(new THREE.IcosahedronGeometry(0.3, 0));
+    const arbol = (x, z) => {
+      poner(geoJ, m.muroBase, x, 0.1, z);
+      poner(geoT, m.tronco, x, 0.5, z);
+      poner(copa, m.hojasOscuras, x, 0.95, z);
+      poner(copa2, m.hojas, x + 0.12, 1.22, z - 0.05);
+    };
+    const xs = [-W / 2 + 0.6, W / 2 - 0.6, cx - 3.2, cx + 3.2].filter((x) => x > -W / 2 + 0.3 && x < W / 2 - 0.3);
+    const usados = [];
+    for (const x of xs) if (usados.every((u) => Math.abs(u - x) > 1.6) && Math.abs(x - cx) > 2.4) { arbol(x, zF); usados.push(x); }
+    const farol = (x, z) => {
+      poner(caja(0.06, 1.3, 0.06), m.metal, x, 0.65, z);
+      poner(caja(0.18, 0.12, 0.18), m.pantallaLampara ?? m.claro, x, 1.34, z);
+    };
+    farol(cx - 1.9, zF + 0.15); farol(cx + 1.9, zF + 0.15);
+    const banca = (x, z) => { poner(caja(1.0, 0.06, 0.34), m.madera, x, 0.3, z); for (const dx of [-0.4, 0.4]) poner(caja(0.06, 0.28, 0.3), m.metal, x + dx, 0.14, z); };
+    if (usados.length) for (const u of usados.slice(0, 2)) banca(u + (u < cx ? 1.2 : -1.2), zF + 0.05);
+  }
   // Fase L: entrada principal: puertas de cristal abiertas, marquesina baja con el nombre del proyecto y una luz
   // con el estado de conexión (el mismo dato del modelo; no indica actividad).
   const ex = (entrada.desde + entrada.hasta) / 2, ez = F / 2 + 0.5;
@@ -175,7 +217,22 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
   const charcos = [];
   for (const p of plano.pasillos) for (let x = -p.ancho / 2 + 3; x < p.ancho / 2 - 1; x += 6) charcos.push([x, p.z, 2.6]);
   if (r) for (const dx of [-1, 0, 1]) if (Math.abs(dx) * 5 < r.ancho / 2 - 1) charcos.push([r.x + dx * 5, r.z + 0.6, 3.4]);
-  if (charcos.length) grupo.add(crearCharcosLuz(charcos, recursos));
+  // Fase M: luz cálida de interiores en cada departamento (zona de escritorios). Ambientación fija: igual con o
+  // sin actividad; de noche se nota más (aplicarLuz).
+  for (const c of cuartos) for (let x = -c.ancho / 2 + 3.2; x < c.ancho / 2 - 1.5; x += 6.4) charcos.push([c.x + x, c.z - c.fondo / 2 + 2.3, 3.6]);
+  let matCharcos = null;
+  if (charcos.length) { const malla = crearCharcosLuz(charcos, recursos); matCharcos = malla.material; grupo.add(malla); }
+  // Fase M: sombras de contacto (oclusión falsa) al pie de los muros: tiras con degradado, una sola llamada de
+  // dibujo para todo el edificio. Dan profundidad sin sombras en tiempo real.
+  const tiras = [];
+  for (const c of cuartos) {
+    tiras.push({ x: c.x, z: c.z - c.fondo / 2, largo: c.ancho, ancho: 0.5, dir: "+z" });
+    tiras.push({ x: c.x - c.ancho / 2, z: c.z, largo: c.fondo, ancho: 0.5, dir: "+x" });
+  }
+  tiras.push({ x: 0, z: xFondo + 0.11, largo: W + 1, ancho: 0.8, dir: "+z" });
+  tiras.push({ x: xIzq + 0.11, z: 0, largo: F + 1, ancho: 0.8, dir: "+x" });
+  if (r) tiras.push({ x: r.x, z: r.z - r.fondo / 2 + 0.48, largo: Math.min(r.ancho - 1, 6), ancho: 0.6, dir: "+z" });
+  grupo.add(crearSombrasContacto(tiras, recursos));
 
   fusionarEstaticos(grupo, recursos);
 
@@ -191,7 +248,10 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
     },
     paso() { reloj?.mover(new Date()); },
     // Fase L: la marquesina repite nombre y conexión del modelo (y se redibuja solo si cambian).
-    aplicarLuz(luz) { matVentana.color.setHex(luz.ventana); },
+    aplicarLuz(luz) {
+      matVentana.color.setHex(luz.ventana);
+      if (matCharcos) matCharcos.opacity = 0.26 + 0.22 * (luz.noche ?? 0); // de noche la luz interior se nota más
+    },
   };
 }
 
@@ -446,6 +506,27 @@ function texturaBaldosa(estilo) {
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
   return t;
+}
+
+/** Fase M: tiras de sombra de contacto (degradado) junto a muros; dir = hacia dónde se aclara. Una sola malla. */
+function crearSombrasContacto(lista, recursos) {
+  const geos = lista.map(({ x, z, largo, ancho, dir }) => {
+    const g = new THREE.PlaneGeometry(dir === "+z" ? largo : ancho, dir === "+z" ? ancho : largo).rotateX(-Math.PI / 2);
+    const uv = g.attributes.uv, pos = g.attributes.position;
+    for (let i = 0; i < uv.count; i++) {
+      // v = 0 junto al muro (oscuro) y 1 al otro lado (transparente).
+      const v = dir === "+z" ? (pos.getZ(i) > 0 ? 1 : 0) : (pos.getX(i) > 0 ? 1 : 0);
+      uv.setXY(i, 0.5, v);
+    }
+    return g.translate(dir === "+z" ? x : x + ancho / 2, 0.005, dir === "+z" ? z + ancho / 2 : z);
+  });
+  const malla = new THREE.Mesh(recursos.agregar(mergeSimple(geos)), recursos.agregar(new THREE.MeshBasicMaterial({
+    map: recursos.agregar(texturaSombraContacto()), transparent: true, depthWrite: false, opacity: 0.8, userData: { sinBrillo: true },
+  })));
+  malla.userData.dinamico = true;
+  malla.renderOrder = 1;
+  malla.name = "sombras-contacto";
+  return malla;
 }
 
 /** Fase L: charcos de luz (planos con degradado radial, suma de color). Todos en una sola malla. */

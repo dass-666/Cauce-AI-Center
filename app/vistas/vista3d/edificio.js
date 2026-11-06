@@ -22,7 +22,7 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
 
   if (modo === "individual") {
     const dep = deps[0];
-    const oficina = crearOficina(dep, modelo, compartido, { acento: acentoDe(dep), tema: temaDe(dep) });
+    const oficina = crearOficina(dep, modelo, compartido, { acento: acentoDe(dep), tema: temaDe(dep), estilo: modelo.proyecto.estilo });
     grupo.add(oficina.grupo);
     cuartos.set(dep.id, { oficina, x: 0, z: 0, ancho: oficina.cuarto.ancho, fondo: oficina.cuarto.fondo, acumulado: 0 });
     limites = calcularLimites([...cuartos.values()]);
@@ -39,6 +39,7 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
         base: false,
         acento: c.acento,
         tema: c.tema,
+        estilo: modelo.proyecto.estilo, // fase M: paleta y pisos del proyecto
       });
       oficina.grupo.position.set(c.x, 0, c.z);
       grupo.add(oficina.grupo);

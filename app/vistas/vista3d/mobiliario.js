@@ -7,6 +7,7 @@
 // - Ningún mueble representa trabajo ni datos: los monitores de decoración van apagados.
 
 import * as THREE from "three";
+import { ATLAS, celdaPictograma } from "./estilo-visual.js";
 
 export const ALTO_ESCRITORIO = 0.6;
 
@@ -25,6 +26,16 @@ export function crearMobiliario(recursos) {
   const caja = (w, h, d) => geo(`c${r3(w)}|${r3(h)}|${r3(d)}`, () => new THREE.BoxGeometry(w, h, d));
   const cil = (rt, rb, h, seg = 10) => geo(`y${r3(rt)}|${r3(rb)}|${r3(h)}|${seg}`, () => new THREE.CylinderGeometry(rt, rb, h, seg));
   const ico = (r, det = 0) => geo(`i${r3(r)}|${det}`, () => new THREE.IcosahedronGeometry(r, det));
+  // Fase M: plano con la celda de un pictograma del atlas de pantallas ambientales (mira hacia +Z).
+  const planoPictograma = (w, h, nombre) => geo(`p${r3(w)}|${r3(h)}|${nombre}`, () => {
+    const g = new THREE.PlaneGeometry(w, h);
+    const { col, fila } = celdaPictograma(nombre);
+    const uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+      uv.setXY(i, (col + 0.04 + uv.getX(i) * 0.92) / ATLAS.columnas, 1 - (fila + 0.04 + (1 - uv.getY(i)) * 0.92) / ATLAS.filas);
+    }
+    return g;
+  });
 
   /** Grupo colocado y girado (rot en radianes alrededor de Y); los muebles se arman en coordenadas locales. */
   function lugar(destino, { x = 0, y = 0, z = 0, rot = 0 } = {}) {
@@ -204,6 +215,177 @@ export function crearMobiliario(recursos) {
       poner(g, caja(ancho + 0.04, 0.03, 0.46), m.madera, 0, 0.565, 0);
       poner(g, caja(0.46, 0.22, 0.36), m.claro, -ancho / 4, 0.69, 0);
       poner(g, caja(0.3, 0.02, 0.1), m.metal, -ancho / 4, 0.8, 0.08);
+      return g;
+    },
+
+
+    // ---------- Fase M: piezas para los interiores por tipo de trabajo (interiores.js) ----------
+
+    /**
+     * Pantalla ambiental con marco: un pictograma abstracto del atlas (sin cifras). Mira hacia +Z (gira con rot).
+     * No cambia con los datos; se atenúa con todo el piso cuando no hay datos vigentes (estilo-visual.js).
+     */
+    pantallaAmbiente(destino, m, opciones = {}) {
+      const { ancho = 0.9, alto = 0.5, pictograma = "mosaico", pie = 0 } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(ancho + 0.06, alto + 0.06, 0.04), m.metal, 0, 0, -0.025);
+      if (pie > 0) {
+        poner(g, caja(0.05, pie, 0.05), m.metal, 0, -alto / 2 - pie / 2, -0.03);
+        poner(g, caja(0.36, 0.03, 0.24), m.metal, 0, -alto / 2 - pie + 0.015, -0.03);
+      }
+      if (m.pantallaAmbiente) poner(g, planoPictograma(ancho, alto, pictograma), m.pantallaAmbiente, 0, 0, 0.001);
+      return g;
+    },
+
+    /** Gabinete de servidores (alto 1.15): rejillas y una franja del acento (luces fijas: no indican tráfico). */
+    rack(destino, m, opciones = {}) {
+      const { alto = 1.15 } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(0.58, alto, 0.6), m.metal, 0, alto / 2, 0);
+      poner(g, caja(0.5, alto - 0.12, 0.02), m.maderaOscura ?? m.metal, 0, alto / 2, 0.305);
+      for (let y = 0.16; y < alto - 0.1; y += 0.16) poner(g, caja(0.44, 0.02, 0.02), y % 0.32 < 0.16 ? (m.acento ?? m.claro) : m.claro, 0, y, 0.315);
+      return g;
+    },
+
+    /** Mesa de análisis amplia con papeles y dos bancos (nadie sentado). */
+    mesaAnalisis(destino, m, opciones = {}) {
+      const { largo = 1.6, fondo = 0.8, bancos = true } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(largo, 0.05, fondo), m.madera, 0, 0.72, 0);
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) poner(g, caja(0.05, 0.72, 0.05), m.metal, x * (largo / 2 - 0.06), 0.36, z * (fondo / 2 - 0.06));
+      poner(g, caja(0.3, 0.012, 0.22), m.claro, -largo * 0.22, 0.75, -0.08).rotation.y = 0.25;
+      poner(g, caja(0.3, 0.012, 0.22), m.claro, largo * 0.05, 0.75, 0.1).rotation.y = -0.15;
+      poner(g, caja(0.24, 0.02, 0.16), m.acento ?? m.claro, largo * 0.28, 0.755, -0.05);
+      if (bancos) for (const x of [-largo / 4, largo / 4]) {
+        poner(g, cil(0.16, 0.16, 0.05, 10), m.silla, x, 0.55, fondo / 2 + 0.3);
+        poner(g, cil(0.025, 0.025, 0.53, 6), m.metal, x, 0.27, fondo / 2 + 0.3);
+      }
+      return g;
+    },
+
+    /** Estación de pie (consulta rápida): mesa alta con una pantalla ambiental. Mira hacia +Z. */
+    estacionPie(destino, m, opciones = {}) {
+      const { pictograma = "lista" } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(0.7, 0.04, 0.45), m.madera, 0, 1.0, 0);
+      poner(g, caja(0.08, 1.0, 0.08), m.metal, 0, 0.5, -0.1);
+      poner(g, caja(0.5, 0.03, 0.4), m.metal, 0, 0.015, -0.1);
+      this.pantallaAmbiente(g, m, { x: 0, y: 1.26, z: -0.12, ancho: 0.5, alto: 0.3, pictograma });
+      return g;
+    },
+
+    /** Pizarrón o tablero en un muro (mira hacia +Z): fondo claro con trazos del acento o corcho con tachuelas. */
+    tablero(destino, m, opciones = {}) {
+      const { ancho = 1.2, alto = 0.6, tipo = "pizarron" } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(ancho + 0.06, alto + 0.06, 0.03), m.marco ?? m.metal, 0, 0, -0.02);
+      poner(g, caja(ancho, alto, 0.02), tipo === "corcho" ? (m.corcho ?? m.madera) : m.claro, 0, 0, 0);
+      if (tipo === "corcho") {
+        for (const [x, y] of [[-0.35, 0.12], [0.1, 0.18], [0.32, -0.1], [-0.12, -0.15], [0.42, 0.2]]) {
+          poner(g, caja(0.16, 0.12, 0.01), m.claro, x * ancho, y * alto * 1.6, 0.015);
+          poner(g, caja(0.03, 0.03, 0.02), m.acento ?? m.claro, x * ancho, y * alto * 1.6 + 0.05, 0.025);
+        }
+      } else {
+        for (let i = 0; i < 3; i++) poner(g, caja(ancho * (0.6 - i * 0.12), 0.025, 0.01), m.acento ?? m.metal, -ancho * 0.12 + i * 0.04, alto * (0.25 - i * 0.22), 0.012);
+        poner(g, caja(ancho * 0.9, 0.03, 0.06), m.marco ?? m.metal, 0, -alto / 2 - 0.03, 0.03);
+      }
+      return g;
+    },
+
+    /** Banda de rodillos con cajas (estación de procesamiento de importación). Largo en X. */
+    banda(destino, m, opciones = {}) {
+      const { largo = 1.6 } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(largo, 0.06, 0.5), m.metal, 0, 0.62, 0);
+      for (let x = -largo / 2 + 0.12; x < largo / 2; x += 0.16) poner(g, caja(0.04, 0.02, 0.46), m.claro, x, 0.66, 0);
+      for (const x of [-largo / 2 + 0.08, largo / 2 - 0.08]) for (const z of [-0.2, 0.2]) poner(g, caja(0.05, 0.6, 0.05), m.metal, x, 0.3, z);
+      const carton = m.carton ?? m.madera;
+      for (const [x, s] of [[-largo * 0.28, 0.3], [largo * 0.12, 0.26], [largo * 0.36, 0.22]]) poner(g, caja(s, s * 0.8, s), carton, x, 0.67 + s * 0.4, 0);
+      return g;
+    },
+
+    /** Tarima con cajas apiladas. */
+    tarima(destino, m, opciones = {}) {
+      const g = lugar(destino, opciones);
+      poner(g, caja(1.0, 0.12, 0.8), m.maderaOscura, 0, 0.06, 0);
+      const carton = m.carton ?? m.madera;
+      for (const [x, y, z, s] of [[-0.22, 0.31, -0.15, 0.38], [0.2, 0.31, -0.15, 0.38], [0.0, 0.31, 0.2, 0.38], [0.0, 0.68, -0.05, 0.34]]) poner(g, caja(s, s, s), carton, x, y, z);
+      return g;
+    },
+
+    /** Lámpara de inspección (brazo articulado) sobre una mesa: pie, dos tramos y pantalla. */
+    lamparaInspeccion(destino, m, opciones = {}) {
+      const g = lugar(destino, opciones);
+      poner(g, cil(0.07, 0.08, 0.03, 10), m.metal, 0, 0.015, 0);
+      poner(g, caja(0.03, 0.34, 0.03), m.metal, 0, 0.18, 0).rotation.z = 0.35;
+      poner(g, caja(0.03, 0.3, 0.03), m.metal, 0.14, 0.38, 0).rotation.z = -0.9;
+      poner(g, cil(0.04, 0.09, 0.08, 10), m.pantallaLampara ?? m.claro, 0.28, 0.42, 0);
+      return g;
+    },
+
+    /** Estante de archivo (alto 1.2) con cajas de archivo; va junto a un muro. Largo en X. */
+    archivoAlto(destino, m, opciones = {}) {
+      const { ancho = 1.2 } = opciones;
+      const g = lugar(destino, opciones);
+      for (const x of [-ancho / 2 + 0.02, ancho / 2 - 0.02]) poner(g, caja(0.04, 1.2, 0.36), m.metal, x, 0.6, 0);
+      for (const y of [0.02, 0.42, 0.82, 1.18]) poner(g, caja(ancho, 0.03, 0.36), m.metal, 0, y, 0);
+      for (let fila = 0; fila < 3; fila++) for (let i = 0; i < Math.floor(ancho / 0.26); i++) {
+        if ((i + fila) % 4 === 3) continue;
+        poner(g, caja(0.22, 0.26, 0.3), (i + fila) % 3 === 0 ? (m.acento ?? m.claro) : (m.carton ?? m.claro), -ancho / 2 + 0.16 + i * 0.26, 0.17 + fila * 0.4, 0);
+      }
+      return g;
+    },
+
+    /** Globo terráqueo en su pie (búsqueda). */
+    globo(destino, m, opciones = {}) {
+      const g = lugar(destino, opciones);
+      poner(g, cil(0.14, 0.16, 0.04, 10), m.maderaOscura, 0, 0.02, 0);
+      poner(g, cil(0.02, 0.02, 0.62, 6), m.metal, 0, 0.33, 0);
+      poner(g, ico(0.2, 1), m.agua ?? m.vidrio, 0, 0.78, 0);
+      poner(g, ico(0.12, 0), m.planta, 0.06, 0.82, 0.1);
+      return g;
+    },
+
+    /** Bandejas de documentos apiladas (revisión). */
+    bandejas(destino, m, opciones = {}) {
+      const g = lugar(destino, opciones);
+      for (let i = 0; i < 3; i++) {
+        poner(g, caja(0.3, 0.015, 0.24), m.metal, 0, i * 0.08, 0);
+        poner(g, caja(0.26, 0.03 + (i % 2) * 0.02, 0.2), m.claro, 0, i * 0.08 + 0.025, 0);
+      }
+      return g;
+    },
+
+    /** Tapete de área (decoración del piso). */
+    tapete(destino, m, opciones = {}) {
+      const { ancho = 2, fondo = 1.4 } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(ancho, 0.01, fondo), m.tapete ?? m.acento ?? m.claro, 0, 0.006, 0);
+      poner(g, caja(ancho - 0.2, 0.012, fondo - 0.2), m.tapeteCentro ?? m.claro, 0, 0.007, 0);
+      return g;
+    },
+
+    /** Charola de cables en el piso entre gabinetes. Largo en X. */
+    charolaCables(destino, m, opciones = {}) {
+      const { largo = 1.2 } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(largo, 0.04, 0.18), m.metal, 0, 0.02, 0);
+      poner(g, caja(largo, 0.03, 0.06), m.acento ?? m.claro, 0, 0.045, -0.03);
+      return g;
+    },
+
+    /** Consola de supervisión: mueble largo con tres pantallas ambientales (no muestran datos). Largo en X. */
+    consola(destino, m, opciones = {}) {
+      const { largo = 1.8 } = opciones;
+      const g = lugar(destino, opciones);
+      poner(g, caja(largo, 0.06, 0.55), m.madera, 0, 0.72, 0);
+      poner(g, caja(largo - 0.1, 0.68, 0.45), m.maderaOscura, 0, 0.35, -0.03);
+      poner(g, caja(largo - 0.2, 0.04, 0.02), m.acento ?? m.claro, 0, 0.5, 0.2);
+      const pics = ["mosaico", "historial", "red"];
+      [-1, 0, 1].forEach((i, k) => {
+        const p = this.pantallaAmbiente(g, m, { x: i * (largo / 3.1), y: 1.0, z: -0.12, ancho: 0.5, alto: 0.3, pictograma: pics[k] });
+        p.rotation.y = -i * 0.25;
+      });
       return g;
     },
 
