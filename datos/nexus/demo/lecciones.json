@@ -1,357 +1,692 @@
 {
-  "contrato": "cauce.leccion.registro",
-  "version_contrato": "0.2.0",
+  "contrato": "cauce.nexus.registro-lecciones",
+  "version_contrato": "0.2",
   "es_demo": true,
-  "versiones": [
+  "entradas": [
     {
-      "contrato": "cauce.leccion",
-      "version_contrato": "0.2.0",
-      "id": "lec-demo-compago-fotos",
-      "revision": 1,
-      "tipo_cambio": "alta",
-      "es_demo": true,
+      "registro": {
+        "esquema": "cauce.leccion",
+        "version_esquema": "0.2",
+        "tipo": "metodo",
+        "antecedentes": [],
+        "limitaciones": [
+          "Solo duplicados exactos"
+        ],
+        "aplicaciones_posibles": [
+          {
+            "proyecto": "tezcatlipoca",
+            "hipotesis": "[DEMO] Contar partidos y no filas cambia alguna conclusión."
+          }
+        ],
+        "validacion": {
+          "estado": "propuesta",
+          "validado_en": []
+        },
+        "sensibilidad": "sin-datos-comerciales",
+        "vigente_hasta": "2027-05-06",
+        "id": "demo-compago-duplicados",
+        "origen": {
+          "proyecto": "compago",
+          "componente": "revisor-esceptico",
+          "version_sistema": "reglas demo 1.0",
+          "commit": "demo000",
+          "tipo": "medicion"
+        },
+        "autor": {
+          "tipo": "humano",
+          "identificador": "analista-demo"
+        },
+        "hallazgo": "[DEMO] Dos registros duplicados no son dos observaciones independientes.",
+        "evidencia": [
+          {
+            "ubicacion": "main",
+            "base_conocimiento": "observed",
+            "reproducible_declarado": true,
+            "tipo": "prueba_unitaria",
+            "referencia": "demo:compago/evaluacion/caso-duplicados",
+            "commit": "demo000",
+            "observado_en": "2026-10-26T12:00:00-06:00",
+            "conocido_en": "2026-10-26T12:00:00-06:00",
+            "proyecto_ejecutor": "compago",
+            "sha256": "f7d38dbcd3910089050ffea34e330f3742898377b05c48927c38c0336bc3ebfc",
+            "reproduccion_independiente": null
+          }
+        ],
+        "procedencia": {
+          "metodo": "evaluacion_sintetica",
+          "periodo_inicio": "2026-10-26",
+          "periodo_fin": "2026-10-26",
+          "alcance": "[DEMO] un caso; sin frecuencia real",
+          "limitaciones_fuente": []
+        },
+        "fecha_hallazgo": "2026-10-28",
+        "muestra": {
+          "n": 1,
+          "unidad": "caso sintético",
+          "n_independiente": 1,
+          "unidad_independencia": "caso",
+          "n_efectivo": 1,
+          "independencia": "no_aplica",
+          "naturaleza": "sintetica",
+          "naturaleza_resultado": "prueba_tecnica",
+          "seleccion_en_muestra": false,
+          "n_comparaciones": 1,
+          "cobertura": "[DEMO] un caso sintético; no mide prevalencia",
+          "supuestos": []
+        },
+        "confianza": {
+          "nivel": "baja",
+          "objeto": "metodo",
+          "justificacion": "[DEMO] Demuestra el defecto en un caso; no su frecuencia."
+        },
+        "revisiones": [
+          {
+            "fecha": "2026-11-01T09:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Alta.",
+            "version": "r1"
+          },
+          {
+            "fecha": "2026-11-01T09:30:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "revisor-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Referencias revisadas por otra persona.",
+            "version": "r2"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-01T10:00:00-06:00",
       "registrado_por": {
         "tipo": "humano",
-        "id": "analista-demo"
+        "identificador": "analista-demo"
       },
-      "autor_conclusion": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "proyectos_destino": [
-        "montambre"
-      ],
-      "antecedentes": [],
-      "validaciones": [
-        {
-          "por": {
-            "tipo": "humano",
-            "id": "revisor-demo"
-          },
-          "en": "2026-11-02T09:00:00-06:00",
-          "ambito": "origen",
-          "proyecto": "compago",
-          "resultado": "confirma",
-          "evidencias": [
-            "e2"
-          ]
-        }
-      ],
-      "vigencia": {
-        "caduca_en": "2027-12-31T23:59:00-06:00"
-      },
-      "registrado_en": "2026-10-20T10:00:00-06:00",
-      "fecha_conclusion": "2026-10-19T18:00:00-06:00",
-      "titulo": "[DEMO] Fichas con tres o más fotos propias se aprueban más",
-      "enunciado": "En la muestra de octubre, las oportunidades con 3+ fotos propias pasaron la evaluación con más frecuencia que las de 1 foto.",
-      "proyecto_origen": "compago",
-      "naturaleza_resultado": "exito",
-      "nivel_validacion": "validada_en_origen",
-      "declara_reproducible": true,
-      "evidencias": [
-        {
-          "id": "e1",
-          "tipo": "experimento",
-          "descripcion": "[DEMO] Comparación de aprobaciones por número de fotos (120 fichas).",
-          "referencia": "demo:compago/informes/fotos-2026-10.csv",
-          "huella": "6c5ffc7748853c00650eb1c3e480c3c3d954548f94e2e9798a9c398cada3a387",
-          "procedimiento": "Contar aprobadas/total por grupo con la consulta guardada del informe.",
-          "producida_por": {
-            "tipo": "proceso",
-            "id": "informe-demo"
-          },
-          "obtenida_en": "2026-10-19T12:00:00-06:00",
-          "usa_datos_hasta": "2026-10-15T23:59:00-06:00",
-          "muestra": {
-            "id": "m-compago-oct",
-            "fuente": "compago-demo",
-            "tamano": 120,
-            "periodo": {
-              "desde": "2026-10-01T00:00:00-06:00",
-              "hasta": "2026-10-15T23:59:00-06:00"
-            }
-          },
-          "metodo": {
-            "configuraciones_probadas": 1,
-            "evaluacion": "fuera_de_muestra"
-          }
-        },
-        {
-          "id": "e2",
-          "tipo": "registro",
-          "uso": "validacion",
-          "descripcion": "[DEMO] Repetición con fichas nuevas de noviembre (80 fichas).",
-          "referencia": "demo:compago/informes/fotos-2026-11.csv",
-          "huella": "80d7352bd7cf122a628b09cb8029a71d350666c2007608455c9e31ea4bfc0d10",
-          "procedimiento": "La misma consulta sobre el periodo nuevo.",
-          "muestra": {
-            "id": "m-compago-nov",
-            "fuente": "compago-demo",
-            "tamano": 80,
-            "periodo": {
-              "desde": "2026-10-16T00:00:00-06:00",
-              "hasta": "2026-11-01T23:59:00-06:00"
-            }
-          }
-        }
-      ],
       "huella_anterior": null
     },
     {
-      "contrato": "cauce.leccion",
-      "version_contrato": "0.2.0",
-      "id": "lec-demo-ek-chuah-backtest",
-      "revision": 1,
-      "tipo_cambio": "alta",
-      "es_demo": true,
-      "registrado_por": {
-        "tipo": "ia",
-        "id": "asistente-demo"
-      },
-      "autor_conclusion": {
-        "tipo": "ia",
-        "id": "asistente-demo"
-      },
-      "proyectos_destino": [],
-      "antecedentes": [],
-      "validaciones": [
-        {
-          "por": {
-            "tipo": "ia",
-            "id": "asistente-demo"
-          },
-          "en": "2026-10-25T10:30:00-06:00",
-          "ambito": "origen",
-          "proyecto": "ek-chuah",
-          "resultado": "confirma",
-          "evidencias": [
-            "e2"
+      "registro": {
+        "esquema": "cauce.leccion",
+        "version_esquema": "0.2",
+        "tipo": "hallazgo",
+        "antecedentes": [],
+        "limitaciones": [],
+        "aplicaciones_posibles": [],
+        "validacion": {
+          "estado": "validada_en_origen",
+          "validado_en": [
+            {
+              "proyecto": "ek-chuah",
+              "prueba_ref": "demo:simulacion-218",
+              "fecha": "2026-10-25",
+              "resultado": "[DEMO] supera"
+            }
           ]
-        }
-      ],
-      "vigencia": {
-        "caduca_en": "2027-12-31T23:59:00-06:00"
-      },
-      "registrado_en": "2026-10-25T11:00:00-06:00",
-      "fecha_conclusion": "2026-10-25T10:00:00-06:00",
-      "titulo": "[DEMO] El cruce de medias 12/26 supera al índice en la simulación",
-      "enunciado": "Tras probar 40 combinaciones, la 12/26 dio el mejor rendimiento simulado del semestre.",
-      "proyecto_origen": "ek-chuah",
-      "naturaleza_resultado": "exito",
-      "nivel_validacion": "validada_en_origen",
-      "declara_reproducible": true,
-      "evidencias": [
-        {
-          "id": "e1",
-          "tipo": "experimento",
-          "descripcion": "[DEMO] Simulación histórica de 40 combinaciones; se eligió la mejor.",
-          "referencia": "demo:ek-chuah/simulaciones/medias-40.json",
-          "usa_datos_hasta": "2026-06-30T23:59:00-06:00",
-          "muestra": {
-            "id": "m-ek-sem1",
-            "fuente": "ek-chuah-demo"
+        },
+        "sensibilidad": "sin-datos-comerciales",
+        "vigente_hasta": "2027-05-06",
+        "id": "demo-ek-chuah-backtest",
+        "origen": {
+          "proyecto": "ek-chuah",
+          "componente": "simulador",
+          "version_sistema": "demo 0.1",
+          "tipo": "texto_ia"
+        },
+        "autor": {
+          "tipo": "ia",
+          "identificador": "asistente-demo"
+        },
+        "hallazgo": "[DEMO] La mejor de 218 combinaciones supera al índice.",
+        "evidencia": [
+          {
+            "ubicacion": "fuera_de_repo",
+            "base_conocimiento": "desconocida",
+            "reproducible_declarado": false,
+            "tipo": "texto_ia",
+            "referencia": "demo:ek-chuah/resumen-ia",
+            "observado_en": null,
+            "conocido_en": null,
+            "proyecto_ejecutor": "ek-chuah"
           },
-          "metodo": {
-            "configuraciones_probadas": 40,
-            "evaluacion": "en_muestra",
-            "datos_entrenamiento_hasta": "2026-06-30T23:59:00-06:00",
-            "datos_prueba_desde": "2026-03-01T00:00:00-06:00"
+          {
+            "ubicacion": "fuera_de_repo",
+            "base_conocimiento": "estimated",
+            "reproducible_declarado": true,
+            "tipo": "backtest",
+            "referencia": "demo:ek-chuah/simulacion-218",
+            "observado_en": "2026-10-20T10:00:00-06:00",
+            "conocido_en": "2026-10-20T10:00:00-06:00",
+            "fraccion_estimada": 0.82,
+            "proyecto_ejecutor": "ek-chuah"
           }
+        ],
+        "procedencia": {
+          "metodo": "backtest",
+          "alcance": "[DEMO] serie histórica ficticia",
+          "limitaciones_fuente": [
+            "fechas de disponibilidad estimadas"
+          ]
         },
-        {
-          "id": "e2",
-          "tipo": "afirmacion",
-          "uso": "validacion",
-          "descripcion": "[DEMO] «Revisé la simulación y es correcta.»"
-        }
-      ],
-      "huella_anterior": "23dafb1d8e73a0e81ade0b0220715c3b295f237aaaa7821654f58d3d04096a2f"
-    },
-    {
-      "contrato": "cauce.leccion",
-      "version_contrato": "0.2.0",
-      "id": "lec-demo-tezca-local",
-      "revision": 1,
-      "tipo_cambio": "alta",
-      "es_demo": true,
-      "registrado_por": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "autor_conclusion": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "proyectos_destino": [],
-      "antecedentes": [
-        {
-          "leccion_id": "lec-demo-tezca-forma",
-          "relacion": "deriva_de"
-        }
-      ],
-      "validaciones": [],
-      "vigencia": {
-        "caduca_en": "2027-12-31T23:59:00-06:00"
-      },
-      "registrado_en": "2026-10-26T09:00:00-06:00",
-      "fecha_conclusion": "2026-10-26T08:00:00-06:00",
-      "titulo": "[DEMO] Jugar de local pesa más que la forma reciente",
-      "enunciado": "Se deduce de la lección sobre la forma reciente.",
-      "proyecto_origen": "tezcatlipoca",
-      "naturaleza_resultado": "mixto",
-      "nivel_validacion": "hipotesis",
-      "declara_reproducible": false,
-      "evidencias": [],
-      "huella_anterior": "bbe924a337b99a4c4b186c831483b5e6298631463648d8f820a532c493a80f73"
-    },
-    {
-      "contrato": "cauce.leccion",
-      "version_contrato": "0.2.0",
-      "id": "lec-demo-tezca-forma",
-      "revision": 1,
-      "tipo_cambio": "alta",
-      "es_demo": true,
-      "registrado_por": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "autor_conclusion": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "proyectos_destino": [],
-      "antecedentes": [
-        {
-          "leccion_id": "lec-demo-tezca-local",
-          "relacion": "apoya"
-        }
-      ],
-      "validaciones": [],
-      "vigencia": {
-        "caduca_en": "2027-12-31T23:59:00-06:00"
-      },
-      "registrado_en": "2026-10-26T09:30:00-06:00",
-      "fecha_conclusion": "2026-10-26T09:10:00-06:00",
-      "titulo": "[DEMO] La forma reciente explica los resultados",
-      "enunciado": "Confirmado porque coincide con la lección de jugar de local.",
-      "proyecto_origen": "tezcatlipoca",
-      "naturaleza_resultado": "exito",
-      "nivel_validacion": "validada_en_origen",
-      "declara_reproducible": false,
-      "evidencias": [
-        {
-          "id": "e1",
-          "tipo": "afirmacion",
-          "descripcion": "[DEMO] «Se ve claramente en los partidos.»"
-        }
-      ],
-      "huella_anterior": "da0a12fd7737502e76aff11486074a623ed4bf9967a00b3f4456eb23308e6912"
-    },
-    {
-      "contrato": "cauce.leccion",
-      "version_contrato": "0.2.0",
-      "id": "lec-demo-cauce-una-pantalla",
-      "revision": 1,
-      "tipo_cambio": "alta",
-      "es_demo": true,
-      "registrado_por": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "autor_conclusion": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "proyectos_destino": [],
-      "antecedentes": [],
-      "validaciones": [],
-      "registrado_en": "2026-10-28T12:00:00-06:00",
-      "fecha_conclusion": "2026-10-28T11:00:00-06:00",
-      "titulo": "[DEMO] Ver todos los pisos en una pantalla reduce revisiones olvidadas",
-      "enunciado": "Hipótesis: la sala de control ayuda a no olvidar asuntos pendientes.",
-      "proyecto_origen": "cauce",
-      "naturaleza_resultado": "inconcluso",
-      "nivel_validacion": "hipotesis",
-      "evidencias": [],
-      "huella_anterior": "21b2802a2e9b2c4eeef971dafe3c40da26cc8bbcf3a7f926313b561fed677310"
-    },
-    {
-      "contrato": "cauce.leccion",
-      "version_contrato": "0.2.0",
-      "id": "lec-demo-cauce-una-pantalla",
-      "revision": 2,
-      "tipo_cambio": "correccion",
-      "es_demo": true,
-      "registrado_por": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "autor_conclusion": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "proyectos_destino": [
-        "compago"
-      ],
-      "antecedentes": [],
-      "validaciones": [],
-      "vigencia": {
-        "caduca_en": "2027-12-31T23:59:00-06:00"
-      },
-      "registrado_en": "2026-10-29T12:00:00-06:00",
-      "fecha_conclusion": "2026-10-28T11:00:00-06:00",
-      "motivo_cambio": "Se aclara que todavía no es reproducible y se fija su caducidad.",
-      "titulo": "[DEMO] Ver todos los pisos en una pantalla reduce revisiones olvidadas",
-      "enunciado": "Hipótesis: la sala de control ayuda a no olvidar asuntos pendientes.",
-      "proyecto_origen": "cauce",
-      "naturaleza_resultado": "inconcluso",
-      "nivel_validacion": "hipotesis",
-      "declara_reproducible": false,
-      "evidencias": [],
-      "huella_anterior": "5e98c709a60173e64fd569f6e9426bc6009cd5ecd5b3abe83eaf54a9395775b9"
-    },
-    {
-      "contrato": "cauce.leccion",
-      "version_contrato": "0.2.0",
-      "id": "lec-demo-compago-resenas",
-      "revision": 1,
-      "tipo_cambio": "alta",
-      "es_demo": true,
-      "registrado_por": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "autor_conclusion": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "proyectos_destino": [],
-      "antecedentes": [],
-      "validaciones": [],
-      "vigencia": {
-        "caduca_en": "2027-12-31T23:59:00-06:00"
-      },
-      "registrado_en": "2026-10-30T16:00:00-06:00",
-      "fecha_conclusion": "2026-10-30T15:00:00-06:00",
-      "titulo": "[DEMO] Responder reseñas en menos de 24 h mejora la recompra",
-      "enunciado": "Dos registros sugieren más recompra cuando se responde rápido.",
-      "proyecto_origen": "compago",
-      "naturaleza_resultado": "exito",
-      "nivel_validacion": "hipotesis",
-      "declara_reproducible": false,
-      "evidencias": [
-        {
-          "id": "e1",
-          "tipo": "registro",
-          "descripcion": "[DEMO] Recompras con respuesta rápida."
+        "fecha_hallazgo": "2026-10-25",
+        "muestra": {
+          "n": 1200,
+          "unidad": "día",
+          "n_independiente": 1200,
+          "unidad_independencia": "día",
+          "n_efectivo": null,
+          "independencia": "serie temporal",
+          "naturaleza": "real_historica",
+          "naturaleza_resultado": "backtest",
+          "seleccion_en_muestra": true,
+          "n_comparaciones": 218,
+          "cobertura": "[DEMO] un semestre",
+          "supuestos": [
+            {
+              "variable": "costos_transaccion",
+              "valor": 0,
+              "conocido": false
+            }
+          ]
         },
-        {
-          "id": "e2",
-          "tipo": "registro",
-          "descripcion": "[DEMO] Recompras con respuesta lenta."
-        }
-      ],
-      "huella_anterior": "331ca5a984110e299f2db151f6d68821e536b57844d9c85c239033cfd089296d"
+        "confianza": {
+          "nivel": "alta",
+          "objeto": "beneficio_economico",
+          "justificacion": "[DEMO] «Supera claramente al índice.»"
+        },
+        "revisiones": [
+          {
+            "fecha": "2026-11-01T10:30:00-06:00",
+            "autor_tipo": "ia",
+            "autor": "asistente-demo",
+            "decision": "validada_en_origen",
+            "justificacion": "[DEMO] Revisé mi simulación.",
+            "version": "r1"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-01T11:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "c64f419e01d88b65c424328b3cce3973b058e7759ddc73fb04742edd42cb4e2e"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.leccion",
+        "version_esquema": "0.2",
+        "tipo": "metodo",
+        "antecedentes": [
+          "demo-tezca-partidos"
+        ],
+        "limitaciones": [],
+        "aplicaciones_posibles": [],
+        "validacion": {
+          "estado": "propuesta",
+          "validado_en": []
+        },
+        "sensibilidad": "sin-datos-comerciales",
+        "vigente_hasta": "2027-05-06",
+        "id": "demo-tezca-filas",
+        "origen": {
+          "proyecto": "tezcatlipoca",
+          "componente": "evaluacion",
+          "version_sistema": "demo",
+          "tipo": "revision_humana"
+        },
+        "autor": {
+          "tipo": "humano",
+          "identificador": "analista-demo"
+        },
+        "hallazgo": "[DEMO] Contar filas en vez de partidos infla los conteos.",
+        "evidencia": [
+          {
+            "ubicacion": "fuera_de_repo",
+            "base_conocimiento": "observed",
+            "reproducible_declarado": false,
+            "tipo": "conteo",
+            "referencia": "demo:tezcatlipoca/conteos",
+            "observado_en": "2026-10-30T10:00:00-06:00",
+            "conocido_en": "2026-10-30T10:00:00-06:00",
+            "proyecto_ejecutor": "tezcatlipoca",
+            "sha256": "1b07f68c08bd38409f7b20e8d60504d0837ac36b939cfbf48f956fc5a3985152"
+          }
+        ],
+        "procedencia": {
+          "metodo": "conteo",
+          "alcance": "[DEMO] copia ficticia",
+          "limitaciones_fuente": []
+        },
+        "fecha_hallazgo": "2026-11-01",
+        "muestra": {
+          "n": 88,
+          "unidad": "fila",
+          "n_independiente": 62,
+          "unidad_independencia": "partido",
+          "n_efectivo": null,
+          "independencia": "por partido",
+          "naturaleza": "real_historica",
+          "naturaleza_resultado": "prueba_tecnica",
+          "seleccion_en_muestra": false,
+          "n_comparaciones": 1,
+          "cobertura": "[DEMO] copia ficticia de una semana",
+          "supuestos": []
+        },
+        "confianza": {
+          "nivel": "baja",
+          "objeto": "metodo",
+          "justificacion": "[DEMO] Un conteo."
+        },
+        "revisiones": [
+          {
+            "fecha": "2026-11-02T08:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Alta.",
+            "version": "r1"
+          },
+          {
+            "fecha": "2026-11-02T08:30:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "revisor-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Revisada.",
+            "version": "r2"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-02T09:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "c2483c181448890b26256e75fd2cb7c3b0a13933d31ea84e24fe6f397cb33fbd"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.leccion",
+        "version_esquema": "0.2",
+        "tipo": "metodo",
+        "antecedentes": [
+          "demo-tezca-filas"
+        ],
+        "limitaciones": [],
+        "aplicaciones_posibles": [],
+        "validacion": {
+          "estado": "validada_en_origen",
+          "validado_en": [
+            {
+              "proyecto": "tezcatlipoca",
+              "prueba_ref": "leccion:demo-tezca-filas",
+              "fecha": "2026-11-02",
+              "resultado": "[DEMO] coincide"
+            }
+          ]
+        },
+        "sensibilidad": "sin-datos-comerciales",
+        "vigente_hasta": "2027-05-06",
+        "id": "demo-tezca-partidos",
+        "origen": {
+          "proyecto": "tezcatlipoca",
+          "componente": "evaluacion",
+          "version_sistema": "demo",
+          "tipo": "revision_humana"
+        },
+        "autor": {
+          "tipo": "humano",
+          "identificador": "analista-demo"
+        },
+        "hallazgo": "[DEMO] La unidad independiente es el partido.",
+        "evidencia": [
+          {
+            "ubicacion": "fuera_de_repo",
+            "base_conocimiento": "observed",
+            "reproducible_declarado": false,
+            "tipo": "conteo",
+            "referencia": "demo:tezcatlipoca/conteos-b",
+            "observado_en": "2026-10-30T10:00:00-06:00",
+            "conocido_en": "2026-10-30T10:00:00-06:00",
+            "proyecto_ejecutor": "tezcatlipoca",
+            "sha256": "f170b845786213442109e0ee7648422287c3d27f2bca9ffcd783d07f6cd6d7fd"
+          }
+        ],
+        "procedencia": {
+          "metodo": "conteo",
+          "alcance": "[DEMO] copia ficticia",
+          "limitaciones_fuente": []
+        },
+        "fecha_hallazgo": "2026-11-01",
+        "muestra": {
+          "n": 88,
+          "unidad": "fila",
+          "n_independiente": 62,
+          "unidad_independencia": "partido",
+          "n_efectivo": null,
+          "independencia": "por partido",
+          "naturaleza": "real_historica",
+          "naturaleza_resultado": "prueba_tecnica",
+          "seleccion_en_muestra": false,
+          "n_comparaciones": 1,
+          "cobertura": "[DEMO] copia ficticia de una semana",
+          "supuestos": []
+        },
+        "confianza": {
+          "nivel": "baja",
+          "objeto": "metodo",
+          "justificacion": "[DEMO] Coincide con la otra lección."
+        },
+        "revisiones": [
+          {
+            "fecha": "2026-11-02T09:10:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Alta.",
+            "version": "r1"
+          },
+          {
+            "fecha": "2026-11-02T09:20:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "revisor-demo",
+            "decision": "validada_en_origen",
+            "justificacion": "[DEMO] Confirmada por la otra lección.",
+            "version": "r2"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-02T09:30:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "315ba33786ee7342c042c89aac08bbf58c2b6695020e940acbac00317b93c5d7"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.leccion",
+        "version_esquema": "0.2",
+        "tipo": "hallazgo",
+        "antecedentes": [],
+        "limitaciones": [],
+        "aplicaciones_posibles": [],
+        "validacion": {
+          "estado": "propuesta",
+          "validado_en": []
+        },
+        "sensibilidad": "sin-datos-comerciales",
+        "vigente_hasta": "2027-05-06",
+        "id": "demo-compago-entregable",
+        "origen": {
+          "proyecto": "compago",
+          "componente": "importador",
+          "version_sistema": "demo",
+          "tipo": "medicion"
+        },
+        "autor": {
+          "tipo": "humano",
+          "identificador": "analista-demo"
+        },
+        "hallazgo": "[DEMO] El importador nocturno ya funciona en producción.",
+        "evidencia": [
+          {
+            "ubicacion": "main",
+            "base_conocimiento": "observed",
+            "reproducible_declarado": false,
+            "tipo": "estado_tarea",
+            "referencia": "demo:tarea succeeded",
+            "observado_en": "2026-11-02T03:00:00-06:00",
+            "conocido_en": "2026-11-02T03:00:00-06:00",
+            "proyecto_ejecutor": "compago",
+            "commit": "demo111"
+          },
+          {
+            "ubicacion": "desplegado",
+            "base_conocimiento": "observed",
+            "reproducible_declarado": false,
+            "tipo": "ci",
+            "referencia": "demo:CI verde del PR",
+            "observado_en": "2026-11-02T04:00:00-06:00",
+            "conocido_en": "2026-11-02T04:00:00-06:00",
+            "proyecto_ejecutor": "compago",
+            "commit": "demo111"
+          }
+        ],
+        "procedencia": {
+          "metodo": "observacion",
+          "alcance": "[DEMO] una noche",
+          "limitaciones_fuente": []
+        },
+        "fecha_hallazgo": "2026-11-02",
+        "muestra": {
+          "n": 1,
+          "unidad": "corrida",
+          "n_independiente": 1,
+          "unidad_independencia": "corrida",
+          "n_efectivo": 1,
+          "independencia": "no_aplica",
+          "naturaleza": "demo",
+          "naturaleza_resultado": "prueba_tecnica",
+          "seleccion_en_muestra": false,
+          "n_comparaciones": 1,
+          "cobertura": "[DEMO] una corrida",
+          "supuestos": []
+        },
+        "confianza": {
+          "nivel": "baja",
+          "objeto": "metodo",
+          "justificacion": "[DEMO] Una corrida."
+        },
+        "revisiones": [
+          {
+            "fecha": "2026-11-03T09:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Alta.",
+            "version": "r1"
+          },
+          {
+            "fecha": "2026-11-03T09:30:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "revisor-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Revisada.",
+            "version": "r2"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-03T10:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "0d01592e82d0dd74f752c8277b4c6e1198d6d0aa347db8e26690daec627feb78"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.leccion",
+        "version_esquema": "0.2",
+        "tipo": "metodo",
+        "antecedentes": [],
+        "limitaciones": [],
+        "aplicaciones_posibles": [],
+        "validacion": {
+          "estado": "propuesta",
+          "validado_en": []
+        },
+        "sensibilidad": "sin-datos-comerciales",
+        "vigente_hasta": "2027-05-06",
+        "id": "demo-cauce-zona-horaria",
+        "origen": {
+          "proyecto": "cauce",
+          "componente": "sala-de-control",
+          "version_sistema": "fase M",
+          "tipo": "revision_humana"
+        },
+        "autor": {
+          "tipo": "humano",
+          "identificador": "analista-demo"
+        },
+        "hallazgo": "[DEMO] Varias marcas de tiempo no traen zona horaria.",
+        "evidencia": [
+          {
+            "ubicacion": "fuera_de_repo",
+            "base_conocimiento": "desconocida",
+            "reproducible_declarado": false,
+            "tipo": "inventario",
+            "referencia": "demo:cauce/marcas-de-tiempo",
+            "observado_en": null,
+            "conocido_en": null,
+            "proyecto_ejecutor": "cauce",
+            "sha256": "0cd2d42ae1ae07af37ad845e2ba1752c1ce9189fa997daa7630592a6eb0414b3"
+          }
+        ],
+        "procedencia": {
+          "metodo": "inventario",
+          "alcance": "[DEMO] tres archivos",
+          "limitaciones_fuente": []
+        },
+        "fecha_hallazgo": "2026-11-03",
+        "muestra": {
+          "n": 3,
+          "unidad": "archivo",
+          "n_efectivo": null,
+          "independencia": "sin revisar",
+          "naturaleza": "demo",
+          "naturaleza_resultado": "prueba_tecnica",
+          "seleccion_en_muestra": false,
+          "cobertura": "[DEMO] tres de muchos archivos",
+          "supuestos": []
+        },
+        "confianza": {
+          "nivel": "baja",
+          "objeto": "metodo",
+          "justificacion": "[DEMO] Inventario parcial."
+        },
+        "revisiones": [
+          {
+            "fecha": "2026-11-03T11:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Alta.",
+            "version": "r1"
+          },
+          {
+            "fecha": "2026-11-03T11:30:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "revisor-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Revisada.",
+            "version": "r2"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-03T12:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "88faff719d3466019e6bd388643ac6ea7643b21ec8778980704371ab2674b40d"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.leccion",
+        "version_esquema": "0.2",
+        "tipo": "metodo",
+        "antecedentes": [],
+        "limitaciones": [],
+        "aplicaciones_posibles": [],
+        "validacion": {
+          "estado": "propuesta",
+          "validado_en": []
+        },
+        "sensibilidad": "sin-datos-comerciales",
+        "vigente_hasta": "2027-05-06",
+        "id": "demo-cauce-zona-horaria",
+        "origen": {
+          "proyecto": "cauce",
+          "componente": "sala-de-control",
+          "version_sistema": "fase M",
+          "tipo": "revision_humana"
+        },
+        "autor": {
+          "tipo": "humano",
+          "identificador": "analista-demo"
+        },
+        "hallazgo": "[DEMO] Varias marcas de tiempo no traen zona horaria.",
+        "evidencia": [
+          {
+            "ubicacion": "fuera_de_repo",
+            "base_conocimiento": "desconocida",
+            "reproducible_declarado": false,
+            "tipo": "inventario",
+            "referencia": "demo:cauce/marcas-de-tiempo",
+            "observado_en": null,
+            "conocido_en": null,
+            "proyecto_ejecutor": "cauce",
+            "sha256": "0cd2d42ae1ae07af37ad845e2ba1752c1ce9189fa997daa7630592a6eb0414b3"
+          }
+        ],
+        "procedencia": {
+          "metodo": "inventario",
+          "alcance": "[DEMO] tres archivos",
+          "limitaciones_fuente": []
+        },
+        "fecha_hallazgo": "2026-11-03",
+        "muestra": {
+          "n": 3,
+          "unidad": "archivo",
+          "n_efectivo": null,
+          "independencia": "sin revisar",
+          "naturaleza": "demo",
+          "naturaleza_resultado": "prueba_tecnica",
+          "seleccion_en_muestra": false,
+          "cobertura": "[DEMO] tres de muchos archivos",
+          "supuestos": [],
+          "n_independiente": 3,
+          "unidad_independencia": "archivo"
+        },
+        "confianza": {
+          "nivel": "baja",
+          "objeto": "metodo",
+          "justificacion": "[DEMO] Inventario parcial."
+        },
+        "revisiones": [
+          {
+            "fecha": "2026-11-03T11:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Alta.",
+            "version": "r1"
+          },
+          {
+            "fecha": "2026-11-03T11:30:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "revisor-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Revisada.",
+            "version": "r2"
+          },
+          {
+            "fecha": "2026-11-04T10:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo",
+            "decision": "propuesta",
+            "justificacion": "[DEMO] Se declara n_independiente; falta saber cuándo se conoció el dato.",
+            "version": "r3"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-04T10:30:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "2332931ebad1cb6f5e3c78d78b41b83a32693c9083a4b0fee7a4d4e7e33d283e"
     }
   ],
   "descripcion": "[DEMO] Lecciones ficticias para probar Nexus fase 1. No son conclusiones reales de ningún proyecto."

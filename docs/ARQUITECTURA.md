@@ -82,7 +82,7 @@ sin viaje. Diseño de un futuro control de procesos (sin implementar): `docs/CON
 
 **Nexus fase 1 (supervisión de conocimiento):** `app/nexus/` (sin dependencias del núcleo del contrato v1) guarda
 lecciones (`cauce.leccion` 0.2) y recomendaciones (`cauce.recomendacion` 0.2) en `datos/nexus/`, en archivos que solo
-crecen, y el gerente escéptico (`gerente.js`) les aplica 12 reglas deterministas. La oficina Nexus (botón ✦, tecla **N**)
+crecen, y el gerente escéptico (`gerente.js`) les aplica las 10 reglas deterministas nexus-R 0.2. La oficina Nexus (botón ✦, tecla **N**)
 es HTML como la sala de control: funciona en 3D, en el plano y sin WebGL, y pausa la 3D mientras está abierta. Ningún
 botón aprueba ni ejecuta nada. Detalle en `docs/NEXUS-FASE-1.md` y `contrato/NEXUS-CONTRATOS.md`.
 

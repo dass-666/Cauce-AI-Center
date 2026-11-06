@@ -8,21 +8,36 @@ export function esFechaConZona(v) {
   return typeof v === "string" && ISO_CON_ZONA.test(v) && Number.isFinite(Date.parse(v));
 }
 
+/** Fecha ISO «AAAA-MM-DD» (día, sin hora: se trata como intervalo de ±14 h por la zona desconocida) o instante con zona. */
+export function esFechaODia(v) {
+  if (esFechaConZona(v)) return true;
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v);
+}
+
+/**
+ * Intervalo [mín, máx] en ms en el que pudo ocurrir una fecha: un instante con zona es exacto; un día sin zona
+ * abarca de 00:00 en UTC+14 a 24:00 en UTC−12. null si no es fecha.
+ */
+export function intervalo(v) {
+  if (esFechaConZona(v)) { const t = Date.parse(v); return [t, t]; }
+  if (esFechaODia(v)) { const t = Date.parse(`${v}T00:00:00Z`); return [t - 14 * 3600e3, t + 36 * 3600e3]; }
+  return null;
+}
+
 /** Milisegundos de una fecha válida con zona, o null. Nunca adivina la zona. */
 export function ms(v) {
   return esFechaConZona(v) ? Date.parse(v) : null;
 }
 
-export const TIPOS_ACTOR = ["humano", "ia", "proceso"];
+export const TIPOS_ACTOR = ["humano", "codigo", "ia"];
 
+/** Actor del registro de Nexus: {tipo: humano|codigo|ia, identificador}. */
 export function esActor(a) {
-  return !!a && typeof a === "object" && TIPOS_ACTOR.includes(a.tipo) && typeof a.id === "string" && a.id.trim() !== "";
+  return !!a && typeof a === "object" && TIPOS_ACTOR.includes(a.tipo) && typeof a.identificador === "string" && a.identificador.trim() !== "";
 }
 
-/** Mismo actor (mismo tipo e id, sin distinguir mayúsculas ni espacios). */
-export function mismoActor(a, b) {
-  return esActor(a) && esActor(b) && a.tipo === b.tipo && a.id.trim().toLowerCase() === b.id.trim().toLowerCase();
-}
+/** Mismo identificador (sin distinguir mayúsculas ni espacios). */
+export const mismoId = (a, b) => typeof a === "string" && typeof b === "string" && a.trim().toLowerCase() === b.trim().toLowerCase();
 
 export const texto = (v) => typeof v === "string" && v.trim() !== "";
 

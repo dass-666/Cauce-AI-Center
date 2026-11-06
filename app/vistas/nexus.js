@@ -4,8 +4,7 @@
 // Ningún botón aprueba, ejecuta ni cambia un proyecto. Lo único que «escribe» es una DESCARGA que la persona guarda.
 
 import { el, fecha } from "./dom.js";
-import { ETIQUETA_ETAPA } from "../nexus/recomendacion.js";
-import { validarLeccion } from "../nexus/leccion.js";
+import { validarLeccion, versionDe } from "../nexus/leccion.js";
 import { evaluarLeccion } from "../nexus/gerente.js";
 import { agregarLeccion, registroVacio } from "../nexus/registro.js";
 
@@ -14,11 +13,11 @@ const DICTAMEN = {
   incompleto: { texto: "Incompleto", titulo: "Falta información para evaluar alguna regla. Nunca cuenta como aprobado." },
   con_objeciones: { texto: "Con objeciones", titulo: "Al menos una regla no se cumple." },
 };
-const NIVEL = { hipotesis: "Hipótesis", validada_en_origen: "Validada en su origen", validada_independiente_en_destino: "Validada en destino (independiente)" };
+const VALIDACION = { propuesta: "Propuesta", en_prueba: "En prueba", validada_en_origen: "Validada en origen", validada_en_destino: "Validada en destino", refutada: "Refutada", caducada: "Caducada" };
 const ICONO = { cumple: "✓", no_cumple: "✗", no_evaluado: "?" };
 const RESULTADO = { cumple: "Cumple", no_cumple: "No cumple", no_evaluado: "No evaluado" };
-const EVENTO = { propuesta: "Propuesta", correccion: "Corrección", revision: "Revisión", aprobacion: "Aprobación humana", rechazo: "Rechazo", experimento: "Experimento", resultado: "Resultado", adopcion: "Adopción", despliegue: "Despliegue", retiro: "Retiro" };
-const actor = (a) => (a ? `${a.tipo === "ia" ? "IA" : a.tipo === "proceso" ? "proceso" : "persona"} ${a.id}` : "—");
+const TIPO_AUTOR = { humano: "persona", codigo: "código", ia: "IA" };
+const actor = (tipo, id) => `${TIPO_AUTOR[tipo] ?? tipo ?? "?"} ${id ?? "?"}`;
 
 /**
  * @param nodo     contenedor (#nexus)
@@ -26,6 +25,7 @@ const actor = (a) => (a ? `${a.tipo === "ia" ? "IA" : a.tipo === "proceso" ? "pr
  * @param opciones { alCerrar(), fuente: "real"|"demo", docLecciones, ahoraMs }
  */
 export function dibujarNexus(nodo, resumen, { alCerrar, fuente = "demo", docLecciones = null, ahoraMs = Date.now() }) {
+  // (Las tarjetas muestran el registro tal cual; los textos entran como texto, nunca como HTML.)
   const abiertos = new Set([...nodo.querySelectorAll("details[open][data-k]")].map((d) => d.dataset.k));
   const borrador = nodo.querySelector("#nexus-borrador")?.value ?? "";
   const cabeza = el("div", { clase: "sala-cabeza" },
@@ -48,18 +48,19 @@ export function dibujarNexus(nodo, resumen, { alCerrar, fuente = "demo", docLecc
     cifra(c.incompletas, "incompletas (falta información)", c.incompletas ? "c-aviso" : ""),
     cifra(c.con_objeciones, "con objeciones", c.con_objeciones ? "c-error" : ""),
     cifra(c.pendientes, "esperan decisión humana", c.pendientes ? "c-demo" : ""),
-    cifra(c.aprobadas_sin_implementar, "aprobadas, sin implementar"),
-    cifra(c.desplegadas, "desplegadas")));
+    cifra(c.aprobadas_sin_ejecutar, "aprobadas, sin ejecutar"),
+    cifra(c.adoptadas, "adoptadas")));
 
   // Pendientes de decisión humana
   partes.push(el("section", { clase: "sala-seccion", "aria-labelledby": "nexus-pendientes" },
     el("h3", { id: "nexus-pendientes" }, `Esperan decisión humana (${resumen.pendientes.length})`),
-    el("p", { clase: "sala-nota" }, "Desde aquí no se aprueba nada: la aprobación es un evento que registra una persona (ver docs/NEXUS-FASE-1.md)."),
+    el("p", { clase: "sala-nota" }, "Desde aquí no se aprueba nada: la aprobación es una nueva versión firmada por una persona (ver docs/NEXUS-FASE-1.md)."),
     resumen.pendientes.length === 0 ? el("p", { clase: "sala-vacio" }, "Ninguna recomendación espera decisión.")
-      : el("ul", { clase: "sala-lista" }, ...resumen.pendientes.map((r) => el("li", { clase: `sala-item ${r.bloqueos.length ? "nivel-advertencia" : "nivel-info"}`, "data-rec": r.id },
-          el("span", { clase: "sala-nivel" }, r.bloqueos.length ? "Bloqueada" : "Lista para decidir"),
-          el("span", { clase: "sala-item-texto" }, el("strong", {}, r.contenido?.titulo ?? r.id), ` · destino ${r.contenido?.proyecto_destino ?? "?"} · propone ${actor(r.proponente)}`,
-            r.bloqueos.length ? el("ul", { clase: "nexus-bloqueos" }, ...r.bloqueos.map((b) => el("li", {}, b))) : null))))));
+      : el("ul", { clase: "sala-lista" }, ...resumen.pendientes.map((x) => { const r = x.registro, b = x.evaluacion.bloqueos;
+          return el("li", { clase: `sala-item ${b.length ? "nivel-advertencia" : "nivel-info"}`, "data-rec": r.id },
+            el("span", { clase: "sala-nivel" }, b.length ? "Bloqueada" : "Lista para decidir"),
+            el("span", { clase: "sala-item-texto" }, el("strong", {}, r.hipotesis), ` · destino ${r.destino.proyecto}/${r.destino.componente} · propone ${actor(r.historial[0]?.autor_tipo, r.historial[0]?.autor)}`,
+              b.length ? el("ul", { clase: "nexus-bloqueos" }, ...b.map((t) => el("li", {}, t))) : null)); }))));
 
   // Alertas de evidencia
   partes.push(el("section", { clase: "sala-seccion", "aria-labelledby": "nexus-alertas" },
@@ -67,7 +68,7 @@ export function dibujarNexus(nodo, resumen, { alCerrar, fuente = "demo", docLecc
     resumen.alertas.length === 0 ? el("p", { clase: "sala-vacio" }, "Ninguna regla incumplida.")
       : el("ul", { clase: "sala-lista" }, ...resumen.alertas.slice(0, 20).map((a) => el("li", { clase: "sala-item nivel-error" },
           el("span", { clase: "sala-nivel" }, `${a.regla.id} ${a.regla.nombre}`),
-          el("span", { clase: "sala-item-texto" }, el("strong", {}, a.titulo), ` · ${a.regla.explicacion}`)))),
+          el("span", { clase: "sala-item-texto" }, el("strong", {}, a.leccion_id), ` · ${a.regla.motivo}`)))),
     resumen.alertas.length > 20 ? el("p", { clase: "sala-nota" }, `Y ${resumen.alertas.length - 20} más.`) : null));
 
   // Lecciones
@@ -78,12 +79,14 @@ export function dibujarNexus(nodo, resumen, { alCerrar, fuente = "demo", docLecc
   // Recomendaciones
   partes.push(el("section", { clase: "sala-seccion", "aria-labelledby": "nexus-recomendaciones" },
     el("h3", { id: "nexus-recomendaciones" }, `Recomendaciones (${resumen.recomendaciones.length})`),
-    el("p", { clase: "sala-nota" }, "Aprobada no es implementada: cada paso (experimento, resultado, adopción, despliegue) necesita su propio registro."),
+    el("p", { clase: "sala-nota" }, "Aprobada no es ejecutada, ni adoptada, ni desplegada: cada cosa se registra aparte. Con dinero o apuestas, Nexus nunca ejecuta ni adopta."),
     el("div", { clase: "nexus-tarjetas" }, ...resumen.recomendaciones.map((r) => tarjetaRecomendacion(r, abiertos)))));
 
   partes.push(seccionBorrador({ abiertos, borrador, resumen, fuente, docLecciones, ahoraMs }));
   nodo.replaceChildren(...partes);
 }
+
+const nodoAlias = () => document.querySelector("#nexus-alias")?.value ?? "";
 
 function chip(estado) {
   const d = DICTAMEN[estado] ?? DICTAMEN.incompleto;
@@ -91,33 +94,33 @@ function chip(estado) {
 }
 
 function tablaReglas(reglas) {
-  return el("ul", { clase: "nexus-reglas" }, ...reglas.map((r) => el("li", { clase: `nexus-regla r-${r.resultado}` },
-    el("span", { clase: "nexus-icono", "aria-hidden": "true" }, ICONO[r.resultado]),
-    el("span", {}, el("strong", {}, `${r.id} ${r.nombre}: `), el("em", {}, RESULTADO[r.resultado]), ` · ${r.explicacion}`))));
+  return el("ul", { clase: "nexus-reglas" }, ...reglas.map((r) => el("li", { clase: `nexus-regla r-${r.estado}` },
+    el("span", { clase: "nexus-icono", "aria-hidden": "true" }, ICONO[r.estado]),
+    el("span", {}, el("strong", {}, `${r.id} ${r.nombre}: `), el("em", {}, r.aplica === false ? `${RESULTADO[r.estado]} (no aplica)` : RESULTADO[r.estado]), ` · ${r.motivo}`))));
 }
 
 function tarjetaLeccion(x, abiertos) {
   const l = x.leccion, e = x.evaluacion;
-  const distinto = e.nivel_declarado && e.nivel_declarado !== e.nivel_sustentado;
-  return el("article", { clase: `nexus-tarjeta${x.retirada ? " nexus-retirada" : ""}`, "data-leccion": l.id },
-    el("div", { clase: "sala-tarjeta-cabeza" }, el("h4", {}, l.titulo), x.retirada ? el("span", { clase: "nexus-chip" }, "Retirada") : chip(e.dictamen.estado)),
-    el("p", { clase: "sala-nota" }, `${l.proyecto_origen}${l.proyectos_destino.length ? ` → ${l.proyectos_destino.join(", ")}` : ""} · ${l.naturaleza_resultado} · rev. ${l.revision}${x.revisiones > 1 ? ` de ${x.revisiones}` : ""} · ${actor(l.autor_conclusion)}`),
-    el("p", { clase: "nexus-nivel" }, `Declara: ${NIVEL[l.nivel_validacion]}`, distinto ? el("strong", { clase: "nexus-sostiene" }, ` · lo registrado sostiene: ${NIVEL[e.nivel_sustentado]}`) : " · sustentado"),
-    el("p", { clase: "nexus-enunciado" }, l.enunciado),
-    el("p", { clase: "sala-nota" }, `Evidencias: ${l.evidencias.length}${l.declara_reproducible === true ? " · declara reproducible" : l.declara_reproducible === false ? " · no reproducible" : ""}${l.vigencia?.caduca_en ? ` · caduca ${fecha(l.vigencia.caduca_en)}` : " · sin caducidad"}`),
-    el("details", { "data-k": `reglas-${l.id}`, open: abiertos.has(`reglas-${l.id}`) }, el("summary", {}, `Reglas del gerente (${e.reglas.filter((r) => r.resultado === "cumple").length}/12 cumplen)`), tablaReglas(e.reglas)));
+  return el("article", { clase: "nexus-tarjeta", "data-leccion": l.id },
+    el("div", { clase: "sala-tarjeta-cabeza" }, el("h4", {}, l.hallazgo), chip(e.dictamen.estado)),
+    el("p", { clase: "sala-nota" }, `${l.id} · ${l.tipo} · ${l.origen.proyecto}/${l.origen.componente} · ${actor(l.autor.tipo, l.autor.identificador)} · revisión ${versionDe(l)}${x.versiones > 1 ? ` (${x.versiones} versiones)` : ""}`),
+    el("p", { clase: "nexus-nivel" }, `Estado: ${VALIDACION[l.validacion.estado] ?? l.validacion.estado} · confianza ${l.confianza.nivel} sobre ${l.confianza.objeto.replace("_", " ")} · ${l.sensibilidad}`),
+    el("p", { clase: "sala-nota" }, `Muestra: ${l.muestra.n ?? l.muestra.n_rango ?? "?"} ${l.muestra.unidad}${Number.isInteger(l.muestra.n_independiente) && l.muestra.n_independiente !== l.muestra.n ? ` → ${l.muestra.n_independiente} ${l.muestra.unidad_independencia ?? ""} independientes` : ""} · ${l.muestra.naturaleza} · ${l.muestra.naturaleza_resultado} · evidencias: ${l.evidencia.length} · vigente hasta ${l.vigente_hasta}`),
+    el("details", { "data-k": `reglas-${l.id}`, open: abiertos.has(`reglas-${l.id}`) }, el("summary", {}, `Reglas nexus-R 0.2 (${e.reglas.filter((r) => r.estado === "cumple").length}/10 cumplen)`), tablaReglas(e.reglas)),
+    el("details", { "data-k": `rev-${l.id}`, open: abiertos.has(`rev-${l.id}`) }, el("summary", {}, `Revisiones (${l.revisiones.length})`),
+      el("ol", { clase: "nexus-historial" }, ...l.revisiones.map((r) => el("li", {}, el("strong", {}, r.version), ` · ${fecha(r.fecha)} · ${actor(r.autor_tipo, r.autor)} · ${r.decision}`, el("span", { clase: "sala-suave" }, ` · ${r.justificacion}`))))));
 }
 
-function tarjetaRecomendacion(r, abiertos) {
-  const k = `rec-${r.id}`;
+function tarjetaRecomendacion(x, abiertos) {
+  const r = x.registro, k = `rec-${r.id}`;
   return el("article", { clase: "nexus-tarjeta", "data-recomendacion": r.id },
-    el("div", { clase: "sala-tarjeta-cabeza" }, el("h4", {}, r.contenido?.titulo ?? r.id), el("span", { clase: `nexus-chip nexus-etapa-${r.etapa}` }, ETIQUETA_ETAPA[r.etapa] ?? "Inválida")),
-    el("p", { clase: "sala-nota" }, `Destino ${r.contenido?.proyecto_destino ?? "?"} · ${r.implementada ? "registrada como desplegada" : "no implementada"} · ${r.contenido?.reversible ? "reversible" : "NO reversible"}`),
-    r.contenido?.criterio_exito ? el("p", { clase: "sala-nota" }, `Criterio de éxito: ${r.contenido.criterio_exito}`) : null,
+    el("div", { clase: "sala-tarjeta-cabeza" }, el("h4", {}, r.hipotesis), el("span", { clase: `nexus-chip nexus-etapa-${r.estado}` }, x.situacion)),
+    el("p", { clase: "sala-nota" }, `${r.id} · destino ${r.destino.proyecto}/${r.destino.componente} · lecciones: ${r.lecciones.map((c) => `${c.id} (${c.revision})`).join(", ")}`),
+    r.toca_parametros_financieros || r.toca_apuestas ? el("p", { clase: "nexus-mal" }, "Toca dinero o apuestas: bloqueo absoluto de ejecución y adopción por Nexus.") : null,
+    r.estado === "aprobada" ? el("p", { clase: "sala-nota" }, `Aprobada por ${r.decision_humana.responsable} el ${fecha(r.decision_humana.fecha)} · alcance: ${r.decision_humana.alcance} · vigencia: ${r.decision_humana.vigencia}`) : null,
+    el("p", { clase: "sala-nota" }, `Experimento: ${r.experimento.metrica_primaria ?? "—"} · éxito: ${r.experimento.criterio_exito ?? "pendiente"} · preregistro: ${r.experimento.preregistro_ref ?? "pendiente"}`),
     el("details", { "data-k": k, open: abiertos.has(k) }, el("summary", {}, `Historial (${r.historial.length} evento${r.historial.length === 1 ? "" : "s"})`),
-      el("ol", { clase: "nexus-historial" }, ...r.historial.map((ev) => el("li", {},
-        el("strong", {}, EVENTO[ev.tipo] ?? ev.tipo), ` · ${fecha(ev.en)} · ${actor(ev.por)}`, ev.dictamen ? ` · ${DICTAMEN[ev.dictamen]?.texto ?? ev.dictamen}` : "",
-        ev.alcance ? ` · alcance: ${ev.alcance}` : "", ev.nota ? el("span", { clase: "sala-suave" }, ` · ${ev.nota}`) : null)))));
+      el("ol", { clase: "nexus-historial" }, ...r.historial.map((h) => el("li", {}, el("strong", {}, h.evento), ` · ${fecha(h.fecha)} · ${actor(h.autor_tipo, h.autor)}`)))));
 }
 
 /** Revisar un borrador de lección pegado como JSON. Opcional: descargar el registro con la lección agregada. */
@@ -125,6 +128,7 @@ function seccionBorrador({ abiertos, borrador, resumen, fuente, docLecciones, ah
   const salida = el("div", { clase: "nexus-salida", role: "status", "aria-live": "polite" });
   const area = el("textarea", { id: "nexus-borrador", rows: "8", spellcheck: "false", "aria-label": "Borrador de lección en JSON", placeholder: '{ "contrato": "cauce.leccion", "version_contrato": "0.2.0", … }' });
   area.value = borrador;
+  const alias = el("input", { id: "nexus-alias", type: "text", placeholder: "tu alias (no un correo)", "aria-label": "Quién registra", value: nodoAlias() });
   const revisar = async () => {
     salida.replaceChildren();
     let v;
@@ -133,20 +137,22 @@ function seccionBorrador({ abiertos, borrador, resumen, fuente, docLecciones, ah
     if (errores.length) salida.append(el("p", { clase: "nexus-mal" }, `El contrato rechaza el borrador (${errores.length}):`), el("ul", {}, ...errores.map((t) => el("li", {}, t))));
     for (const t of avisos) salida.append(el("p", { clase: "sala-nota" }, t));
     const lecciones = new Map(resumen.lecciones.map((x) => [x.leccion.id, x.leccion]));
+    if (!v || typeof v !== "object") return;
     lecciones.set(v?.id, v);
     const ev = evaluarLeccion(v, { ahora: ahoraMs, lecciones });
     salida.append(el("p", {}, "Dictamen del gerente: ", chip(ev.dictamen.estado)), tablaReglas(ev.reglas));
     if (errores.length) return;
     // El registro real empieza vacío si todavía no existe; uno de prueba solo admite lecciones de prueba.
-    const mismoTipo = (v.es_demo === true) === (fuente === "demo");
-    const r = await agregarLeccion(mismoTipo && docLecciones ? docLecciones : registroVacio("lecciones", { es_demo: v.es_demo === true }), v);
+    const demo = String(v.id).startsWith("demo-");
+    const base = demo === (fuente === "demo") && docLecciones ? docLecciones : registroVacio("lecciones", { es_demo: demo });
+    const r = await agregarLeccion(base, { registro: v, registrado_en: new Date(ahoraMs).toISOString(), registrado_por: { tipo: "humano", identificador: alias.value.trim() } });
     if (!r.ok) { salida.append(el("p", { clase: "nexus-mal" }, `No se puede agregar al registro: ${r.errores.join(" ")}`)); return; }
     const url = URL.createObjectURL(new Blob([`${JSON.stringify(r.doc, null, 2)}\n`], { type: "application/json" }));
     salida.append(el("p", {}, el("a", { clase: "boton boton-chico", href: url, download: "lecciones.json" }, "Descargar registro con esta lección"),
-      el("span", { clase: "sala-nota" }, ` Guárdalo en ${v.es_demo ? "datos/nexus/demo/" : "datos/nexus/registro/"} como lecciones.json. Incluye todo el historial anterior sin cambios.`)));
+      el("span", { clase: "sala-nota" }, ` Guárdalo en ${demo ? "datos/nexus/demo/" : "datos/nexus/registro/"} como lecciones.json. Incluye todo el historial anterior sin cambios.`)));
   };
   return el("details", { clase: "sala-seccion", "data-k": "borrador", open: abiertos.has("borrador") },
     el("summary", {}, el("h3", { clase: "sala-h3-linea", id: "nexus-borrador-titulo" }, "Revisar un borrador de lección")),
-    el("p", { clase: "sala-nota" }, "Pega una lección (contrato cauce.leccion 0.2). Se revisa aquí mismo, sin enviarla a ningún lado. Plantilla: contrato/ejemplos/nexus/leccion-plantilla.json."),
-    area, el("p", {}, el("button", { type: "button", clase: "boton boton-chico", id: "nexus-revisar", onclick: revisar }, "Revisar con el gerente")), salida);
+    el("p", { clase: "sala-nota" }, "Pega una lección (contrato cauce.leccion 0.2 del documento maestro). Se revisa aquí mismo, sin enviarla a ningún lado. Plantilla: contrato/ejemplos/nexus/leccion-plantilla.json."),
+    area, el("p", {}, el("label", {}, "Registra: ", alias)), el("p", {}, el("button", { type: "button", clase: "boton boton-chico", id: "nexus-revisar", onclick: revisar }, "Revisar con el gerente")), salida);
 }

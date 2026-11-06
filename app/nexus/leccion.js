@@ -1,126 +1,151 @@
-// Contrato `cauce.leccion` 0.2 (PROVISIONAL: reconstruido sin el documento maestro v0.2; ver docs/NEXUS-FASE-1.md).
-// Una lección es una VERSIÓN inmutable: corregir = agregar la revisión siguiente, nunca editar ni borrar.
-// Este archivo solo valida la forma. Lo que la evidencia sostiene lo decide el gerente escéptico (gerente.js).
+// Contrato `cauce.leccion` 0.2 según CAUCE_NEXUS_ARQUITECTURA_MAESTRA_v0.2 §3 (docs/). Valida SOLO la forma.
+// Lo que la evidencia sostiene lo decide el gerente escéptico (gerente.js, reglas nexus-R 0.2).
+// Claves desconocidas = error (§3: «el validador rechazará claves desconocidas»), salvo las extensiones
+// documentadas en contrato/NEXUS-CONTRATOS.md (§ Extensiones Cauce 0.2), que son opcionales.
 
-import { esFechaConZona, esActor, texto, buscarDatosPrivados } from "./comun.js";
+import { esFechaConZona, esFechaODia, texto, buscarDatosPrivados } from "./comun.js";
 
-export const CONTRATO_LECCION = "cauce.leccion";
-export const VERSION_LECCION = "0.2.0";
+export const ESQUEMA_LECCION = "cauce.leccion";
+export const VERSION_LECCION = "0.2";
+export const TIPOS = ["metodo", "hallazgo", "estrategia"];
+export const TIPOS_ORIGEN = ["medicion", "revision_humana", "texto_ia"];
+export const TIPOS_AUTOR = ["humano", "codigo", "ia"];
+export const UBICACIONES = ["main", "pr_abierto", "desplegado", "fuera_de_repo"];
+export const BASES = ["vintage", "observed", "estimated", "desconocida"];
+export const NATURALEZAS = ["sintetica", "demo", "real_historica", "real_comercial"];
+export const NATURALEZAS_RESULTADO = ["prueba_tecnica", "backtest", "simulacion", "resultado_operativo_real", "sin_resultado"];
+export const NIVELES_CONFIANZA = ["baja", "media", "alta"];
+export const OBJETOS_CONFIANZA = ["metodo", "efecto_operativo", "beneficio_economico"];
+export const ESTADOS_VALIDACION = ["propuesta", "en_prueba", "validada_en_origen", "validada_en_destino", "refutada", "caducada"];
+export const SENSIBILIDADES = ["sin-datos-comerciales", "interno", "restringida"];
 
-export const TIPOS_CAMBIO = ["alta", "correccion", "revision", "retiro"];
-export const NATURALEZAS = ["exito", "fracaso", "neutro", "mixto", "inconcluso"];
-/** De menor a mayor: hipótesis < validada en su proyecto de origen < validada de forma independiente en el destino. */
-export const NIVELES = ["hipotesis", "validada_en_origen", "validada_independiente_en_destino"];
-export const TIPOS_EVIDENCIA = ["experimento", "registro", "metrica", "documento", "afirmacion"];
-export const USOS_EVIDENCIA = ["conclusion", "validacion"];
-export const RELACIONES = ["apoya", "deriva_de", "contradice", "reemplaza"];
-export const RESULTADOS_VALIDACION = ["confirma", "refuta", "inconcluso"];
-export const EVALUACIONES = ["en_muestra", "fuera_de_muestra", "validacion_cruzada", "desconocida"];
+const CLAVES = {
+  raiz: ["id", "esquema", "version_esquema", "tipo", "origen", "autor", "hallazgo", "antecedentes", "evidencia", "procedencia", "fecha_hallazgo", "vigente_hasta", "muestra", "confianza", "limitaciones", "aplicaciones_posibles", "validacion", "revisiones", "sensibilidad"],
+  origen: ["proyecto", "componente", "version_sistema", "commit", "tipo"],
+  autor: ["tipo", "identificador"],
+  // exportado_en y fraccion_estimada: extensiones Cauce 0.2 (T07 y T21 las necesitan y §3 no les da campo).
+  evidencia: ["tipo", "referencia", "ubicacion", "commit", "observado_en", "conocido_en", "base_conocimiento", "proyecto_ejecutor", "dataset_id", "sha256", "reproducible_declarado", "reproduccion_independiente", "exportado_en", "fraccion_estimada"],
+  reproduccion: ["quien", "fecha", "referencia", "sha256"],
+  procedencia: ["metodo", "periodo_inicio", "periodo_fin", "comando", "alcance", "limitaciones_fuente"],
+  muestra: ["n", "n_rango", "unidad", "n_independiente", "unidad_independencia", "n_efectivo", "independencia", "naturaleza", "naturaleza_resultado", "seleccion_en_muestra", "n_comparaciones", "cobertura", "supuestos"],
+  confianza: ["nivel", "objeto", "justificacion"],
+  aplicacion: ["proyecto", "hipotesis"],
+  validacion: ["estado", "validado_en"],
+  validado_en: ["proyecto", "prueba_ref", "commit", "fecha", "resultado", "dataset_id", "sha256"],
+  revision: ["fecha", "autor_tipo", "autor", "decision", "justificacion", "version", "tipo"],
+};
+const ID = /^[a-z0-9][a-z0-9._-]{2,80}$/i;
+const PROYECTO = /^[a-z0-9][a-z0-9_-]{0,40}$/;
+const esObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 
-const CAMPOS = new Set(["contrato", "version_contrato", "id", "revision", "tipo_cambio", "motivo_cambio", "es_demo", "registrado_en", "registrado_por",
-  "autor_conclusion", "fecha_conclusion", "titulo", "enunciado", "proyecto_origen", "proyectos_destino", "naturaleza_resultado", "nivel_validacion",
-  "declara_reproducible", "evidencias", "antecedentes", "validaciones", "vigencia", "huella_anterior"]);
-const ID_LECCION = /^lec-[a-z0-9][a-z0-9-]{2,62}$/;
-const ID_PROYECTO = /^[a-z0-9][a-z0-9_-]{0,40}$/;
-
-/**
- * Valida una versión de lección. Devuelve { errores, avisos }. Con errores la versión NO se registra.
- * Fechas sin zona horaria, credenciales o datos personales son errores (no se «corrigen» solos).
- */
-export function validarLeccion(v) {
+/** @returns { errores, avisos } — con errores la lección no es «registrable» (§3). */
+export function validarLeccion(l) {
   const errores = [];
   const avisos = [];
   const e = (t) => errores.push(t);
-  if (!v || typeof v !== "object" || Array.isArray(v)) return { errores: ["La lección debe ser un objeto JSON."], avisos };
+  if (!esObj(l)) return { errores: ["La lección debe ser un objeto JSON."], avisos };
+  const claves = (obj, lista, ruta) => { for (const k of Object.keys(obj)) if (!lista.includes(k)) e(`${ruta}${k}: clave desconocida (el contrato 0.2 la rechaza).`); };
+  const obligatorio = (obj, k, ruta) => { if (!(k in obj)) e(`${ruta}${k} es obligatorio.`); };
+  const enumera = (v, lista, r) => { if (!lista.includes(v)) e(`${r} debe ser uno de: ${lista.join(", ")}.`); };
+  const instante = (v, r) => { if (v !== null && v !== undefined && !esFechaConZona(v)) e(`${r} «${v}» debe ser instante ISO 8601 con zona horaria o null.`); };
+  const dia = (v, r, oblig = true) => { if ((v === null || v === undefined) && !oblig) return; if (!esFechaODia(v)) e(`${r} «${v}» debe ser fecha ISO (AAAA-MM-DD o instante con zona).`); };
 
-  if (v.contrato !== CONTRATO_LECCION) e(`contrato debe ser "${CONTRATO_LECCION}".`);
-  if (typeof v.version_contrato !== "string" || !/^0\.2\.\d+$/.test(v.version_contrato)) e("version_contrato debe ser 0.2.x.");
-  if (typeof v.id !== "string" || !ID_LECCION.test(v.id)) e("id debe empezar con «lec-» y usar minúsculas, números o guiones.");
-  if (!Number.isInteger(v.revision) || v.revision < 1) e("revision debe ser un entero desde 1.");
-  if (!TIPOS_CAMBIO.includes(v.tipo_cambio)) e(`tipo_cambio debe ser uno de: ${TIPOS_CAMBIO.join(", ")}.`);
-  if (v.revision === 1 && v.tipo_cambio !== "alta") e("La revisión 1 debe ser tipo_cambio «alta».");
-  if (v.revision > 1 && v.tipo_cambio === "alta") e("Solo la revisión 1 puede ser «alta».");
-  if (v.revision > 1 && !texto(v.motivo_cambio)) e("Una revisión posterior a la 1 necesita motivo_cambio.");
-  if (typeof v.es_demo !== "boolean") e("es_demo es obligatorio (true para datos de prueba).");
+  claves(l, CLAVES.raiz, "");
+  for (const k of CLAVES.raiz) obligatorio(l, k, "");
+  if (typeof l.id !== "string" || !ID.test(l.id)) e("id: identificador estable (letras, números, . _ -).");
+  if (l.esquema !== ESQUEMA_LECCION) e(`esquema debe ser "${ESQUEMA_LECCION}".`);
+  if (l.version_esquema !== VERSION_LECCION) e(`version_esquema debe ser "${VERSION_LECCION}".`);
+  enumera(l.tipo, TIPOS, "tipo");
+  if (!esObj(l.origen)) e("origen debe ser un objeto.");
+  else {
+    claves(l.origen, CLAVES.origen, "origen.");
+    if (typeof l.origen.proyecto !== "string" || !PROYECTO.test(l.origen.proyecto)) e("origen.proyecto: id de proyecto (ej. compago).");
+    for (const k of ["componente", "version_sistema"]) if (!texto(l.origen[k])) e(`origen.${k} es obligatorio.`);
+    enumera(l.origen.tipo, TIPOS_ORIGEN, "origen.tipo");
+  }
+  if (!esObj(l.autor)) e("autor debe ser un objeto.");
+  else { claves(l.autor, CLAVES.autor, "autor."); enumera(l.autor.tipo, TIPOS_AUTOR, "autor.tipo"); if (!texto(l.autor.identificador)) e("autor.identificador es obligatorio."); }
+  if (!texto(l.hallazgo)) e("hallazgo es obligatorio.");
+  if (!Array.isArray(l.antecedentes) || l.antecedentes.some((a) => typeof a !== "string" || !ID.test(a))) e("antecedentes: lista de ids de lecciones (puede estar vacía).");
 
-  fecha(v, "registrado_en", e, true);
-  fecha(v, "fecha_conclusion", e, true);
-  if (!esActor(v.registrado_por)) e("registrado_por necesita {tipo: humano|ia|proceso, id}.");
-  if (!esActor(v.autor_conclusion)) e("autor_conclusion necesita {tipo: humano|ia|proceso, id}.");
-  for (const k of ["titulo", "enunciado"]) if (!texto(v[k])) e(`${k} es obligatorio.`);
-  if (typeof v.titulo === "string" && v.titulo.length > 160) e("titulo: máximo 160 caracteres.");
-  if (typeof v.proyecto_origen !== "string" || !ID_PROYECTO.test(v.proyecto_origen)) e("proyecto_origen debe ser un id de proyecto (ej. compago).");
-  if (!Array.isArray(v.proyectos_destino) || v.proyectos_destino.some((p) => typeof p !== "string" || !ID_PROYECTO.test(p))) e("proyectos_destino debe ser una lista de ids de proyecto.");
-  if (!NATURALEZAS.includes(v.naturaleza_resultado)) e(`naturaleza_resultado debe ser una de: ${NATURALEZAS.join(", ")}.`);
-  if (!NIVELES.includes(v.nivel_validacion)) e(`nivel_validacion debe ser uno de: ${NIVELES.join(", ")}.`);
-  if (v.declara_reproducible !== undefined && typeof v.declara_reproducible !== "boolean") e("declara_reproducible debe ser true o false.");
-
-  // Evidencias
-  const ids = new Set();
-  if (!Array.isArray(v.evidencias)) e("evidencias debe ser una lista (puede estar vacía en una hipótesis).");
-  else v.evidencias.forEach((ev, i) => {
-    const r = `evidencias[${i}]`;
-    if (!ev || typeof ev !== "object") return e(`${r} debe ser un objeto.`);
-    if (!texto(ev.id)) e(`${r}.id es obligatorio.`);
-    else if (ids.has(ev.id)) e(`${r}.id «${ev.id}» repetido.`);
-    else ids.add(ev.id);
-    if (!TIPOS_EVIDENCIA.includes(ev.tipo)) e(`${r}.tipo debe ser uno de: ${TIPOS_EVIDENCIA.join(", ")}.`);
-    if (ev.uso !== undefined && !USOS_EVIDENCIA.includes(ev.uso)) e(`${r}.uso debe ser conclusion o validacion.`);
-    if (!texto(ev.descripcion)) e(`${r}.descripcion es obligatoria.`);
-    if (ev.producida_por !== undefined && !esActor(ev.producida_por)) e(`${r}.producida_por debe ser un actor.`);
-    fecha(ev, "obtenida_en", e, false, r);
-    fecha(ev, "usa_datos_hasta", e, false, r);
-    if (ev.periodo !== undefined) { fecha(ev.periodo, "desde", e, false, `${r}.periodo`); fecha(ev.periodo, "hasta", e, false, `${r}.periodo`); }
-    if (ev.muestra !== undefined) {
-      if (!ev.muestra || !texto(ev.muestra.id)) e(`${r}.muestra.id es obligatorio si hay muestra.`);
-      for (const k of ["solapa_con", "derivada_de"]) if (ev.muestra?.[k] !== undefined && !Array.isArray(ev.muestra[k])) e(`${r}.muestra.${k} debe ser una lista.`);
-      if (ev.muestra?.tamano !== undefined && !(Number.isInteger(ev.muestra.tamano) && ev.muestra.tamano > 0)) e(`${r}.muestra.tamano debe ser un entero positivo.`);
+  if (!Array.isArray(l.evidencia)) e("evidencia debe ser una lista.");
+  else l.evidencia.forEach((ev, i) => {
+    const r = `evidencia[${i}].`;
+    if (!esObj(ev)) return e(`${r} debe ser un objeto.`);
+    claves(ev, CLAVES.evidencia, r);
+    for (const k of ["tipo", "referencia", "ubicacion", "base_conocimiento", "proyecto_ejecutor", "reproducible_declarado"]) obligatorio(ev, k, r);
+    if (!texto(ev.tipo) || !texto(ev.referencia)) e(`${r}tipo y referencia son textos obligatorios.`);
+    enumera(ev.ubicacion, UBICACIONES, `${r}ubicacion`);
+    enumera(ev.base_conocimiento, BASES, `${r}base_conocimiento`);
+    if (typeof ev.proyecto_ejecutor !== "string" || !PROYECTO.test(ev.proyecto_ejecutor)) e(`${r}proyecto_ejecutor: id de proyecto.`);
+    if (typeof ev.reproducible_declarado !== "boolean") e(`${r}reproducible_declarado debe ser true o false.`);
+    instante(ev.observado_en, `${r}observado_en`); instante(ev.conocido_en, `${r}conocido_en`); instante(ev.exportado_en, `${r}exportado_en`);
+    if (ev.sha256 !== undefined && ev.sha256 !== null && !/^[0-9a-f]{64}$/.test(ev.sha256)) e(`${r}sha256: 64 caracteres hexadecimales.`);
+    if (ev.fraccion_estimada !== undefined && !(typeof ev.fraccion_estimada === "number" && ev.fraccion_estimada >= 0 && ev.fraccion_estimada <= 1)) e(`${r}fraccion_estimada: número de 0 a 1.`);
+    if (ev.reproduccion_independiente !== undefined && ev.reproduccion_independiente !== null) {
+      const ri = ev.reproduccion_independiente;
+      if (!esObj(ri)) e(`${r}reproduccion_independiente debe ser objeto o null.`);
+      else { claves(ri, CLAVES.reproduccion, `${r}reproduccion_independiente.`); if (!texto(ri.quien) || !texto(ri.referencia)) e(`${r}reproduccion_independiente necesita quien y referencia.`); dia(ri.fecha, `${r}reproduccion_independiente.fecha`); }
     }
-    if (ev.metodo !== undefined) {
-      const m = ev.metodo;
-      if (m.configuraciones_probadas !== undefined && !(Number.isInteger(m.configuraciones_probadas) && m.configuraciones_probadas >= 1)) e(`${r}.metodo.configuraciones_probadas debe ser un entero desde 1.`);
-      if (m.evaluacion !== undefined && !EVALUACIONES.includes(m.evaluacion)) e(`${r}.metodo.evaluacion debe ser una de: ${EVALUACIONES.join(", ")}.`);
-      fecha(m, "datos_entrenamiento_hasta", e, false, `${r}.metodo`);
-      fecha(m, "datos_prueba_desde", e, false, `${r}.metodo`);
-    }
-    if (ev.huella !== undefined && !/^[0-9a-f]{64}$/.test(ev.huella)) e(`${r}.huella debe ser SHA-256 en hexadecimal (64 caracteres).`);
   });
 
-  if (!Array.isArray(v.antecedentes ?? [])) e("antecedentes debe ser una lista.");
-  else (v.antecedentes ?? []).forEach((a, i) => {
-    if (!a || typeof a.leccion_id !== "string" || !ID_LECCION.test(a.leccion_id)) e(`antecedentes[${i}].leccion_id inválido.`);
-    if (!RELACIONES.includes(a?.relacion)) e(`antecedentes[${i}].relacion debe ser una de: ${RELACIONES.join(", ")}.`);
+  if (!esObj(l.procedencia)) e("procedencia debe ser un objeto.");
+  else {
+    claves(l.procedencia, CLAVES.procedencia, "procedencia.");
+    for (const k of ["metodo", "alcance"]) if (!texto(l.procedencia[k])) e(`procedencia.${k} es obligatorio.`);
+    if (!Array.isArray(l.procedencia.limitaciones_fuente)) e("procedencia.limitaciones_fuente debe ser una lista.");
+    dia(l.procedencia.periodo_inicio, "procedencia.periodo_inicio", false); dia(l.procedencia.periodo_fin, "procedencia.periodo_fin", false);
+  }
+  dia(l.fecha_hallazgo, "fecha_hallazgo"); dia(l.vigente_hasta, "vigente_hasta");
+
+  if (!esObj(l.muestra)) e("muestra debe ser un objeto.");
+  else {
+    const m = l.muestra;
+    claves(m, CLAVES.muestra, "muestra.");
+    for (const k of ["unidad", "independencia", "naturaleza", "naturaleza_resultado", "seleccion_en_muestra", "supuestos"]) obligatorio(m, k, "muestra.");
+    if (!("n" in m) && !("n_rango" in m)) e("muestra necesita n o n_rango.");
+    for (const k of ["n", "n_independiente", "n_efectivo", "n_comparaciones"]) if (m[k] !== undefined && m[k] !== null && !(Number.isInteger(m[k]) && m[k] >= 0)) e(`muestra.${k}: entero ≥ 0 o null.`);
+    enumera(m.naturaleza, NATURALEZAS, "muestra.naturaleza");
+    enumera(m.naturaleza_resultado, NATURALEZAS_RESULTADO, "muestra.naturaleza_resultado");
+    if (typeof m.seleccion_en_muestra !== "boolean") e("muestra.seleccion_en_muestra debe ser true o false.");
+    if (!Array.isArray(m.supuestos)) e("muestra.supuestos debe ser una lista.");
+  }
+  if (!esObj(l.confianza)) e("confianza debe ser un objeto.");
+  else { claves(l.confianza, CLAVES.confianza, "confianza."); enumera(l.confianza.nivel, NIVELES_CONFIANZA, "confianza.nivel"); enumera(l.confianza.objeto, OBJETOS_CONFIANZA, "confianza.objeto"); if (!texto(l.confianza.justificacion)) e("confianza.justificacion es obligatoria."); }
+  if (!Array.isArray(l.limitaciones)) e("limitaciones debe ser una lista.");
+  if (!Array.isArray(l.aplicaciones_posibles)) e("aplicaciones_posibles debe ser una lista.");
+  else l.aplicaciones_posibles.forEach((a, i) => { if (!esObj(a) || !texto(a.proyecto) || !texto(a.hipotesis)) e(`aplicaciones_posibles[${i}] necesita proyecto e hipotesis.`); else claves(a, CLAVES.aplicacion, `aplicaciones_posibles[${i}].`); });
+  if (!esObj(l.validacion)) e("validacion debe ser un objeto.");
+  else {
+    claves(l.validacion, CLAVES.validacion, "validacion.");
+    enumera(l.validacion.estado, ESTADOS_VALIDACION, "validacion.estado");
+    if (!Array.isArray(l.validacion.validado_en)) e("validacion.validado_en debe ser una lista.");
+    else l.validacion.validado_en.forEach((v, i) => {
+      const r = `validacion.validado_en[${i}].`;
+      if (!esObj(v)) return e(`${r} debe ser un objeto.`);
+      claves(v, CLAVES.validado_en, r);
+      if (!texto(v.proyecto)) e(`${r}proyecto es obligatorio.`);
+      dia(v.fecha, `${r}fecha`);
+      if (!texto(v.resultado)) e(`${r}resultado es obligatorio.`);
+      // prueba_ref vacío NO es error de forma: lo juzga R06 (T05).
+    });
+  }
+  if (!Array.isArray(l.revisiones) || l.revisiones.length === 0) e("revisiones: lista con al menos un evento (historial de solo anexado).");
+  else l.revisiones.forEach((rv, i) => {
+    const r = `revisiones[${i}].`;
+    if (!esObj(rv)) return e(`${r} debe ser un objeto.`);
+    claves(rv, CLAVES.revision, r);
+    // Una revisión es un instante: SIEMPRE con zona (§3). Sin zona, la lección no es registrable (T17).
+    if (!esFechaConZona(rv.fecha)) e(`${r}fecha «${rv.fecha}» debe ser instante ISO con zona horaria.`);
+    enumera(rv.autor_tipo, TIPOS_AUTOR, `${r}autor_tipo`);
+    for (const k of ["autor", "decision", "justificacion", "version"]) if (!texto(rv[k])) e(`${r}${k} es obligatorio.`);
   });
+  enumera(l.sensibilidad, SENSIBILIDADES, "sensibilidad");
 
-  if (!Array.isArray(v.validaciones ?? [])) e("validaciones debe ser una lista.");
-  else (v.validaciones ?? []).forEach((val, i) => {
-    const r = `validaciones[${i}]`;
-    if (!val || typeof val !== "object") return e(`${r} debe ser un objeto.`);
-    if (!esActor(val.por)) e(`${r}.por debe ser un actor.`);
-    fecha(val, "en", e, true, r);
-    if (!["origen", "destino"].includes(val.ambito)) e(`${r}.ambito debe ser origen o destino.`);
-    if (typeof val.proyecto !== "string" || !ID_PROYECTO.test(val.proyecto)) e(`${r}.proyecto debe ser un id de proyecto.`);
-    if (!RESULTADOS_VALIDACION.includes(val.resultado)) e(`${r}.resultado debe ser confirma, refuta o inconcluso.`);
-    if (!Array.isArray(val.evidencias)) e(`${r}.evidencias debe ser una lista de ids de evidencias.`);
-    else for (const id of val.evidencias) if (!ids.has(id)) e(`${r} cita la evidencia «${id}», que no está en evidencias.`);
-  });
-
-  if (v.vigencia !== undefined) {
-    if (!v.vigencia || typeof v.vigencia !== "object") e("vigencia debe ser un objeto.");
-    else fecha(v.vigencia, "caduca_en", e, false, "vigencia");
-  } else avisos.push("Sin vigencia.caduca_en: el gerente no podrá saber si la lección sigue vigente.");
-
-  const extra = Object.keys(v).filter((k) => !CAMPOS.has(k));
-  if (extra.length) avisos.push(`Campos que el contrato no conoce (se guardan, pero nadie los revisa): ${extra.join(", ")}.`);
-
-  const privados = buscarDatosPrivados(v);
-  for (const p of privados) e(`Dato privado no permitido en ${p.ruta}: ${p.motivo}. Nexus no guarda credenciales ni datos personales.`);
+  for (const p of buscarDatosPrivados(l)) e(`Dato privado no permitido en ${p.ruta}: ${p.motivo}.`);
   return { errores, avisos };
 }
 
-function fecha(obj, campo, e, obligatoria, prefijo = "") {
-  const r = prefijo ? `${prefijo}.${campo}` : campo;
-  const v = obj?.[campo];
-  if (v === undefined || v === null) { if (obligatoria) e(`${r} es obligatoria.`); return; }
-  if (!esFechaConZona(v)) e(`${r} «${v}» debe ser fecha y hora con zona horaria (ej. 2026-11-06T10:00:00-06:00 o …Z).`);
-}
+/** Versión vigente de una lección = la `version` de su última revisión (así la citan las recomendaciones §4). */
+export const versionDe = (l) => (Array.isArray(l?.revisiones) && l.revisiones.length ? l.revisiones.at(-1).version ?? null : null);
+export const esDia = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);

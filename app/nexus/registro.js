@@ -1,20 +1,18 @@
-// Registro de Nexus (fase 1): lecciones y recomendaciones en dos archivos JSON que SOLO crecen.
-// Cada entrada lleva `huella_anterior` (SHA-256 de la entrada previa): si alguien borra o edita una entrada
-// del historial, la cadena se rompe y el registro lo dice. Nada aquí escribe en disco: las funciones devuelven
-// un documento nuevo y quien llama (herramientas/nexus.mjs o la descarga del navegador) decide guardarlo.
+// Almacén propio de Nexus (fase 1): dos archivos JSON que SOLO crecen, uno de lecciones y otro de recomendaciones.
+// Cada entrada es un sobre {registro, registrado_en, registrado_por, huella_anterior}: `registro` es el documento del
+// contrato 0.2 tal cual (sin campos ajenos) y `huella_anterior` es el SHA-256 de la entrada previa del archivo. Borrar,
+// editar o reordenar rompe la cadena y se detecta. Una versión nueva de una lección debe anexar revisiones; de una
+// recomendación, anexar eventos al historial. Nada aquí escribe en disco: se devuelve el documento nuevo.
 
-import { huellaDe, ms } from "./comun.js";
-import { validarLeccion, VERSION_LECCION } from "./leccion.js";
+import { huellaDe, esFechaConZona, esActor } from "./comun.js";
+import { validarLeccion, versionDe } from "./leccion.js";
 import { evaluarLeccion } from "./gerente.js";
-import { plegarRecomendacion, validarEventoForma, CONTRATO_RECOMENDACION, VERSION_RECOMENDACION } from "./recomendacion.js";
+import { validarRecomendacion, validarPaso, evaluarRecomendacion, situacion } from "./recomendacion.js";
 
-export const REGISTRO_LECCIONES = "cauce.leccion.registro";
-export const REGISTRO_RECOMENDACIONES = "cauce.recomendacion.registro";
+export const REGISTRO = { lecciones: "cauce.nexus.registro-lecciones", recomendaciones: "cauce.nexus.registro-recomendaciones" };
 
 export function registroVacio(tipo, { es_demo = false } = {}) {
-  return tipo === "lecciones"
-    ? { contrato: REGISTRO_LECCIONES, version_contrato: VERSION_LECCION, es_demo, versiones: [] }
-    : { contrato: REGISTRO_RECOMENDACIONES, version_contrato: VERSION_RECOMENDACION, es_demo, eventos: [] };
+  return { contrato: REGISTRO[tipo], version_contrato: "0.2", es_demo, entradas: [] };
 }
 
 /** Revisa que ninguna entrada se haya borrado, cambiado o reordenado. */
@@ -23,178 +21,142 @@ export async function verificarCadena(entradas) {
   let previa = null;
   for (let i = 0; i < entradas.length; i++) {
     const esperada = previa === null ? null : await huellaDe(previa);
-    if ((entradas[i]?.huella_anterior ?? null) !== esperada)
-      errores.push(`Entrada ${i + 1}: la huella no coincide con la entrada anterior (se borró, editó o reordenó el historial).`);
+    if ((entradas[i]?.huella_anterior ?? null) !== esperada) errores.push(`Entrada ${i + 1}: la huella no coincide con la anterior (se borró, editó o reordenó el historial).`);
     previa = entradas[i];
   }
   return { ok: errores.length === 0, errores };
 }
 
-function forma(doc, tipo) {
-  const campo = tipo === "lecciones" ? "versiones" : "eventos";
-  const contrato = tipo === "lecciones" ? REGISTRO_LECCIONES : REGISTRO_RECOMENDACIONES;
-  if (!doc || doc.contrato !== contrato || !Array.isArray(doc[campo])) return { errores: [`El registro de ${tipo} debe tener contrato "${contrato}" y la lista «${campo}».`], lista: [] };
-  return { errores: [], lista: doc[campo] };
+const lista = (doc, tipo) => (doc && doc.contrato === REGISTRO[tipo] && Array.isArray(doc.entradas) ? doc.entradas : null);
+
+/** Lecciones vigentes en un instante (las registradas hasta entonces), para juzgar una decisión en su momento. */
+function leccionesHasta(entradasLecciones, hastaMs = Infinity) {
+  const m = new Map();
+  for (const e of entradasLecciones) if (Date.parse(e.registrado_en) <= hastaMs && e.registro?.id) m.set(e.registro.id, e.registro);
+  return m;
+}
+
+function revisarSobre(e, i) {
+  const errores = [];
+  if (!e || typeof e !== "object") return [`Entrada ${i + 1}: no es un objeto.`];
+  for (const k of Object.keys(e)) if (!["registro", "registrado_en", "registrado_por", "huella_anterior"].includes(k)) errores.push(`Entrada ${i + 1}: clave desconocida ${k}.`);
+  if (!esFechaConZona(e.registrado_en)) errores.push(`Entrada ${i + 1}: registrado_en «${e.registrado_en}» debe tener zona horaria (T17).`);
+  if (!esActor(e.registrado_por)) errores.push(`Entrada ${i + 1}: registrado_por necesita {tipo: humano|codigo|ia, identificador}.`);
+  return errores;
 }
 
 /**
- * Lee los dos registros y arma el estado de Nexus. Nunca lanza error: lo que esté mal queda en `errores`.
- * @returns { versiones, ultimas: Map(id → última versión válida), historial: Map(id → versiones), recomendaciones: [...], errores, avisos, es_demo }
+ * Lee ambos registros. Nunca lanza: lo que esté mal va a `errores` y esa entrada no se usa.
+ * @returns { ultimas: Map(id → lección), historial: Map(id → [versiones]), recomendaciones: [{registro, versiones, errores}], errores, es_demo }
  */
 export async function leerNexus({ lecciones, recomendaciones }) {
   const errores = [];
-  const avisos = [];
-  const fl = forma(lecciones, "lecciones");
-  const fr = forma(recomendaciones ?? registroVacio("recomendaciones"), "recomendaciones");
-  errores.push(...fl.errores, ...fr.errores);
-  for (const [t, f] of [["lecciones", fl], ["recomendaciones", fr]]) {
-    const c = await verificarCadena(f.lista);
-    errores.push(...c.errores.map((x) => `Registro de ${t}: ${x}`));
-  }
-  const historial = new Map();
-  const ultimas = new Map();
-  for (const v of fl.lista) {
-    const r = validarLeccion(v);
-    if (r.errores.length) { errores.push(`Lección ${v?.id ?? "?"} rev. ${v?.revision ?? "?"}: ${r.errores.join(" ")}`); continue; }
-    const previas = historial.get(v.id) ?? [];
-    if (v.revision !== previas.length + 1) { errores.push(`Lección ${v.id}: revisión ${v.revision} fuera de orden (se esperaba ${previas.length + 1}).`); continue; }
-    previas.push(v);
-    historial.set(v.id, previas);
-    ultimas.set(v.id, v);
-  }
-  const porRec = new Map();
-  for (const ev of fr.lista) { const k = ev?.id ?? "?"; porRec.set(k, [...(porRec.get(k) ?? []), ev]); }
-  const recs = [...porRec.values()].map((evs) => plegarRecomendacion(evs, { evaluarLeccionCitada: evaluarCitadaEnSuMomento(ultimas, historial, evs) }));
-  for (const r of recs) errores.push(...r.errores.map((x) => `Recomendación ${r.id}: ${x}`));
-  const es_demo = lecciones?.es_demo === true || recomendaciones?.es_demo === true;
-  return { versiones: fl.lista, ultimas, historial, recomendaciones: recs, errores, avisos, es_demo };
+  const eL = lista(lecciones, "lecciones");
+  const eR = recomendaciones ? lista(recomendaciones, "recomendaciones") : [];
+  if (!eL) errores.push(`El registro de lecciones debe tener contrato "${REGISTRO.lecciones}" y la lista «entradas».`);
+  if (!eR) errores.push(`El registro de recomendaciones debe tener contrato "${REGISTRO.recomendaciones}" y la lista «entradas».`);
+  for (const [t, ent] of [["lecciones", eL ?? []], ["recomendaciones", eR ?? []]]) errores.push(...(await verificarCadena(ent)).errores.map((x) => `Registro de ${t}: ${x}`));
+  const historial = new Map(), ultimas = new Map(), validas = [];
+  (eL ?? []).forEach((e, i) => {
+    const err = [...revisarSobre(e, i), ...validarLeccion(e?.registro).errores];
+    const previa = ultimas.get(e?.registro?.id);
+    if (!err.length && previa) err.push(...pasoLeccion(previa, e.registro));
+    if (err.length) { errores.push(`Lección ${e?.registro?.id ?? "?"} (entrada ${i + 1}): ${err.join(" ")}`); return; }
+    historial.set(e.registro.id, [...(historial.get(e.registro.id) ?? []), e]);
+    ultimas.set(e.registro.id, e.registro);
+    validas.push(e);
+  });
+  const porId = new Map();
+  (eR ?? []).forEach((e, i) => {
+    const err = [...revisarSobre(e, i), ...validarRecomendacion(e?.registro).errores];
+    const id = e?.registro?.id ?? "?";
+    const previas = porId.get(id) ?? [];
+    if (!err.length) err.push(...validarPaso(previas.at(-1)?.registro ?? null, e.registro, { lecciones: leccionesHasta(validas, Date.parse(e.registrado_en)), ahora: Date.parse(e.registrado_en) }));
+    if (err.length) { errores.push(`Recomendación ${id} (entrada ${i + 1}): ${err.join(" ")}`); return; }
+    porId.set(id, [...previas, e]);
+  });
+  const recs = [...porId.values()].map((v) => ({ registro: v.at(-1).registro, versiones: v }));
+  return { ultimas, historial, recomendaciones: recs, errores, es_demo: lecciones?.es_demo === true || recomendaciones?.es_demo === true };
 }
 
-/** Para validar una aprobación: la lección citada debe ser la vigente y el gerente no debe tener objeciones ni pendientes. */
-function citador(ultimas, ahoraMs) {
-  return (id, revision) => {
-    const ult = ultimas.get(id);
-    if (!ult) return { estado: "desconocida", motivo: "no está en el registro" };
-    if (ult.revision !== revision) return { estado: "desactualizada", motivo: `la vigente es la revisión ${ult.revision}` };
-    const d = evaluarLeccion(ult, { ahora: ahoraMs, lecciones: ultimas }).dictamen;
-    return { estado: d.estado, motivo: d.estado === "sin_objeciones" ? "" : `reglas ${[...d.no_cumple, ...d.no_evaluado].join(", ")}` };
-  };
+/** Una versión nueva de lección: mismo id, revisiones anexadas (las anteriores intactas), sin revivir una caducada/refutada. */
+function pasoLeccion(previa, nueva) {
+  const a = previa.revisiones ?? [], b = nueva.revisiones ?? [];
+  const err = [];
+  if (b.length <= a.length || JSON.stringify(b.slice(0, a.length)) !== JSON.stringify(a)) err.push("revisiones: solo se puede anexar; las anteriores no cambian y debe haber al menos una nueva.");
+  if (b.length && a.length && Date.parse(b.at(-1).fecha) < Date.parse(a.at(-1).fecha)) err.push("La revisión nueva tiene fecha anterior a la previa.");
+  if (versionDe(nueva) === versionDe(previa)) err.push(`La revisión nueva debe llevar otra «version» (la vigente es «${versionDe(previa)}»).`);
+  return err;
 }
 
-/** Una aprobación del pasado se juzga con la información que había en SU fecha (las revisiones de lecciones de entonces). */
-function evaluarCitadaEnSuMomento(ultimas, historial, eventos) {
-  return (id, revision) => {
-    const aprob = [...eventos].reverse().find((e) => e.tipo === "aprobacion");
-    const cuando = ms(aprob?.en) ?? Date.now();
-    const deEntonces = new Map();
-    for (const [k, vs] of historial) {
-      const v = vs.filter((x) => (ms(x.registrado_en) ?? 0) <= cuando).at(-1);
-      if (v) deEntonces.set(k, v);
-    }
-    return citador(deEntonces, cuando)(id, revision);
-  };
-}
-
-/** Agrega una versión de lección. Devuelve { ok, doc, errores }; con errores el documento NO cambia. */
-export async function agregarLeccion(doc, version) {
-  const f = forma(doc, "lecciones");
-  if (f.errores.length) return { ok: false, doc, errores: f.errores };
-  const cadena = await verificarCadena(f.lista);
+async function agregar(doc, tipo, sobre, comprobar) {
+  const ent = lista(doc, tipo);
+  if (!ent) return { ok: false, doc, errores: [`No es un registro de ${tipo}.`] };
+  const cadena = await verificarCadena(ent);
   if (!cadena.ok) return { ok: false, doc, errores: ["El registro ya está alterado; no se agrega nada.", ...cadena.errores] };
-  const limpia = { ...version };
-  delete limpia.huella_anterior;
-  const { errores } = validarLeccion(limpia);
+  const limpio = { registro: sobre.registro, registrado_en: sobre.registrado_en, registrado_por: sobre.registrado_por };
+  const errores = [...revisarSobre(limpio, ent.length), ...(await comprobar(limpio, ent))];
+  if (ent.length && Date.parse(limpio.registrado_en) < Date.parse(ent.at(-1).registrado_en)) errores.push("registrado_en es anterior a la última entrada del registro.");
   if (errores.length) return { ok: false, doc, errores };
-  if (limpia.es_demo !== (doc.es_demo === true)) return { ok: false, doc, errores: [doc.es_demo ? "Este registro es de prueba: la lección debe llevar es_demo: true." : "Este registro es real: no admite lecciones de prueba (es_demo: true)."] };
-  const previas = f.lista.filter((v) => v.id === limpia.id);
-  if (limpia.revision !== previas.length + 1) return { ok: false, doc, errores: [previas.length ? `La lección ${limpia.id} va en la revisión ${previas.length}; la siguiente debe ser ${previas.length + 1}.` : `La lección ${limpia.id} no existe: debe empezar en la revisión 1.`] };
-  if (previas.length && previas.at(-1).tipo_cambio === "retiro") return { ok: false, doc, errores: [`La lección ${limpia.id} fue retirada; registre una lección nueva.`] };
-  const ultima = previas.at(-1);
-  if (ultima && ms(limpia.registrado_en) < ms(ultima.registrado_en)) return { ok: false, doc, errores: ["La revisión nueva tiene fecha anterior a la previa."] };
-  limpia.huella_anterior = f.lista.length ? await huellaDe(f.lista.at(-1)) : null;
-  return { ok: true, doc: { ...doc, versiones: [...f.lista, limpia] }, errores: [] };
+  limpio.huella_anterior = ent.length ? await huellaDe(ent.at(-1)) : null;
+  return { ok: true, doc: { ...doc, entradas: [...ent, limpio] }, errores: [] };
 }
 
-/** Agrega un evento de recomendación, comprobando la historia completa y las reglas de aprobación. */
-export async function agregarEvento(docRec, evento, docLecciones) {
-  const f = forma(docRec, "recomendaciones");
-  if (f.errores.length) return { ok: false, doc: docRec, errores: f.errores };
-  const cadena = await verificarCadena(f.lista);
-  if (!cadena.ok) return { ok: false, doc: docRec, errores: ["El registro ya está alterado; no se agrega nada.", ...cadena.errores] };
-  const limpio = { ...evento };
-  delete limpio.huella_anterior;
-  const fe = validarEventoForma(limpio).errores;
-  if (fe.length) return { ok: false, doc: docRec, errores: fe };
-  if (limpio.es_demo !== (docRec.es_demo === true)) return { ok: false, doc: docRec, errores: ["es_demo del evento no coincide con el del registro."] };
-  const nx = await leerNexus({ lecciones: docLecciones, recomendaciones: { ...docRec, eventos: [] } });
-  const previos = f.lista.filter((x) => x.id === limpio.id);
-  const r = plegarRecomendacion([...previos, limpio], { evaluarLeccionCitada: citador(nx.ultimas, ms(limpio.en) ?? Date.now()) });
-  const nuevo = r.errores.find((x) => x.startsWith(`Evento ${limpio.secuencia} `));
-  if (nuevo || r.historial.at(-1) !== limpio) return { ok: false, doc: docRec, errores: [nuevo ?? "El evento no se pudo aplicar.", ...r.errores.filter((x) => x !== nuevo)] };
-  limpio.huella_anterior = f.lista.length ? await huellaDe(f.lista.at(-1)) : null;
-  return { ok: true, doc: { ...docRec, eventos: [...f.lista, limpio] }, errores: [] };
+/** Agrega una versión de lección: {registro, registrado_en, registrado_por}. */
+export function agregarLeccion(doc, sobre) {
+  return agregar(doc, "lecciones", sobre, async (s, ent) => {
+    const err = validarLeccion(s.registro).errores;
+    if (err.length) return err;
+    if (s.registro.id.startsWith("demo-") !== (doc.es_demo === true)) return [doc.es_demo ? "Registro de prueba: el id debe empezar con «demo-»." : "Registro real: un id «demo-…» no se admite."];
+    const previa = [...ent].reverse().find((e) => e.registro?.id === s.registro.id)?.registro;
+    return previa ? pasoLeccion(previa, s.registro) : [];
+  });
 }
 
-/** Revisión automática del gerente para una recomendación: el peor dictamen de sus lecciones citadas. */
-export function revisionDelGerente(nexus, recomendacion, { en, secuencia, es_demo }) {
-  const orden = ["sin_objeciones", "incompleto", "con_objeciones"];
-  let peor = "sin_objeciones";
-  const detalle = [];
-  for (const c of recomendacion.contenido?.lecciones ?? []) {
-    const r = citador(nexus.ultimas, ms(en) ?? Date.now())(c.id, c.revision);
-    const estado = orden.includes(r.estado) ? r.estado : "incompleto";
-    if (orden.indexOf(estado) > orden.indexOf(peor)) peor = estado;
-    detalle.push(`${c.id} rev. ${c.revision}: ${r.estado}${r.motivo ? ` (${r.motivo})` : ""}`);
-  }
-  return { contrato: CONTRATO_RECOMENDACION, version_contrato: VERSION_RECOMENDACION, id: recomendacion.id, secuencia, tipo: "revision", en,
-    por: { tipo: "proceso", id: "gerente-esceptico" }, dictamen: peor, nota: detalle.join("; "), es_demo };
+/** Agrega una versión de recomendación, con sus reglas de paso (aprobación humana, bloqueos, T12). */
+export function agregarRecomendacion(docRec, sobre, docLecciones) {
+  return agregar(docRec, "recomendaciones", sobre, async (s, ent) => {
+    const err = validarRecomendacion(s.registro).errores;
+    if (err.length) return err;
+    if (s.registro.id.startsWith("demo-") !== (docRec.es_demo === true)) return [docRec.es_demo ? "Registro de prueba: el id debe empezar con «demo-»." : "Registro real: un id «demo-…» no se admite."];
+    const previa = [...ent].reverse().find((e) => e.registro?.id === s.registro.id)?.registro ?? null;
+    const nx = await leerNexus({ lecciones: docLecciones, recomendaciones: null });
+    return validarPaso(previa, s.registro, { lecciones: leccionesHasta([...nx.historial.values()].flat(), Date.parse(s.registrado_en)), ahora: Date.parse(s.registrado_en) });
+  });
 }
 
-/** Consulta de lecciones vigentes (la última versión de cada una). */
-export function consultarLecciones(nexus, { proyecto = null, nivel = null, texto: buscar = "", incluirRetiradas = false } = {}) {
-  const q = buscar.trim().toLowerCase();
+/** Consulta de lecciones vigentes. */
+export function consultarLecciones(nexus, { proyecto = null, estado = null, texto: q = "" } = {}) {
+  const b = q.trim().toLowerCase();
   return [...nexus.ultimas.values()].filter((l) =>
-    (incluirRetiradas || l.tipo_cambio !== "retiro")
-    && (!proyecto || l.proyecto_origen === proyecto || l.proyectos_destino.includes(proyecto))
-    && (!nivel || l.nivel_validacion === nivel)
-    && (!q || `${l.titulo} ${l.enunciado}`.toLowerCase().includes(q)));
+    (!proyecto || l.origen.proyecto === proyecto || l.aplicaciones_posibles.some((a) => a.proyecto === proyecto))
+    && (!estado || l.validacion.estado === estado)
+    && (!b || `${l.id} ${l.hallazgo}`.toLowerCase().includes(b)));
 }
 
-/** Modelo para la oficina Nexus: todo lo que se muestra sale de aquí (la vista no decide nada). */
+/** Modelo para la oficina Nexus: todo lo que se muestra sale de aquí. */
 export function resumirNexus(nexus, { ahora = Date.now() } = {}) {
   const ahoraMs = ahora instanceof Date ? ahora.getTime() : ahora;
-  const lecciones = consultarLecciones(nexus, { incluirRetiradas: true }).map((l) => ({
-    leccion: l, revisiones: nexus.historial.get(l.id)?.length ?? 1, evaluacion: evaluarLeccion(l, { ahora: ahoraMs, lecciones: nexus.ultimas }), retirada: l.tipo_cambio === "retiro",
-  }));
-  const alertas = lecciones.filter((x) => !x.retirada && x.evaluacion.dictamen.estado === "con_objeciones")
-    .flatMap((x) => x.evaluacion.reglas.filter((r) => r.resultado === "no_cumple").map((r) => ({ leccion_id: x.leccion.id, titulo: x.leccion.titulo, regla: r })));
-  const cita = citador(nexus.ultimas, ahoraMs);
-  const recomendaciones = nexus.recomendaciones.map((r) => {
-    const bloqueos = [];
-    if (r.etapa === "en_revision") {
-      const rev = [...r.historial].reverse().find((e) => e.tipo === "revision");
-      if (rev?.dictamen !== "sin_objeciones") bloqueos.push(`La última revisión dice «${rev?.dictamen ?? "?"}».`);
-      for (const c of r.contenido?.lecciones ?? []) { const x = cita(c.id, c.revision); if (x.estado !== "sin_objeciones") bloqueos.push(`${c.id} rev. ${c.revision}: ${x.estado}${x.motivo ? ` (${x.motivo})` : ""}.`); }
-    }
-    return { ...r, bloqueos, espera_aprobacion: r.etapa === "en_revision" };
+  const lecciones = consultarLecciones(nexus).map((l) => ({ leccion: l, versiones: nexus.historial.get(l.id)?.length ?? 1, evaluacion: evaluarLeccion(l, { ahora: ahoraMs, lecciones: nexus.ultimas }) }));
+  const alertas = lecciones.flatMap((x) => x.evaluacion.reglas.filter((r) => r.estado === "no_cumple").map((r) => ({ leccion_id: x.leccion.id, regla: r })));
+  const recomendaciones = nexus.recomendaciones.map(({ registro: r, versiones }) => {
+    const ev = evaluarRecomendacion(r, { lecciones: nexus.ultimas, ahora: ahoraMs });
+    return { registro: r, versiones: versiones.length, evaluacion: ev, situacion: situacion(r), espera_decision: r.estado === "pendiente_aprobacion" };
   });
-  const cuenta = (f) => lecciones.filter((x) => !x.retirada && f(x)).length;
+  const cuenta = (f) => lecciones.filter(f).length;
   return {
-    es_demo: nexus.es_demo,
-    errores: nexus.errores,
-    lecciones,
-    recomendaciones,
-    pendientes: recomendaciones.filter((r) => r.espera_aprobacion),
-    alertas,
+    es_demo: nexus.es_demo, errores: nexus.errores, lecciones, recomendaciones, alertas,
+    pendientes: recomendaciones.filter((r) => r.espera_decision),
     cifras: {
-      lecciones: cuenta(() => true),
+      lecciones: lecciones.length,
       sin_objeciones: cuenta((x) => x.evaluacion.dictamen.estado === "sin_objeciones"),
       incompletas: cuenta((x) => x.evaluacion.dictamen.estado === "incompleto"),
       con_objeciones: cuenta((x) => x.evaluacion.dictamen.estado === "con_objeciones"),
-      pendientes: recomendaciones.filter((r) => r.espera_aprobacion).length,
-      aprobadas_sin_implementar: recomendaciones.filter((r) => ["aprobada", "en_experimento", "con_resultado", "adoptada"].includes(r.etapa)).length,
-      desplegadas: recomendaciones.filter((r) => r.implementada).length,
+      pendientes: recomendaciones.filter((r) => r.espera_decision).length,
+      aprobadas_sin_ejecutar: recomendaciones.filter((r) => r.registro.estado === "aprobada" && r.registro.ejecucion.estado === "no_iniciada").length,
+      adoptadas: recomendaciones.filter((r) => r.registro.adopcion.estado !== "no_adoptada").length,
     },
   };
 }
+
 

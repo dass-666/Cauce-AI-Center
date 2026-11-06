@@ -33,39 +33,39 @@ const plantilla = fs.readFileSync('contrato/ejemplos/nexus/leccion-plantilla.jso
   ok('el botón «Nexus» abre la oficina con aria-pressed y foco en su título', await nexus.isVisible() && (await p.locator('#boton-nexus').getAttribute('aria-pressed')) === 'true' && await p.evaluate(() => document.activeElement?.id === 'nexus-titulo'));
   const texto = await nexus.innerText();
   ok('datos de prueba marcados como tales', /DATOS DE PRUEBA/.test(texto));
-  ok('cifras: 6 lecciones, 2 sin objeciones, 1 incompleta, 3 con objeciones, 2 esperan decisión, 1 aprobada sin implementar',
-    /6\s*lecciones vigentes/.test(texto) && /2\s*sin objeciones/.test(texto) && /1\s*incompletas/.test(texto) && /3\s*con objeciones/.test(texto) && /2\s*esperan decisión humana/.test(texto) && /1\s*aprobadas, sin implementar/.test(texto));
-  ok('pendientes: una lista para decidir y otra bloqueada con su motivo', (await p.locator('[data-rec="rec-demo-fotos-montambre"]').innerText()).includes('Lista para decidir')
-    && /Bloqueada[\s\S]*con_objeciones/.test(await p.locator('[data-rec="rec-demo-medias-ek-chuah"]').innerText()));
-  ok('alertas de evidencia: circularidad, sobreajuste y autovalidación', /G07 Sin razonamiento circular/.test(texto) && /G11 Sin sobreajuste/.test(texto) && /G08 Nadie valida su propia conclusión/.test(texto));
-  ok('6 tarjetas de lección y 3 de recomendación', (await p.locator('[data-leccion]').count()) === 6 && (await p.locator('[data-recomendacion]').count()) === 3);
-  ok('lección exagerada: «lo registrado sostiene: Hipótesis»', /lo registrado sostiene: Hipótesis/.test(await p.locator('[data-leccion="lec-demo-ek-chuah-backtest"]').innerText()));
-  ok('lección corregida muestra «rev. 2 de 2»', /rev\. 2 de 2/.test(await p.locator('[data-leccion="lec-demo-cauce-una-pantalla"]').innerText()));
-  ok('recomendación aprobada dice «sin implementar»', /Aprobada por una persona · sin implementar/.test(await p.locator('[data-recomendacion="rec-demo-sala-compago"]').innerText())
-    && /no implementada/.test(await p.locator('[data-recomendacion="rec-demo-sala-compago"]').innerText()));
+  ok('cifras: 6 lecciones, 1 sin objeciones, 1 incompleta, 4 con objeciones, 2 esperan decisión, 1 aprobada sin ejecutar',
+    /6\s*lecciones vigentes/.test(texto) && /1\s*sin objeciones/.test(texto) && /1\s*incompletas/.test(texto) && /4\s*con objeciones/.test(texto) && /2\s*esperan decisión humana/.test(texto) && /1\s*aprobadas, sin ejecutar/.test(texto));
+  ok('pendientes: una lista para decidir y otra bloqueada (dinero) con su motivo', (await p.locator('[data-rec="demo-rec-conteos-tezcatlipoca"]').innerText()).includes('Lista para decidir')
+    && /Bloqueada[\s\S]*Bloqueo absoluto[\s\S]*R08/.test(await p.locator('[data-rec="demo-rec-backtest-ek-chuah"]').innerText()));
+  ok('alertas de evidencia: circularidad (R03), despliegue falso (R09) y backtest como beneficio (R08)', /R03 Independencia y circularidad/.test(texto) && /R09 Resultado y estado operativo/.test(texto) && /R08 Inferencia y robustez/.test(texto));
+  ok('6 tarjetas de lección y 4 de recomendación', (await p.locator('[data-leccion]').count()) === 6 && (await p.locator('[data-recomendacion]').count()) === 4);
+  ok('lección corregida muestra «2 versiones» y su revisión r3', /revisión r3 \(2 versiones\)/.test(await p.locator('[data-leccion="demo-cauce-zona-horaria"]').innerText()));
+  ok('T15 a la vista: 88 filas → 62 partidos independientes', /88 fila → 62 partido independientes/.test(await p.locator('[data-leccion="demo-tezca-filas"]').innerText()));
+  ok('recomendación aprobada: «Aprobada por una persona · sin ejecutar · no adoptada»', /Aprobada por una persona · sin ejecutar · no adoptada/.test(await p.locator('[data-recomendacion="demo-rec-duplicados-compago"]').innerText()));
   ok('sin botones que aprueben o ejecuten (solo cerrar y revisar borrador)', (await nexus.locator('button').allTextContents()).every((t) => /^(Ir al edificio|Revisar con el gerente)/.test(t.trim())), (await nexus.locator('button').allTextContents()).join('|'));
-  await p.locator('[data-leccion="lec-demo-compago-resenas"] summary').click(); await p.waitForTimeout(200);
-  const reglas = await p.locator('[data-leccion="lec-demo-compago-resenas"] .nexus-regla').allInnerTexts();
-  ok('las 12 reglas se ven con su resultado y explicación (incompleta: 3 «No evaluado»)', reglas.length === 12 && reglas.filter((t) => t.includes('No evaluado')).length === 3);
+  await p.locator('[data-leccion="demo-cauce-zona-horaria"] summary').first().click(); await p.waitForTimeout(200);
+  const reglas = await p.locator('[data-leccion="demo-cauce-zona-horaria"] .nexus-regla').allInnerTexts();
+  ok('las 10 reglas nexus-R 0.2 se ven con estado y motivo (incompleta: R04 «No evaluado»)', reglas.length === 10 && reglas.filter((t) => t.includes('No evaluado')).length === 1 && /R04/.test(reglas.find((t) => t.includes('No evaluado'))));
   const c0 = await cuadros(); await p.waitForTimeout(1200); const c1 = await cuadros();
   ok('con Nexus abierto la 3D no dibuja', c1 === c0, `${c0}→${c1}`);
   await foto(p, 'nexus-escritorio'); await foto(p, 'nexus-escritorio-completo', true);
 
   // Revisión de borradores
   await p.locator('[data-k="borrador"] summary').click();
+  await p.locator('#nexus-alias').fill('revisor-prueba');
   await p.locator('#nexus-borrador').fill(plantilla.replace('"2026-11-06T10:00:00-06:00"', '"2026-11-06T10:00:00"'));
   await p.locator('#nexus-revisar').click(); await p.waitForTimeout(400);
   let salida = await p.locator('.nexus-salida').innerText();
-  ok('borrador con fecha sin zona: el contrato lo rechaza y no ofrece descarga', /registrado_en .* zona horaria/.test(salida) && (await p.locator('.nexus-salida a[download]').count()) === 0);
-  await p.locator('#nexus-borrador').fill(plantilla.replace('"enunciado": "', '"enunciado": "password=Secreta123 '));
+  ok('borrador con revisión sin zona (T17): el contrato lo rechaza y no ofrece descarga', /revisiones\[0\]\.fecha .* zona horaria/.test(salida) && (await p.locator('.nexus-salida a[download]').count()) === 0);
+  await p.locator('#nexus-borrador').fill(plantilla.replace('"hallazgo": "', '"hallazgo": "password=Secreta123 '));
   await p.locator('#nexus-revisar').click(); await p.waitForTimeout(400);
   ok('borrador con credencial: rechazado por privacidad', /Dato privado/.test(await p.locator('.nexus-salida').innerText()) && (await p.locator('.nexus-salida a[download]').count()) === 0);
   await p.locator('#nexus-borrador').fill(plantilla);
   await p.locator('#nexus-revisar').click(); await p.waitForTimeout(400);
   salida = await p.locator('.nexus-salida').innerText();
-  ok('plantilla válida: dictamen del gerente y descarga del registro real', /Dictamen del gerente/.test(salida) && (await p.locator('.nexus-salida a[download="lecciones.json"]').count()) === 1 && /datos\/nexus\/registro\//.test(salida));
+  ok('plantilla válida: dictamen «Incompleto» (falta revisión de otra persona) y descarga del registro real', /Dictamen del gerente/.test(salida) && /Incompleto/.test(salida) && (await p.locator('.nexus-salida a[download="lecciones.json"]').count()) === 1 && /datos\/nexus\/registro\//.test(salida));
   const descarga = await Promise.all([p.waitForEvent('download'), p.locator('.nexus-salida a[download]').click()]).then(([d]) => d.path()).then((ruta) => JSON.parse(fs.readFileSync(ruta, 'utf8')));
-  ok('el archivo descargado es un registro real con 1 versión y huella_anterior nula', descarga.contrato === 'cauce.leccion.registro' && descarga.es_demo === false && descarga.versiones.length === 1 && descarga.versiones[0].huella_anterior === null);
+  ok('el archivo descargado es un registro real con 1 entrada, quién registró y huella_anterior nula', descarga.contrato === 'cauce.nexus.registro-lecciones' && descarga.es_demo === false && descarga.entradas.length === 1 && descarga.entradas[0].huella_anterior === null && descarga.entradas[0].registrado_por.identificador === 'revisor-prueba');
   await foto(p, 'nexus-borrador');
 
   // Convivencia con sala, teclado y Esc
@@ -96,7 +96,7 @@ const plantilla = fs.readFileSync('contrato/ejemplos/nexus/leccion-plantilla.jso
   await p.keyboard.press('n'); await p.waitForTimeout(1200);
   let t2 = await nexus.innerText();
   ok('con registro real: sin franja de prueba y 1 lección', !/DATOS DE PRUEBA/.test(t2) && /1\s*lecciones vigentes/.test(t2));
-  real.versiones.push({ ...real.versiones[0], id: 'lec-proyecto-otra', huella_anterior: '0'.repeat(64) });
+  real.entradas.push({ ...real.entradas[0], huella_anterior: '0'.repeat(64) });
   await p.keyboard.press('n'); await p.waitForTimeout(300); await p.keyboard.press('n'); await p.waitForTimeout(1200);
   t2 = await nexus.innerText();
   ok('registro con historial alterado: lo avisa y no muestra la entrada alterada como válida', /problema/.test(t2) && /huella no coincide/.test(t2));
@@ -135,9 +135,9 @@ const plantilla = fs.readFileSync('contrato/ejemplos/nexus/leccion-plantilla.jso
   vigilar(pp);
   await pp.goto(BASE + 'pruebas.html'); await pp.waitForFunction(() => !/Ejecutando/.test(document.getElementById('resumen').textContent), null, { timeout: 120000 });
   const resumen = await pp.locator('#resumen').innerText();
-  const nexusEnNavegador = await pp.locator('li', { hasText: 'Nexus' }).count();
+  const nexusEnNavegador = await pp.locator('li', { hasText: /Nexus|^.?\s*T\d\d/ }).count();
   ok('pruebas.html en el navegador: 0 fallaron', / 0 fallaron/.test(resumen), resumen);
-  ok('pruebas.html incluye las pruebas de Nexus', nexusEnNavegador >= 25, `${nexusEnNavegador}`);
+  ok('pruebas.html incluye las pruebas de Nexus', nexusEnNavegador >= 30, `${nexusEnNavegador}`);
   await pp.close();
 
   await b.close();

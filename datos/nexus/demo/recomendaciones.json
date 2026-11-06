@@ -1,153 +1,1541 @@
 {
-  "contrato": "cauce.recomendacion.registro",
-  "version_contrato": "0.2.0",
+  "contrato": "cauce.nexus.registro-recomendaciones",
+  "version_contrato": "0.2",
   "es_demo": true,
-  "eventos": [
+  "entradas": [
     {
-      "contrato": "cauce.recomendacion",
-      "version_contrato": "0.2.0",
-      "id": "rec-demo-fotos-montambre",
-      "secuencia": 1,
-      "tipo": "propuesta",
-      "en": "2026-11-03T10:00:00-06:00",
-      "por": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "es_demo": true,
-      "contenido": {
-        "titulo": "[DEMO] Probar fichas con 3+ fotos en Montambre",
-        "descripcion": "Llevar la lección de Compago a un piloto pequeño en Montambre.",
-        "proyecto_destino": "montambre",
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [
+          "[DEMO] copia incompleta"
+        ],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [],
+          "revisor": {
+            "tipo": "humano",
+            "identificador": "pendiente"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-conteos-tezcatlipoca",
+        "destino": {
+          "proyecto": "tezcatlipoca",
+          "componente": "evaluacion-conteos-aislada"
+        },
         "lecciones": [
           {
-            "id": "lec-demo-compago-fotos",
-            "revision": 1
+            "id": "demo-compago-duplicados",
+            "revision": "r2"
           }
         ],
-        "reversible": true,
-        "criterio_exito": "[DEMO] Medir la misma métrica antes y después, con una muestra nueva."
+        "problema": "[DEMO] No se sabe si contar filas altera conclusiones.",
+        "hipotesis": "[DEMO] Contar partidos únicos cambia al menos una conclusión.",
+        "accion_propuesta": "[DEMO] Comparar conteos en una copia aislada.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "propuesta",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T09:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T09:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
       },
       "huella_anterior": null
     },
     {
-      "contrato": "cauce.recomendacion",
-      "version_contrato": "0.2.0",
-      "id": "rec-demo-fotos-montambre",
-      "secuencia": 2,
-      "tipo": "revision",
-      "en": "2026-11-03T10:05:00-06:00",
-      "por": {
-        "tipo": "proceso",
-        "id": "gerente-esceptico"
-      },
-      "dictamen": "sin_objeciones",
-      "nota": "lec-demo-compago-fotos rev. 1: sin_objeciones",
-      "es_demo": true,
-      "huella_anterior": "47ae35787d8bd404e5dfdc903339c35a3f1e3eb5cdcae2e1ce9039cefd61e2e2"
-    },
-    {
-      "contrato": "cauce.recomendacion",
-      "version_contrato": "0.2.0",
-      "id": "rec-demo-medias-ek-chuah",
-      "secuencia": 1,
-      "tipo": "propuesta",
-      "en": "2026-11-03T11:00:00-06:00",
-      "por": {
-        "tipo": "ia",
-        "id": "asistente-demo"
-      },
-      "es_demo": true,
-      "contenido": {
-        "titulo": "[DEMO] Usar el cruce 12/26 en las simulaciones",
-        "descripcion": "Adoptar la mejor combinación del backtest.",
-        "proyecto_destino": "ek-chuah",
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [
+          "[DEMO] copia incompleta"
+        ],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [
+            {
+              "id": "R01",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R02",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R03",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R04",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R05",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R06",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R07",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R08",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R09",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R10",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            }
+          ],
+          "revisor": {
+            "tipo": "codigo",
+            "identificador": "gerente-esceptico"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-conteos-tezcatlipoca",
+        "destino": {
+          "proyecto": "tezcatlipoca",
+          "componente": "evaluacion-conteos-aislada"
+        },
         "lecciones": [
           {
-            "id": "lec-demo-ek-chuah-backtest",
-            "revision": 1
+            "id": "demo-compago-duplicados",
+            "revision": "r2"
           }
         ],
-        "reversible": true,
-        "criterio_exito": "[DEMO] Medir la misma métrica antes y después, con una muestra nueva."
+        "problema": "[DEMO] No se sabe si contar filas altera conclusiones.",
+        "hipotesis": "[DEMO] Contar partidos únicos cambia al menos una conclusión.",
+        "accion_propuesta": "[DEMO] Comparar conteos en una copia aislada.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "revisada",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T09:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "revisada",
+            "fecha": "2026-11-05T09:05:00-06:00",
+            "autor_tipo": "codigo",
+            "autor": "gerente-esceptico"
+          }
+        ]
       },
-      "huella_anterior": "5b61c983647af0c37d8218149df8ecd2e71e029bdb66b06007edc9c8d8d7b1e4"
+      "registrado_en": "2026-11-05T09:05:00-06:00",
+      "registrado_por": {
+        "tipo": "codigo",
+        "identificador": "gerente-esceptico"
+      },
+      "huella_anterior": "73925eba225193acacf95476895dd293330c972cebfc7c6694e045b2269dfa3d"
     },
     {
-      "contrato": "cauce.recomendacion",
-      "version_contrato": "0.2.0",
-      "id": "rec-demo-medias-ek-chuah",
-      "secuencia": 2,
-      "tipo": "revision",
-      "en": "2026-11-03T11:05:00-06:00",
-      "por": {
-        "tipo": "proceso",
-        "id": "gerente-esceptico"
-      },
-      "dictamen": "con_objeciones",
-      "nota": "lec-demo-ek-chuah-backtest rev. 1: con_objeciones (reglas G06, G08, G09, G10, G11)",
-      "es_demo": true,
-      "huella_anterior": "ac4915f521393c0c4e21373244d79037134f9cb57bf581a43d3fbfb5c9a9bd3e"
-    },
-    {
-      "contrato": "cauce.recomendacion",
-      "version_contrato": "0.2.0",
-      "id": "rec-demo-sala-compago",
-      "secuencia": 1,
-      "tipo": "propuesta",
-      "en": "2026-11-04T09:00:00-06:00",
-      "por": {
-        "tipo": "humano",
-        "id": "analista-demo"
-      },
-      "es_demo": true,
-      "contenido": {
-        "titulo": "[DEMO] Medir si la sala de control reduce asuntos olvidados",
-        "descripcion": "Contar durante dos semanas los asuntos atendidos tarde.",
-        "proyecto_destino": "compago",
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [
+          "[DEMO] copia incompleta"
+        ],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [
+            {
+              "id": "R01",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R02",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R03",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R04",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R05",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R06",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R07",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R08",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R09",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R10",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            }
+          ],
+          "revisor": {
+            "tipo": "codigo",
+            "identificador": "gerente-esceptico"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-conteos-tezcatlipoca",
+        "destino": {
+          "proyecto": "tezcatlipoca",
+          "componente": "evaluacion-conteos-aislada"
+        },
         "lecciones": [
           {
-            "id": "lec-demo-cauce-una-pantalla",
-            "revision": 2
+            "id": "demo-compago-duplicados",
+            "revision": "r2"
           }
         ],
-        "reversible": true,
-        "criterio_exito": "[DEMO] Medir la misma métrica antes y después, con una muestra nueva."
+        "problema": "[DEMO] No se sabe si contar filas altera conclusiones.",
+        "hipotesis": "[DEMO] Contar partidos únicos cambia al menos una conclusión.",
+        "accion_propuesta": "[DEMO] Comparar conteos en una copia aislada.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "pendiente_aprobacion",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T09:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "revisada",
+            "fecha": "2026-11-05T09:05:00-06:00",
+            "autor_tipo": "codigo",
+            "autor": "gerente-esceptico"
+          },
+          {
+            "evento": "pendiente_aprobacion",
+            "fecha": "2026-11-05T09:10:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          }
+        ]
       },
-      "huella_anterior": "efe6e59e1228950754e58dc6d87588fb1452a10fcbd7d1377a27a1e27881b2db"
-    },
-    {
-      "contrato": "cauce.recomendacion",
-      "version_contrato": "0.2.0",
-      "id": "rec-demo-sala-compago",
-      "secuencia": 2,
-      "tipo": "revision",
-      "en": "2026-11-04T09:05:00-06:00",
-      "por": {
-        "tipo": "proceso",
-        "id": "gerente-esceptico"
-      },
-      "dictamen": "sin_objeciones",
-      "nota": "lec-demo-cauce-una-pantalla rev. 2: sin_objeciones",
-      "es_demo": true,
-      "huella_anterior": "9fd72f7377d825d0e044171ce5b5729fe97ef3f98686b27351728b5c90cb7337"
-    },
-    {
-      "contrato": "cauce.recomendacion",
-      "version_contrato": "0.2.0",
-      "id": "rec-demo-sala-compago",
-      "secuencia": 3,
-      "tipo": "aprobacion",
-      "en": "2026-11-04T12:00:00-06:00",
-      "por": {
+      "registrado_en": "2026-11-05T09:10:00-06:00",
+      "registrado_por": {
         "tipo": "humano",
-        "id": "director-demo"
+        "identificador": "analista-demo"
       },
-      "es_demo": true,
-      "alcance": "experimento",
-      "nota": "[DEMO] Se aprueba solo el experimento de dos semanas.",
-      "huella_anterior": "149023addbc474d8349767c7a9921d7106b6ffa001bd34a8cc13c438246916b9"
+      "huella_anterior": "fc4c98919b9e70807fc456584646b7fcd3b676d255dbe8500beb9b6ed556be01"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [
+          "[DEMO] sobreajuste"
+        ],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": true,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [],
+          "revisor": {
+            "tipo": "humano",
+            "identificador": "pendiente"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-backtest-ek-chuah",
+        "destino": {
+          "proyecto": "ek-chuah",
+          "componente": "simulador"
+        },
+        "lecciones": [
+          {
+            "id": "demo-ek-chuah-backtest",
+            "revision": "r1"
+          }
+        ],
+        "problema": "[DEMO] Mejorar el rendimiento simulado.",
+        "hipotesis": "[DEMO] La combinación elegida funciona fuera de muestra.",
+        "accion_propuesta": "[DEMO] Cambiar la combinación del simulador.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "propuesta",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T10:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T10:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "946effe2db83230ae88c0aa1b40ad3f3caeafadb525ecdffa7199e144b734773"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [
+          "[DEMO] sobreajuste"
+        ],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": true,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [
+            {
+              "id": "R01",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: El origen es texto de IA: no acredita hechos y no puede estar validada.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R02",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Origen texto de IA y ninguna evidencia primaria con huella.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R03",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R04",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: known_at estimado (82 %): no permite confianza alta sobre ausencia de mirada al futuro (T21).",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R05",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Marcada como validada sin artefacto (huella o commit) ni reproducción independiente.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R06",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Validada en origen sin revisión independiente del autor.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R07",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R08",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Afirma beneficio económico con un resultado «backtest»: un backtest o simulación no es beneficio real (T06).",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R09",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R10",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            }
+          ],
+          "revisor": {
+            "tipo": "codigo",
+            "identificador": "gerente-esceptico"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-backtest-ek-chuah",
+        "destino": {
+          "proyecto": "ek-chuah",
+          "componente": "simulador"
+        },
+        "lecciones": [
+          {
+            "id": "demo-ek-chuah-backtest",
+            "revision": "r1"
+          }
+        ],
+        "problema": "[DEMO] Mejorar el rendimiento simulado.",
+        "hipotesis": "[DEMO] La combinación elegida funciona fuera de muestra.",
+        "accion_propuesta": "[DEMO] Cambiar la combinación del simulador.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "revisada",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T10:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "revisada",
+            "fecha": "2026-11-05T10:05:00-06:00",
+            "autor_tipo": "codigo",
+            "autor": "gerente-esceptico"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T10:05:00-06:00",
+      "registrado_por": {
+        "tipo": "codigo",
+        "identificador": "gerente-esceptico"
+      },
+      "huella_anterior": "e303839a63f3ce23fdba1c72a5d4221c2856cc3e9dc4bd169c60f374633b20a7"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [
+          "[DEMO] sobreajuste"
+        ],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": true,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [
+            {
+              "id": "R01",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: El origen es texto de IA: no acredita hechos y no puede estar validada.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R02",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Origen texto de IA y ninguna evidencia primaria con huella.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R03",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R04",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: known_at estimado (82 %): no permite confianza alta sobre ausencia de mirada al futuro (T21).",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R05",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Marcada como validada sin artefacto (huella o commit) ni reproducción independiente.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R06",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Validada en origen sin revisión independiente del autor.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R07",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R08",
+              "estado": "no_cumple",
+              "motivo": "demo-ek-chuah-backtest: Afirma beneficio económico con un resultado «backtest»: un backtest o simulación no es beneficio real (T06).",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R09",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            },
+            {
+              "id": "R10",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-ek-chuah-backtest"
+              ]
+            }
+          ],
+          "revisor": {
+            "tipo": "codigo",
+            "identificador": "gerente-esceptico"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-backtest-ek-chuah",
+        "destino": {
+          "proyecto": "ek-chuah",
+          "componente": "simulador"
+        },
+        "lecciones": [
+          {
+            "id": "demo-ek-chuah-backtest",
+            "revision": "r1"
+          }
+        ],
+        "problema": "[DEMO] Mejorar el rendimiento simulado.",
+        "hipotesis": "[DEMO] La combinación elegida funciona fuera de muestra.",
+        "accion_propuesta": "[DEMO] Cambiar la combinación del simulador.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "pendiente_aprobacion",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T10:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "revisada",
+            "fecha": "2026-11-05T10:05:00-06:00",
+            "autor_tipo": "codigo",
+            "autor": "gerente-esceptico"
+          },
+          {
+            "evento": "pendiente_aprobacion",
+            "fecha": "2026-11-05T10:10:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T10:10:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "5f0408ec3e668b71cb8d7c418c5b0b3a2da02e9bc2aa813acc1b0fd65125388a"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [],
+          "revisor": {
+            "tipo": "humano",
+            "identificador": "pendiente"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-duplicados-compago",
+        "destino": {
+          "proyecto": "compago",
+          "componente": "revisor-esceptico"
+        },
+        "lecciones": [
+          {
+            "id": "demo-compago-duplicados",
+            "revision": "r2"
+          }
+        ],
+        "problema": "[DEMO] Duplicados contados dos veces.",
+        "hipotesis": "[DEMO] Marcar duplicados reduce falsos positivos.",
+        "accion_propuesta": "[DEMO] Medir en una copia aislada.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "propuesta",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T11:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T11:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "d2889ddd986a009e3bd730c0120b428da8771af24789ded5a6b2550fa864d786"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [
+            {
+              "id": "R01",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R02",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R03",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R04",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R05",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R06",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R07",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R08",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R09",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R10",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            }
+          ],
+          "revisor": {
+            "tipo": "codigo",
+            "identificador": "gerente-esceptico"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-duplicados-compago",
+        "destino": {
+          "proyecto": "compago",
+          "componente": "revisor-esceptico"
+        },
+        "lecciones": [
+          {
+            "id": "demo-compago-duplicados",
+            "revision": "r2"
+          }
+        ],
+        "problema": "[DEMO] Duplicados contados dos veces.",
+        "hipotesis": "[DEMO] Marcar duplicados reduce falsos positivos.",
+        "accion_propuesta": "[DEMO] Medir en una copia aislada.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "revisada",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T11:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "revisada",
+            "fecha": "2026-11-05T11:05:00-06:00",
+            "autor_tipo": "codigo",
+            "autor": "gerente-esceptico"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T11:05:00-06:00",
+      "registrado_por": {
+        "tipo": "codigo",
+        "identificador": "gerente-esceptico"
+      },
+      "huella_anterior": "87b097d031358ac7db699016cf7f0bc5be05598060717d50f0b64c8830cc9e2b"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [
+            {
+              "id": "R01",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R02",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R03",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R04",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R05",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R06",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R07",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R08",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R09",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R10",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            }
+          ],
+          "revisor": {
+            "tipo": "codigo",
+            "identificador": "gerente-esceptico"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-duplicados-compago",
+        "destino": {
+          "proyecto": "compago",
+          "componente": "revisor-esceptico"
+        },
+        "lecciones": [
+          {
+            "id": "demo-compago-duplicados",
+            "revision": "r2"
+          }
+        ],
+        "problema": "[DEMO] Duplicados contados dos veces.",
+        "hipotesis": "[DEMO] Marcar duplicados reduce falsos positivos.",
+        "accion_propuesta": "[DEMO] Medir en una copia aislada.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "pendiente_aprobacion",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T11:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "revisada",
+            "fecha": "2026-11-05T11:05:00-06:00",
+            "autor_tipo": "codigo",
+            "autor": "gerente-esceptico"
+          },
+          {
+            "evento": "pendiente_aprobacion",
+            "fecha": "2026-11-05T11:10:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T11:10:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "ce3fdf412ed431b93dbb8f013ce21b65c9c18d29c100fe2c599bfb6bdf59e155"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [
+            {
+              "id": "R01",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R02",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R03",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R04",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R05",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R06",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R07",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R08",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R09",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            },
+            {
+              "id": "R10",
+              "estado": "cumple",
+              "motivo": "Cumple en todas las lecciones citadas.",
+              "evidencia_consultada": [
+                "demo-compago-duplicados"
+              ]
+            }
+          ],
+          "revisor": {
+            "tipo": "codigo",
+            "identificador": "gerente-esceptico"
+          }
+        },
+        "decision_humana": {
+          "estado": "aprobada",
+          "responsable": "director-demo",
+          "fecha": "2026-11-05T12:00:00-06:00",
+          "alcance": "[DEMO] solo el experimento aislado de 2 semanas",
+          "vigencia": "2026-12-31",
+          "condiciones": [
+            "sin escritura en Compago"
+          ],
+          "referencia": "demo:acta-001"
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-duplicados-compago",
+        "destino": {
+          "proyecto": "compago",
+          "componente": "revisor-esceptico"
+        },
+        "lecciones": [
+          {
+            "id": "demo-compago-duplicados",
+            "revision": "r2"
+          }
+        ],
+        "problema": "[DEMO] Duplicados contados dos veces.",
+        "hipotesis": "[DEMO] Marcar duplicados reduce falsos positivos.",
+        "accion_propuesta": "[DEMO] Medir en una copia aislada.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": "[DEMO] copia ficticia desensibilizada",
+          "unidad_independencia": "partido",
+          "n_minimo": 30,
+          "ventana": "2 semanas",
+          "criterio_exito": "[DEMO] al menos una conclusión cambia",
+          "criterio_fracaso": "[DEMO] ninguna cambia con n ≥ 30",
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": "demo:preregistro-001"
+        },
+        "estado": "aprobada",
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T11:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "revisada",
+            "fecha": "2026-11-05T11:05:00-06:00",
+            "autor_tipo": "codigo",
+            "autor": "gerente-esceptico"
+          },
+          {
+            "evento": "pendiente_aprobacion",
+            "fecha": "2026-11-05T11:10:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          },
+          {
+            "evento": "aprobada",
+            "fecha": "2026-11-05T12:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "director-demo"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T12:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "director-demo"
+      },
+      "huella_anterior": "fe5782e232005396660f0e94fec3ba5a242bdd7ef20c38ad2dd12ce5af9fd46b"
+    },
+    {
+      "registro": {
+        "esquema": "cauce.recomendacion",
+        "version_esquema": "0.2",
+        "riesgos": [],
+        "permisos_requeridos": [
+          "solo lectura de copia autorizada"
+        ],
+        "toca_parametros_financieros": false,
+        "toca_apuestas": false,
+        "revision_esceptica": {
+          "version_reglas": "nexus-R 0.2",
+          "reglas": [],
+          "revisor": {
+            "tipo": "humano",
+            "identificador": "pendiente"
+          }
+        },
+        "decision_humana": {
+          "estado": "pendiente_aprobacion",
+          "responsable": null,
+          "fecha": null,
+          "alcance": null,
+          "vigencia": null,
+          "condiciones": [],
+          "referencia": null
+        },
+        "ejecucion": {
+          "estado": "no_iniciada",
+          "resultados": []
+        },
+        "adopcion": {
+          "estado": "no_adoptada",
+          "referencia": null
+        },
+        "id": "demo-rec-borrador",
+        "estado": "propuesta",
+        "destino": {
+          "proyecto": "tezcatlipoca",
+          "componente": "evaluacion-conteos-aislada"
+        },
+        "lecciones": [
+          {
+            "id": "demo-tezca-filas",
+            "revision": "r2"
+          }
+        ],
+        "problema": "[DEMO] Borrador.",
+        "hipotesis": "[DEMO] Por definir.",
+        "accion_propuesta": "[DEMO] Diseñar comparación solo si hay respaldo reproducible.",
+        "experimento": {
+          "metrica_primaria": "[DEMO] conclusiones de conteo que cambian",
+          "linea_base": "conteo por fila",
+          "muestra": null,
+          "unidad_independencia": "partido",
+          "n_minimo": null,
+          "ventana": null,
+          "criterio_exito": null,
+          "criterio_fracaso": null,
+          "parada": "datos restringidos o sin respaldo",
+          "aislamiento": "copia autorizada, sin escritura",
+          "reversion": "borrar la copia y conservar el informe",
+          "preregistro_ref": null
+        },
+        "historial": [
+          {
+            "evento": "borrador",
+            "fecha": "2026-11-05T13:00:00-06:00",
+            "autor_tipo": "humano",
+            "autor": "analista-demo"
+          }
+        ]
+      },
+      "registrado_en": "2026-11-05T13:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "huella_anterior": "aea597061ee1ce498313e96ae36143050f2e30a91df9eafd644ce0766ca7b660"
     }
   ],
-  "descripcion": "[DEMO] Recomendaciones ficticias. Nexus solo las registra: no ejecuta nada en ningún proyecto."
+  "descripcion": "[DEMO] Recomendaciones ficticias. Nexus solo las registra: no ejecuta nada."
 }
