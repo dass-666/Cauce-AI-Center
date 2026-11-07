@@ -138,11 +138,12 @@ if (SAL) fs.mkdirSync(SAL, { recursive: true });
   const pm = await c.newPage(); await preparar(pm);
   await pm.goto(BASE + '?csi=1'); await pm.waitForTimeout(4000);
   ok('celular: ?csi=1 abre el laboratorio', await pm.locator('#csi').isVisible());
+  const W = devices['iPhone 13'].viewport.width;
   const ancho = await pm.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
-  ok('celular: sin desplazamiento horizontal de la página', ancho[0] <= ancho[1] + 1, ancho.join(' vs '));
+  ok('celular: sin desplazamiento horizontal de la página (ancho del aparato, no el ampliado)', ancho[0] <= W + 1 && ancho[1] <= W + 1, `${ancho.join(' / ')} vs ${W}`);
   await pm.locator('[data-pestana="predicciones"]').click(); await pm.waitForTimeout(300);
   const ancho2 = await pm.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
-  ok('celular: la tabla de predicciones se desplaza dentro de su caja, no la página', ancho2[0] <= ancho2[1] + 1, ancho2.join(' vs '));
+  ok('celular: la tabla de predicciones se desplaza dentro de su caja, no la página', ancho2[0] <= W + 1, ancho2.join(' vs '));
   await foto(pm, 'csi-celular-predicciones', true);
   await c.close();
 

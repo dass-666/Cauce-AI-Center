@@ -215,12 +215,12 @@ const agente = (d, id) => d.departamentos.flatMap((x) => x.agentes).find((a) => 
   await s.route('**/datos/reales/*', (x) => x.fulfill({ status: 404, body: '' }));
   await s.goto(BASE + '?medir=1'); await s.waitForTimeout(7000);
   const mas = s.locator('#pisos .pisos-mas summary');
-  ok('10 proyectos: los 7 pendientes se juntan en «+7 pendientes»; los pisos con datos siguen a la vista', /\+7 pendientes/.test(await mas.innerText().catch(() => '')) && (await s.locator('#pisos > .piso').count()) === 3, `${await s.locator('#pisos > .piso').count()} pestañas`);
+  ok('11 proyectos (con CSI): los 7 pendientes se juntan en «+7 pendientes»; los pisos con datos siguen a la vista', /\+7 pendientes/.test(await mas.innerText().catch(() => '')) && (await s.locator('#pisos > .piso').count()) === 4, `${await s.locator('#pisos > .piso').count()} pestañas`);
   await mas.click(); await s.waitForTimeout(300);
   await s.locator('.pisos-mas-lista .piso', { hasText: 'Extra 2' }).click(); await s.waitForTimeout(2500);
   ok('10 proyectos: elegir uno agrupado lo abre y su pestaña queda a la vista', /Extra 2/.test(await s.locator('#pisos [aria-selected="true"]').innerText()));
   await s.keyboard.press('s'); await s.waitForTimeout(600);
-  ok('10 proyectos: la sala sigue mostrando los 10', (await s.locator('.sala-tarjeta').count()) === 10);
+  ok('11 proyectos (con CSI): la sala sigue mostrando los 11', (await s.locator('.sala-tarjeta').count()) === 11);
   await s.close();
 
   console.log(res.join('\n'));

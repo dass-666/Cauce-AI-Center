@@ -756,3 +756,9 @@ html.csi-abierto .principal { grid-template-columns: 1fr !important; }
 .csi-campo input, .csi-campo select, .csi-campo textarea { font: inherit; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 5px 6px; min-width: 0; }
 .csi-botones { display: flex; flex-wrap: wrap; gap: 6px; }
 .csi-mensajes p { margin: 0; }
+/* CSI añadió un botón a la cabecera: en celulares angostos los controles se aprietan para no desbordar la página. */
+@media (max-width: 430px) {
+  .controles { gap: 4px; }
+  .controles .boton-sala, #recargar, .boton-inmersivo, .controles .segmentado .boton { padding-left: 8px; padding-right: 8px; min-width: 0; }
+  .controles .interruptor { min-width: 0; font-size: 12px; gap: 4px; }
+}
