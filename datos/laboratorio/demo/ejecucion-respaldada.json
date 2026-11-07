@@ -1,0 +1,43 @@
+{
+  "contrato": "cauce.lab.ejecucion",
+  "version_contrato": "0.1",
+  "es_demo": true,
+  "encargo_id": "demo-lab-enc-001",
+  "encargo_sha256": "348a70c9c67a385bac491ad04e25e62f835be5d4fdc6d354c8794508ed282223",
+  "rol": "critico",
+  "estado": "terminado",
+  "inicio": "2030-03-31T10:05:00Z",
+  "fin": "2030-03-31T10:09:00Z",
+  "latido": "2030-03-31T10:09:00Z",
+  "autor": {
+    "tipo": "ia",
+    "identificador": "sintetico-v0",
+    "adaptador": "ninguno"
+  },
+  "hipotesis": [],
+  "objeciones": [],
+  "dudas": [],
+  "contradicciones": [],
+  "consultas_web": [],
+  "uso": {
+    "tokens_entrada": null,
+    "tokens_salida": null,
+    "costo_mxn": 0
+  },
+  "error": null,
+  "id": "demo-lab-run-001",
+  "afirmaciones": [
+    {
+      "id": "a1",
+      "texto": "El Instituto anunció que mantendría la tasa en 4.00 % durante el trimestre.",
+      "clase": "hecho_citado",
+      "citas": [
+        {
+          "fuente_id": "demo-f-a",
+          "extracto": "El Instituto mantendrá la tasa de referencia en 4.00 % durante el trimestre.",
+          "ubicacion": "línea 2"
+        }
+      ]
+    }
+  ]
+}

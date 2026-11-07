@@ -1,0 +1,26 @@
+# Pruebas automáticas de Cauce (solo Node, sin dependencias ni secretos).
+# Por qué: hasta ahora nada impedía fusionar en rojo. Para un repositorio público, GitHub Actions no cuesta nada.
+# Qué NO hace: no despliega, no publica, no usa claves ni llama a modelos. Las pruebas de navegador (Chromium)
+# siguen siendo manuales (pruebas/navegador/todas.cjs), porque tardan unos 50 minutos.
+name: Pruebas
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Pruebas comunes (las mismas de pruebas.html)
+        run: node pruebas/ejecutar.mjs
+      - name: Pruebas de Node del Laboratorio (disco y herramienta)
+        run: node pruebas/laboratorio-node.mjs
+      - name: Pruebas de la herramienta de Nexus
+        run: node pruebas/nexus-cli.mjs

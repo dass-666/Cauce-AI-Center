@@ -24,3 +24,9 @@ datos/csi/registro/*
 # CSI fase 2: el caso histórico real es local hasta que Diego autorice publicarlo (el repositorio es público).
 datos/csi/historico/*
 !datos/csi/historico/LEEME.md
+# Laboratorio de IA (fase 1): registros reales, bancos generados y especificaciones privadas nunca van a git
+# (el repositorio es público y la clave de respuestas no debe estar al alcance de la IA que se evalúe).
+datos/laboratorio/registro/*
+!datos/laboratorio/registro/LEEME.md
+datos/laboratorio/banco/
+datos/laboratorio/privado/

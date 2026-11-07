@@ -1,0 +1,67 @@
+{
+  "contrato": "cauce.lab.ejecucion",
+  "version_contrato": "0.1",
+  "es_demo": true,
+  "encargo_id": "demo-lab-enc-001",
+  "encargo_sha256": "348a70c9c67a385bac491ad04e25e62f835be5d4fdc6d354c8794508ed282223",
+  "rol": "critico",
+  "estado": "terminado",
+  "inicio": "2030-03-31T10:05:00Z",
+  "fin": "2030-03-31T10:09:00Z",
+  "latido": "2030-03-31T10:09:00Z",
+  "autor": {
+    "tipo": "ia",
+    "identificador": "sintetico-v0",
+    "adaptador": "ninguno"
+  },
+  "hipotesis": [],
+  "objeciones": [],
+  "dudas": [],
+  "contradicciones": [],
+  "consultas_web": [],
+  "uso": {
+    "tokens_entrada": null,
+    "tokens_salida": null,
+    "costo_mxn": 0
+  },
+  "error": null,
+  "id": "demo-lab-run-002",
+  "afirmaciones": [
+    {
+      "id": "a1",
+      "texto": "El Instituto abandonará su meta de inflación del 3 %.",
+      "clase": "hecho_citado",
+      "citas": [
+        {
+          "fuente_id": "demo-f-a",
+          "extracto": "el Instituto vaya a abandonar su meta de inflación del 3 %",
+          "ubicacion": "línea 3"
+        }
+      ]
+    },
+    {
+      "id": "a2",
+      "texto": "El Instituto subió la tasa a 4.50 %.",
+      "clase": "hecho_citado",
+      "citas": [
+        {
+          "fuente_id": "demo-f-b",
+          "extracto": "subió la tasa de referencia a 4.50 % sin aviso previo",
+          "ubicacion": null
+        }
+      ]
+    },
+    {
+      "id": "a3",
+      "texto": "Un portal anónimo asegura que habrá recorte.",
+      "clase": "hecho_citado",
+      "citas": [
+        {
+          "fuente_id": "demo-f-inventada",
+          "extracto": "habrá recorte de tasas en abril de 2030",
+          "ubicacion": null
+        }
+      ]
+    }
+  ]
+}
