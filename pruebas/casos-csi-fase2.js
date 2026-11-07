@@ -374,6 +374,9 @@ export function registrarCasosCSIFase2() {
     const inv = await completa();
     const r = await intento(inv, "cotejar_fuente", { fuente_id: "f1", resultado: "corregido", metodo: "manual", detalle: "El original dice otra cosa.", extracto_corregido: "\"La junta mantuvo la tasa.\"" }, 20);
     verdadero(!r.ok && tiene(r.errores, /cita|procedencia/i), r.errores?.join(" | "));
+    const retirado = await paso(inv, "retirar_enunciado", { enunciado_id: "e1", motivo: "Su cita no coincide con el original." }, 20);
+    const tras = await intento(retirado, "cotejar_fuente", { fuente_id: "f1", resultado: "corregido", metodo: "manual", detalle: "El original dice otra cosa.", extracto_corregido: "\"La junta mantuvo la tasa.\"" }, 21);
+    verdadero(tras.ok, "retirado el enunciado, la corrección se admite: " + tras.errores?.join(" | "));
     const sinCopia = await intento(inv, "cotejar_fuente", { fuente_id: "f2", resultado: "coincide", metodo: "copia_local", detalle: "Descargado.", huella_contenido: "a".repeat(64) }, 20);
     verdadero(!sinCopia.ok && tiene(sinCopia.errores, /copia_local/), sinCopia.errores?.join(" | "));
     const ok = await intento(inv, "cotejar_fuente", { fuente_id: "f2", resultado: "coincide", metodo: "copia_local", detalle: "Descargado.", huella_contenido: "a".repeat(64), copia_local: "copias/f2.html" }, 20);

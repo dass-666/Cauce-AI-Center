@@ -206,7 +206,7 @@ function validarEnunciado02(x, { r, e, conocidas, primarias, demo, inv }) {
   if (x.tipo === "hecho" && primarias.length && primarias.every((f) => f.clase === "interpretacion")) e(`${r}un hecho no descansa solo en interpretaciones: hace falta una fuente primaria o secundaria (si no, es una inferencia).`);
   if (x.cita !== undefined) {
     if (!texto(x.cita)) e(`${r}cita vacía.`);
-    else if (!citaConProcedencia(x.cita, conocidas)) e(`${r}cita sin procedencia: el texto citado no aparece en el extracto textual de ninguna de sus fuentes consultadas.`);
+    else if (!x.retirado && !citaConProcedencia(x.cita, conocidas)) e(`${r}cita sin procedencia: el texto citado no aparece en el extracto textual de ninguna de sus fuentes consultadas.`);
   }
   if (x.contrafactual !== undefined && (x.contrafactual !== true || x.tipo !== "simulacion")) e(`${r}contrafactual: true solo en simulaciones («qué habría pasado si…»).`);
   if (inv.naturaleza_estudio === "historico" && x.tipo === "simulacion" && x.contrafactual !== true) e(`${r}en un estudio histórico toda simulación es contrafactual: márcala contrafactual: true.`);
