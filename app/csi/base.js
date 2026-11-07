@@ -6,6 +6,9 @@ export { esFechaConZona, esFechaODia, intervalo, ms, texto, buscarDatosPrivados,
 import { buscarDatosPrivados } from "../nexus/comun.js";
 
 export const VERSION_CSI = "0.1";
+/** Fase 2: los contratos de investigación, actores y escenario aceptan 0.1 (sin cambios) y 0.2 (fuentes con procedencia). */
+export const VERSION_CSI_2 = "0.2";
+export const VERSIONES_CSI = [VERSION_CSI, VERSION_CSI_2];
 export const ID = /^[a-z0-9][a-z0-9._-]{1,80}$/i;
 export const esObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 export const L = (v) => (Array.isArray(v) ? v : []);
@@ -38,7 +41,7 @@ export function controlesComunes(doc, e) {
 
 /** Claves desconocidas = error (como Nexus): un campo que el contrato no conoce no se cuela en silencio. */
 export function claves(obj, lista, ruta, e) {
-  if (esObj(obj)) for (const k of Object.keys(obj)) if (!lista.includes(k)) e(`${ruta}${k}: clave desconocida (contrato CSI ${VERSION_CSI}).`);
+  if (esObj(obj)) for (const k of Object.keys(obj)) if (!lista.includes(k)) e(`${ruta}${k}: clave desconocida (contrato CSI).`);
 }
 
 export const clon = (x) => JSON.parse(JSON.stringify(x));

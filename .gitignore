@@ -21,3 +21,6 @@ datos/nexus/restauraciones/
 # CSI: el almacén real de investigaciones y predicciones es local (el caso ficticio está en datos/csi/demo/).
 datos/csi/registro/*
 !datos/csi/registro/LEEME.md
+# CSI fase 2: el caso histórico real es local hasta que Diego autorice publicarlo (el repositorio es público).
+datos/csi/historico/*
+!datos/csi/historico/LEEME.md
