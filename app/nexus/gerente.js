@@ -263,6 +263,25 @@ function R07(l) {
   return C("Sin datos privados ni detalles de estrategia detectados (los patrones no garantizan ausencia: la exportación requiere aprobación humana).", ["sensibilidad"]);
 }
 
+/**
+ * Rango de comparaciones declarado en muestra.supuestos cuando el conteo exacto no se divulga (cierre):
+ * `{ variable: "n_comparaciones_rango", valor: [min, max] }` o un texto «… comparaciones … entre A y B …».
+ * @returns [min, max] o null si no hay un rango bien formado.
+ */
+export function rangoComparaciones(m) {
+  for (const s of L(m?.supuestos)) {
+    if (s && typeof s === "object" && /^n_comparaciones_rango$/.test(s.variable ?? "")) {
+      const v = s.valor;
+      return Array.isArray(v) && v.length === 2 && v.every((x) => Number.isInteger(x) && x >= 0) && v[0] <= v[1] ? [v[0], v[1]] : null;
+    }
+    if (typeof s === "string") {
+      const x = s.match(/compar\w*[^.;]*?\bentre\s+(\d+)\s+y\s+(\d+)/i);
+      if (x) { const a = Number(x[1]), b = Number(x[2]); return a <= b ? [a, b] : null; }
+    }
+  }
+  return null;
+}
+
 // R08 — inferencia: naturaleza de datos/resultado vs objeto de confianza, selección, comparaciones, costos, n efectivo.
 function R08(l) {
   const m = l.muestra ?? {}, c = l.confianza ?? {};
@@ -280,6 +299,16 @@ function R08(l) {
   if (m.seleccion_en_muestra === true && fuerte) return N("La alternativa se eligió y se probó con la misma muestra: no generaliza (T16).", ["muestra.seleccion_en_muestra"]);
   const ajuste = L(m.supuestos).some((s) => (s && typeof s === "object" && /ajuste_comparaciones/.test(s.variable ?? "")) || (typeof s === "string" && /ajuste (por|de) (comparaciones|selecci)/i.test(s)));
   if (Number.isInteger(m.n_comparaciones) && m.n_comparaciones > 1 && fuerte && !ajuste) return N(`${m.n_comparaciones} alternativas comparadas sin ajuste por selección: impide afirmar ventaja robusta (T18).`, ["muestra.n_comparaciones"]);
+  // Cierre (caso L6 de Tezcatlipoca): n_comparaciones = null significa «conteo exacto no divulgado» (dato sensible), no
+  // «no se comparó». Lo que permite concluir es el RANGO declarado en supuestos (rangoComparaciones): si hasta su mínimo
+  // ya son varias alternativas sin ajuste, la regla no se cumple con lo divulgado; si el rango admite una sola, no se puede
+  // juzgar (no evaluado, nunca «cumple» por omisión); sin rango, tampoco. El conteo exacto nunca se exige.
+  if (m.n_comparaciones === null && fuerte && !ajuste) {
+    const r = rangoComparaciones(m);
+    if (r && r[0] > 1) return N(`Entre ${r[0]} y ${r[1]} alternativas comparadas sin ajuste por selección (conteo exacto no divulgado; el mínimo basta): impide afirmar ventaja robusta (T18).`, ["muestra.n_comparaciones", "muestra.supuestos"]);
+    if (r) return E(`El conteo de comparaciones no se divulga y el rango declarado [${r[0]}, ${r[1]}] admite una sola alternativa: no se puede juzgar la selección (T18). Declara un mínimo mayor que 1 o un ajuste por selección.`, ["muestra.n_comparaciones", "muestra.supuestos"]);
+    return E("n_comparaciones es null (no divulgado) y supuestos no declara un rango de comparaciones: la robustez frente a la selección no se puede juzgar (T18).", ["muestra.n_comparaciones", "muestra.supuestos"]);
+  }
   const est = L(l.evidencia).filter((x) => x?.base_conocimiento === "estimated" && (x.fraccion_estimada ?? 1) >= 0.5);
   if (est.length && c.nivel === "alta") return N("La mayor parte de las fechas de disponibilidad son estimadas: limita la confianza (T21).", ["evidencia.fraccion_estimada"]);
   if (c.nivel === "alta" && !Number.isInteger(m.n_efectivo)) return E("Confianza alta sin n_efectivo: no se puede juzgar.", ["muestra.n_efectivo"]);

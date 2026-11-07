@@ -15,6 +15,19 @@ export const COLECCIONES = { investigaciones: "cauce.csi.investigaciones", escen
 export const coleccionVacia = (tipo, es_demo = false) => ({ contrato: COLECCIONES[tipo], version_contrato: VERSION_CSI, es_demo, [tipo]: [] });
 
 /**
+ * Colección `investigaciones.json` lista para guardarse en el almacén (datos/csi/registro/): la forma que leerCSI()
+ * lee. Si ya existe una colección del mismo conjunto (DEMO o REAL), la investigación reemplaza a la de su mismo id o se
+ * agrega al final; una colección del otro conjunto se ignora (nunca se mezclan). @returns {ok, doc, errores}
+ */
+export function coleccionInvestigaciones(inv, existente = null) {
+  if (!esObj(inv) || typeof inv.id !== "string") return { ok: false, doc: null, errores: ["Falta la investigación."] };
+  const base = esObj(existente) && Array.isArray(existente.investigaciones) && existente.es_demo === inv.es_demo ? existente : coleccionVacia("investigaciones", inv.es_demo === true);
+  const lista = base.investigaciones.filter((x) => x?.id !== inv.id);
+  lista.push(inv);
+  return { ok: true, doc: { ...base, es_demo: inv.es_demo === true, investigaciones: lista }, errores: [] };
+}
+
+/**
  * @param docs { actores, investigaciones, escenarios, predicciones }  (cualquiera puede faltar)
  * @returns todo lo que la oficina necesita, con errores de cada documento; lo inválido no se muestra.
  */

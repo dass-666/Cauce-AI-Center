@@ -69,7 +69,9 @@ El alcance se registró antes de agregar la primera fuente, y el historial del c
 
 ## Referencias
 
-Las 12 fuentes se consultaron el 7-nov-2026 y todas tienen huella. Cada huella corresponde a una copia byte a byte, privada y **no publicada**, porque es de terceros. La huella SHA-256 permite a cualquiera comprobar si su propia copia es idéntica a la usada.
+El expediente tiene **13 registros de fuente**: las 12 fuentes de la tabla (F1–F12), consultadas y cotejadas el 7-nov-2026, cada una con huella, y un 13.º registro **PENDIENTE** (`f-bns-2011`) que conserva el primer enlace, equivocado, con el que se buscó el comunicado del BNS del 6-sep-2011. Ese registro no tiene huella ni cita, no respalda ningún enunciado y se deja a la vista para que el historial muestre cómo se corrigió la referencia (la fuente correcta es F2). Las correcciones de citas también están en el historial del expediente, no se borraron.
+
+Cada huella corresponde a una copia byte a byte, privada y **no publicada**, porque es de terceros. La huella SHA-256 permite a cualquiera comprobar si su propia copia es idéntica a la usada. El 7-nov-2026 las 12 huellas se volvieron a comprobar contra las copias privadas guardadas en el equipo de Diego: las 12 coinciden.
 
 | | Fuente | Clase | SHA-256 de la copia (7-nov-2026) |
 |---|---|---|---|

@@ -9,6 +9,8 @@
 //   node herramientas/csi.mjs expediente <expediente.json> [--salida datos/csi/historico]
 //        construye una investigación (con historial real) desde un expediente y escribe actores/investigaciones/escenarios
 //   node herramientas/csi.mjs revisar [--base <carpeta>]  flujo de 10 pasos, Abogado del Diablo y fuentes pendientes
+//   node herramientas/csi.mjs informe [--base <carpeta>] [--salida <carpeta>]
+//        escribe el expediente legible (Markdown) de cada investigación del conjunto: expediente-<id>.md (cierre)
 //   node herramientas/csi.mjs ancla --por <id> [--con-ids]     ancla del registro REAL en datos/csi/registro/anclas.json (no publica nada)
 //   node herramientas/csi.mjs verificar-ancla [<ancla.json>]    compara el registro REAL con un ancla (por defecto, la última)
 //   node herramientas/csi.mjs acreditar --n <k> --tipo <t> --en <instante> --prueba <ref> --texto <archivo-publicado> --autorizada-por diego
@@ -26,6 +28,7 @@ import { validarEscenario } from "../app/csi/simulador.js";
 import { agregarEntrada, registroVacioPredicciones, verificarPredicciones, validarRegistroPredicciones, resumirPredicciones } from "../app/csi/predicciones.js";
 import { construirDesdeExpediente } from "../app/csi/expediente.js";
 import { crearAncla, instruccionesPublicacion, verificarContraAncla, registrarAcreditacion, validarAncla, TEMPORAL_TXT } from "../app/csi/ancla.js";
+import { informeInvestigacion } from "../app/csi/informe.js";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const [orden, ...args] = process.argv.slice(2);
@@ -112,6 +115,21 @@ if (orden === "demo") {
     for (const h of x.abogado.hipotesis) for (const k of h.comprobaciones.filter((k) => k.resultado !== "ok")) console.log(`    ${h.id} · ${k.pregunta} [${k.resultado}] ${k.detalle}`);
     console.log(`  Fuentes: ${x.expediente.consultadas.length} consultadas · ${x.expediente.pendientes.length} pendientes · ${x.expediente.sin_huella.length} sin huella de contenido`);
   }
+} else if (orden === "informe") {
+  const base = opcion("--base") ?? REAL;
+  const sal = opcion("--salida") ?? base;
+  const docs = { actores: await leerSi(`${base}/actores.json`), investigaciones: await leerSi(`${base}/investigaciones.json`), escenarios: await leerSi(`${base}/escenarios.json`), predicciones: await leerSi(`${base}/predicciones.json`) };
+  if (!Object.values(docs).some(Boolean)) { console.log(`Sin datos en ${base}/.`); process.exit(1); }
+  const c = await leerCSI(docs);
+  for (const t of c.errores) console.log(`ERROR ${t}`);
+  for (const x of c.investigaciones) {
+    const md = informeInvestigacion(x.inv, { actores: c.actores?.doc ?? null, escenarios: c.escenarios.map((e) => e.esc), naturaleza: c.naturaleza, ahora: new Date().toISOString(), origen: `${base}/ (herramientas/csi.mjs informe)` });
+    const ruta = `${sal}/expediente-${x.inv.id}.md`;
+    await mkdir(dirname(join(raiz, ruta)), { recursive: true });
+    await writeFile(join(raiz, ruta), md, "utf8");
+    console.log(`escrito ${ruta} (${md.length} caracteres)`);
+  }
+  if (!c.investigaciones.length) { console.log("No hay investigaciones válidas."); process.exit(1); }
 } else if (orden === "ancla") {
   const por = opcion("--por");
   if (!por) { console.log("Falta --por <identificador> (identidad declarada)."); process.exit(1); }
@@ -149,6 +167,6 @@ if (orden === "demo") {
   col.anclas[n - 1] = r.ancla; await escribir(ANCLAS, col);
   console.log(`Acreditación anotada en el ancla ${n}. Verifica la prueba con la herramienta del tercero (openssl ts -verify, ots verify…).`);
 } else {
-  console.log("Órdenes: demo [--comprobar] | resumen [--demo] | validar <archivo> | predecir <archivo> --por <id> [--en <instante>] | piso | expediente <archivo> | revisar [--base] | ancla --por <id> | verificar-ancla [ancla] | acreditar --n <k> …");
+  console.log("Órdenes: demo [--comprobar] | resumen [--demo] | validar <archivo> | predecir <archivo> --por <id> [--en <instante>] | piso | expediente <archivo> | revisar [--base] | informe [--base] [--salida] | ancla --por <id> | verificar-ancla [ancla] | acreditar --n <k> …");
   process.exit(orden ? 1 : 0);
 }

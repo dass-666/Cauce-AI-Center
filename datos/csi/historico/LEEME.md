@@ -4,13 +4,16 @@ Esta carpeta guarda casos reales ya ocurridos, analizados después con fuentes p
 Todo lo que hay aquí, salvo este archivo, está fuera de git: el repositorio es público y una investigación solo se
 publica si Diego lo autoriza.
 
-Para ver un caso en el laboratorio (tecla I, botón «HISTÓRICO», o `?csi=historico`):
+**Si la carpeta está vacía, no hace falta hacer nada.** El laboratorio (tecla I, botón «HISTÓRICO» o `?csi=historico`)
+reconstruye en el navegador los casos publicados que lista `datos/csi/casos-publicados/indice.json`, con el mismo motor
+que usa una persona; la banda azul dice «reconstruido en este navegador». No requiere Node.
 
-1. Copia aquí el expediente. El caso publicado está en `datos/csi/casos-publicados/expediente-bns-2015.json` (informe: `docs/CSI-CASO-BNS-2015.md`).
-2. Ejecuta `node herramientas/csi.mjs expediente datos/csi/historico/expediente-bns-2015.json`. Escribe
-   `actores.json`, `investigaciones.json` y `escenarios.json` con el mismo motor que usa una persona, así el
-   historial y las huellas son reales.
+Para trabajar aquí un caso propio (publicado o no):
+
+1. Copia el expediente (`cauce.csi.expediente`) a esta carpeta.
+2. `node herramientas/csi.mjs expediente datos/csi/historico/<expediente>.json` escribe `actores.json`,
+   `investigaciones.json` y `escenarios.json`. Si existen, el laboratorio los usa en vez de reconstruir los publicados.
 3. `node herramientas/csi.mjs revisar --base datos/csi/historico` muestra el flujo de 10 pasos, el Abogado del Diablo
-   y las fuentes pendientes.
+   y las fuentes pendientes. `node herramientas/csi.mjs informe --base datos/csi/historico` escribe un `expediente-<id>.md` por investigación.
 
 Un caso histórico no lleva `predicciones.json`. Las predicciones van en `datos/csi/registro/`, registradas antes de su horizonte.
