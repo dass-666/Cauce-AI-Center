@@ -32,6 +32,7 @@
     <div class="controles">
       <button type="button" id="boton-sala" class="boton boton-sala" aria-pressed="false" aria-controls="sala-control"><span aria-hidden="true">◉</span><span class="texto-control"> Sala de control</span><span class="solo-lector"> (asuntos con datos reales:)</span> <span class="sala-contador" hidden></span></button>
       <button type="button" id="boton-nexus" class="boton boton-sala" aria-pressed="false" aria-controls="nexus" title="Oficina Nexus: lecciones, recomendaciones y decisiones pendientes (N)"><span aria-hidden="true">✦</span><span class="texto-control"> Nexus</span></button>
+      <button type="button" id="boton-csi" class="boton boton-sala" aria-pressed="false" aria-controls="csi" title="Inteligencia Estratégica (CSI): investigaciones, actores, escenarios y predicciones (I)"><span aria-hidden="true">◇</span><span class="texto-control"> CSI</span></button>
       <div class="segmentado" role="group" aria-label="Tipo de vista">
         <button type="button" class="boton" data-vista="3d" aria-pressed="false">3D</button>
         <button type="button" class="boton" data-vista="2d" aria-pressed="false">Plano</button>
@@ -57,13 +58,14 @@
   <main class="principal">
     <section id="sala-control" class="sala-control" aria-labelledby="sala-titulo" hidden></section>
     <section id="nexus" class="sala-control nexus" aria-labelledby="nexus-titulo" hidden></section>
+    <section id="csi" class="sala-control nexus csi" aria-labelledby="csi-titulo" hidden></section>
     <div id="oficina" class="oficina"></div>
     <aside id="panel" class="panel" hidden aria-label="Detalle"></aside>
   </main>
 
   <footer class="pie">
     Un personaje solo aparece trabajando si su sistema dejó un registro que lo respalde.
-    <span class="atajos">Teclas: <kbd>S</kbd> sala de control · <kbd>N</kbd> Nexus · <kbd>R</kbd> recepción · <kbd>A</kbd> siguiente alerta · <kbd>0</kbd> edificio completo · <kbd>1</kbd>–<kbd>9</kbd> departamento · <kbd>←</kbd> <kbd>→</kbd> vecino · <kbd>F</kbd> seguir personaje · <kbd>Retroceso</kbd> vista anterior · <kbd>Esc</kbd> cerrar.</span>
+    <span class="atajos">Teclas: <kbd>S</kbd> sala de control · <kbd>N</kbd> Nexus · <kbd>I</kbd> CSI · <kbd>R</kbd> recepción · <kbd>A</kbd> siguiente alerta · <kbd>0</kbd> edificio completo · <kbd>1</kbd>–<kbd>9</kbd> departamento · <kbd>←</kbd> <kbd>→</kbd> vecino · <kbd>F</kbd> seguir personaje · <kbd>Retroceso</kbd> vista anterior · <kbd>Esc</kbd> cerrar.</span>
     <a href="pruebas.html">Pruebas</a>
   </footer>
 

@@ -1,0 +1,177 @@
+{
+  "contrato": "cauce.estado-proyecto",
+  "version": "1.0.0",
+  "proyecto": {
+    "id": "csi",
+    "nombre": "Inteligencia Estratégica (CSI)"
+  },
+  "generado_en": "2026-11-06T17:59:00Z",
+  "vigencia_segundos": 600,
+  "es_demo": true,
+  "fuente": {
+    "tipo": "demo",
+    "nombre": "Caso ficticio de CSI (herramientas/csi.mjs demo)",
+    "version": "0.1"
+  },
+  "departamentos": [
+    {
+      "id": "estratega",
+      "nombre": "Estratega",
+      "descripcion": "[DEMO] Objetivos, incentivos, recursos y decisiones. Lo usa una persona; CSI no corre solo.",
+      "indicadores": [
+        {
+          "etiqueta": "Investigaciones",
+          "valor": 1
+        },
+        {
+          "etiqueta": "Actores registrados",
+          "valor": 7
+        },
+        {
+          "etiqueta": "Hipótesis incompletas",
+          "valor": 1
+        }
+      ],
+      "agentes": [
+        {
+          "id": "csi-estratega",
+          "nombre": "Estratega",
+          "rol": "Objetivos, incentivos, recursos y decisiones",
+          "estado": "requiere_revision",
+          "actividad": {
+            "descripcion": "[DEMO] 4 hipótesis; 1 incompletas"
+          }
+        }
+      ]
+    },
+    {
+      "id": "psicologo",
+      "nombre": "Psicólogo de Masas",
+      "descripcion": "[DEMO] Reacciones colectivas y economía conductual. Lo usa una persona; CSI no corre solo.",
+      "indicadores": [
+        {
+          "etiqueta": "Enunciados de conducta",
+          "valor": 3
+        }
+      ],
+      "agentes": [
+        {
+          "id": "csi-psicologo",
+          "nombre": "Psicólogo de Masas",
+          "rol": "Reacciones colectivas y economía conductual",
+          "estado": "esperando",
+          "actividad": {
+            "descripcion": "[DEMO] 3 enunciados sobre conducta colectiva"
+          }
+        }
+      ]
+    },
+    {
+      "id": "poder",
+      "nombre": "Analista de Poder",
+      "descripcion": "[DEMO] Relaciones verificables entre actores e instituciones. Lo usa una persona; CSI no corre solo.",
+      "indicadores": [
+        {
+          "etiqueta": "Relaciones verificables",
+          "valor": 4
+        },
+        {
+          "etiqueta": "Sin fuente",
+          "valor": 1
+        }
+      ],
+      "agentes": [
+        {
+          "id": "csi-poder",
+          "nombre": "Analista de Poder",
+          "rol": "Relaciones verificables entre actores e instituciones",
+          "estado": "requiere_revision",
+          "actividad": {
+            "descripcion": "[DEMO] 4 relaciones con fuente; 1 sin verificar"
+          }
+        }
+      ]
+    },
+    {
+      "id": "simulador",
+      "nombre": "Simulador",
+      "descripcion": "[DEMO] Árboles de decisiones y escenarios alternativos. Lo usa una persona; CSI no corre solo.",
+      "indicadores": [
+        {
+          "etiqueta": "Escenarios",
+          "valor": 1
+        },
+        {
+          "etiqueta": "Rutas simuladas",
+          "valor": 6
+        },
+        {
+          "etiqueta": "Problemas",
+          "valor": 0
+        }
+      ],
+      "agentes": [
+        {
+          "id": "csi-simulador",
+          "nombre": "Simulador",
+          "rol": "Árboles de decisiones y escenarios alternativos",
+          "estado": "esperando",
+          "actividad": {
+            "descripcion": "[DEMO] 1 escenario(s) · 6 rutas (simulación, no resultado real)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "abogado",
+      "nombre": "Abogado del Diablo",
+      "descripcion": "[DEMO] Objeciones, explicaciones alternativas y sesgos. Lo usa una persona; CSI no corre solo.",
+      "indicadores": [
+        {
+          "etiqueta": "Objeciones abiertas",
+          "valor": 3
+        },
+        {
+          "etiqueta": "Predicciones",
+          "valor": 5
+        },
+        {
+          "etiqueta": "Sin evaluar",
+          "valor": 1
+        }
+      ],
+      "agentes": [
+        {
+          "id": "csi-abogado",
+          "nombre": "Abogado del Diablo",
+          "rol": "Objeciones, explicaciones alternativas y sesgos",
+          "estado": "requiere_revision",
+          "actividad": {
+            "descripcion": "[DEMO] 3 objeciones abiertas · 1 aciertos, 1 fallos, 1 indeterminadas"
+          }
+        }
+      ]
+    }
+  ],
+  "alertas": [
+    {
+      "id": "csi-objeciones",
+      "nivel": "advertencia",
+      "titulo": "[DEMO] 3 objeción(es) del Abogado del Diablo sin responder",
+      "departamento_id": "abogado",
+      "creada_en": "2026-11-06T17:59:00Z"
+    }
+  ],
+  "resultados": [
+    {
+      "id": "csi-laboratorio",
+      "titulo": "Abrir el laboratorio CSI",
+      "descripcion": "Investigaciones, actores, hipótesis, árboles, predicciones y propuestas para Nexus.",
+      "departamento_id": "estratega",
+      "enlace": "?csi=1"
+    }
+  ],
+  "demo": {
+    "ahora_simulado": "2026-11-06T18:00:00Z"
+  }
+}

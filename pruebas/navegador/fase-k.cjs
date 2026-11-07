@@ -46,7 +46,7 @@ function compagoReal(base, cambiar = null) {
   await p.locator('#boton-sala').click(); await p.waitForTimeout(800);
   let texto = await sala().innerText();
   ok('botón «Sala de control» la abre, con aria-pressed y foco en su título', await abierta() && (await p.locator('#boton-sala').getAttribute('aria-pressed')) === 'true' && await p.evaluate(() => document.activeElement?.id === 'sala-titulo'));
-  ok('sala: los 6 proyectos registrados', (await p.locator('.sala-tarjeta').count()) === 6, `${await p.locator('.sala-tarjeta').count()}`);
+  ok('sala: los 7 proyectos registrados (CSI incluido)', (await p.locator('.sala-tarjeta').count()) === 7, `${await p.locator('.sala-tarjeta').count()}`);
   ok('sala: Compago y Ek Chuah DEMO; Tezcatlipoca, CauceService y Repacar «Pendiente»; Montambre sin conexión',
     /DEMO/.test(await p.locator('.sala-tarjeta[data-proyecto="compago"]').innerText()) && /DEMO/.test(await p.locator('.sala-tarjeta[data-proyecto="ek-chuah"]').innerText())
     && (await Promise.all(['tezcatlipoca', 'cauceservice', 'repacar'].map((id) => p.locator(`.sala-tarjeta[data-proyecto="${id}"]`).innerText()))).every((t) => /Pendiente/.test(t) && /Sin conexión/.test(t))
@@ -169,7 +169,7 @@ function compagoReal(base, cambiar = null) {
   await p.waitForTimeout(2500);
   ok('WebGL perdido: pasa al plano 2D con aviso y «Reintentar 3D»', await p.locator('.reintentar-3d').isVisible() && !(await p.locator('.vista3d').count()));
   await p.keyboard.press('s'); await p.waitForTimeout(600);
-  ok('WebGL perdido: la sala de control funciona sin 3D', await abierta() && (await p.locator('.sala-tarjeta').count()) === 6);
+  ok('WebGL perdido: la sala de control funciona sin 3D', await abierta() && (await p.locator('.sala-tarjeta').count()) === 7);
   await p.keyboard.press('Escape');
   await p.locator('.reintentar-3d').click(); await p.waitForTimeout(5000);
   ok('Reintentar 3D vuelve a la oficina', await p.locator('.vista3d').isVisible());

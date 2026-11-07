@@ -93,7 +93,7 @@ const agente = (d, id) => d.departamentos.flatMap((x) => x.agentes).find((a) => 
   const antesSala = await cam(p);
   await p.keyboard.press('s'); await p.waitForTimeout(700);
   const ids = await p.locator('.sala-tarjeta').evaluateAll((n) => n.map((x) => x.dataset.proyecto));
-  ok('sala: 6 proyectos; los pendientes (Tezcatlipoca, CauceService, Repacar) al final y compactos', ids.length === 6 && ids.slice(-3).sort().join() === 'cauceservice,repacar,tezcatlipoca' && (await p.locator('.sala-tarjeta-compacta').count()) === 3, ids.join(', '));
+  ok('sala: 7 proyectos (CSI incluido); los pendientes (Tezcatlipoca, CauceService, Repacar) al final y compactos', ids.length === 7 && ids.slice(-3).sort().join() === 'cauceservice,repacar,tezcatlipoca' && (await p.locator('.sala-tarjeta-compacta').count()) === 3, ids.join(', '));
   ok('sala: Compago muestra su estilo «Análisis comercial» y su color de identidad', /Análisis comercial/i.test(await p.locator('.sala-tarjeta[data-proyecto="compago"]').innerText()) && /--identidad/.test(await p.locator('.sala-tarjeta[data-proyecto="compago"]').getAttribute('style')));
   ok('sala: ningún botón actúa sobre un sistema (solo navegar)', (await p.locator('#sala-control button').evaluateAll((n) => n.map((x) => x.textContent))).every((t) => /Ir al|Volver|Ver|Atención|Proyectos|Cambios|edificio/.test(t)));
   await p.keyboard.press('s'); await p.waitForTimeout(900);

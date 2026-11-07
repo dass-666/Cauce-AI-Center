@@ -73,6 +73,6 @@ export function registrarCasosFaseI(leerTexto) {
       const e = elegirCarga({ tipo: "no_encontrado" }, demo);
       r[p.id] = resumenDe(construirModeloVista({ proyecto: p, carga: e.carga, ahora }));
     }
-    igual(r, { compago: "demo", "ek-chuah": "demo", tezcatlipoca: "desconectado", montambre: "desconectado", cauceservice: "desconectado", repacar: "desconectado" }); // K: + 2 pendientes
+    igual(r, { compago: "demo", "ek-chuah": "demo", tezcatlipoca: "desconectado", montambre: "desconectado", csi: "demo", cauceservice: "desconectado", repacar: "desconectado" }); // K: + 2 pendientes
   });
 }

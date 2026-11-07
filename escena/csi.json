@@ -1,0 +1,13 @@
+{
+  "proyecto_id": "csi",
+  "version": 1,
+  "inventario": "Departamento interno de Cauce (app/csi/). Lo usa una persona; no hay procesos automáticos.",
+  "cuadricula": { "columnas": 3, "filas": 2, "metros_por_celda": 4 },
+  "departamentos": {
+    "estratega": { "x": 0, "y": 0, "ancho": 1, "alto": 1, "tema": "oportunidades", "nombre": "Estratega", "descripcion": "Objetivos, incentivos, recursos y decisiones de cada actor." },
+    "psicologo": { "x": 1, "y": 0, "ancho": 1, "alto": 1, "tema": "margenes", "nombre": "Psicólogo de Masas", "descripcion": "Reacciones colectivas y economía conductual." },
+    "poder":     { "x": 2, "y": 0, "ancho": 1, "alto": 1, "tema": "busqueda", "nombre": "Analista de Poder", "descripcion": "Relaciones verificables entre actores e instituciones." },
+    "simulador": { "x": 0, "y": 1, "ancho": 1, "alto": 1, "tema": "supervision", "nombre": "Simulador", "descripcion": "Árboles de decisiones y escenarios alternativos (simulación, no resultado real)." },
+    "abogado":   { "x": 1, "y": 1, "ancho": 2, "alto": 1, "tema": "auditoria", "nombre": "Abogado del Diablo", "descripcion": "Objeciones, explicaciones alternativas y sesgos." }
+  }
+}

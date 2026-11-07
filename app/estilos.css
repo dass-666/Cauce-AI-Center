@@ -726,3 +726,33 @@ html.nexus-abierto .principal { grid-template-columns: 1fr !important; }
 .nexus-candidata { border-style: dashed; border-color: #6b5a2f; }
 .nexus-chip-candidata { color: #ffe08a; border-color: #6b5a2f; }
 .nexus-regla.r-no_aplica .nexus-icono { color: var(--texto-suave, #9aa3b5); }
+
+/* ---------- CSI: laboratorio de Inteligencia Estratégica (reutiliza sala de control y Nexus; sin animaciones) ---------- */
+html.csi-abierto #oficina, html.csi-abierto #panel, html.csi-abierto #conexion,
+html.csi-abierto #banda-demo, html.csi-abierto #diagnostico, html.csi-abierto #aviso-vista { display: none !important; }
+html.csi-abierto .principal { grid-template-columns: 1fr !important; }
+.csi { border-color: #2f5e6b; }
+.csi:not([hidden]) { animation: none; }
+.csi-pestanas { display: flex; flex-wrap: wrap; gap: 6px; }
+.csi-cuerpo { display: grid; gap: 12px; min-width: 0; }
+.csi-seccion { display: grid; gap: 8px; min-width: 0; }
+.csi-seccion h3 { margin: 0; font-size: 16px; }
+.csi h5 { margin: 6px 0 2px; font-size: 12.5px; color: var(--texto-suave); }
+.csi-lista { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13px; }
+.csi-fuentes { display: block; color: var(--texto-suave); font-size: 11.5px; }
+.csi-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+.csi-col { border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.csi-col-hecho { border-color: #2f6b47; } .csi-col-declaracion { border-color: #2f4a6b; }
+.csi-col-inferencia { border-color: #6b5a2f; } .csi-col-simulacion, .csi-col-prediccion { border-color: #5a2f6b; border-style: dashed; }
+.csi-tabla-envoltura { overflow-x: auto; max-width: 100%; }
+.csi-tabla { border-collapse: collapse; font-size: 12.5px; width: 100%; min-width: 640px; }
+.csi-tabla th, .csi-tabla td { border-bottom: 1px solid var(--borde); padding: 4px 6px; text-align: left; vertical-align: top; }
+.csi-flujo { margin: 0; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--cuarto); overflow-wrap: anywhere; }
+.csi-arbol { margin: 0; padding-left: 16px; list-style: none; border-left: 1px dashed var(--borde); }
+.csi-arbol summary { cursor: pointer; font-size: 13px; }
+.csi-bloqueada > details > summary { color: var(--c-error); text-decoration: line-through; }
+.csi-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 6px 10px; align-items: end; }
+.csi-campo { display: grid; gap: 2px; font-size: 12.5px; }
+.csi-campo input, .csi-campo select, .csi-campo textarea { font: inherit; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 5px 6px; min-width: 0; }
+.csi-botones { display: flex; flex-wrap: wrap; gap: 6px; }
+.csi-mensajes p { margin: 0; }

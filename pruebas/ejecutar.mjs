@@ -14,6 +14,7 @@ import { registrarCasosRendimiento } from "./casos-rendimiento.js";
 import { registrarCasosFaseM } from "./casos-fase-m.js";
 import { registrarCasosNexus } from "./casos-nexus.js";
 import { registrarCasosNexus15 } from "./casos-nexus-15.js";
+import { registrarCasosCSI } from "./casos-csi.js";
 import { ejecutar } from "./mini.js";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -29,6 +30,7 @@ registrarCasosRendimiento(leer);
 registrarCasosFaseM(leer);
 registrarCasosNexus(leer);
 registrarCasosNexus15(leer);
+registrarCasosCSI(leer);
 
 const r = await ejecutar();
 for (const p of r.resultados) console.log(`${p.ok ? "OK   " : "FALLA"} ${p.nombre}${p.ok ? "" : "\n      " + p.error}`);

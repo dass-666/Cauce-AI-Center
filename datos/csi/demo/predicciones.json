@@ -1,0 +1,367 @@
+{
+  "contrato": "cauce.csi.predicciones",
+  "version_contrato": "0.1",
+  "es_demo": true,
+  "entradas": [
+    {
+      "n": 1,
+      "tipo": "registro",
+      "contenido": {
+        "id": "pred-bc-facilidad",
+        "investigacion_id": "demo-caida-lumen",
+        "hipotesis_id": "H-B",
+        "hipotesis_original": "[DEMO] El Banco Central anunciará una facilidad de liquidez antes del 20 de octubre.",
+        "resultado_observable": "Comunicado oficial que anuncie una facilidad nueva",
+        "horizonte": {
+          "desde": "2026-10-13T10:00:00-06:00",
+          "hasta": "2026-10-20T23:59:00-06:00"
+        },
+        "criterios": {
+          "acertada": "Se anuncia una facilidad nueva en el horizonte",
+          "fallida": "No se anuncia ninguna facilidad nueva en el horizonte",
+          "indeterminada": "Se anuncia algo ambiguo que no es claramente una facilidad"
+        },
+        "fuentes_conocidas": [
+          {
+            "titulo": "[DEMO] Comunicado del Banco Central",
+            "publicada_en": "2026-10-12T19:00:00-06:00",
+            "ficticia": true
+          },
+          {
+            "titulo": "[DEMO] Boletín de cierre",
+            "publicada_en": "2026-10-12T15:30:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "supuestos": [
+          "El comunicado del 12 de octubre anticipa acción"
+        ],
+        "version_reglas": "csi-reglas 0.1 (manual, sin IA)",
+        "referencia": {
+          "descripcion": "Sin cambio: el Banco Central no anuncia medidas nuevas",
+          "resultado_esperado": "No hay facilidad nueva"
+        }
+      },
+      "registrado_en": "2026-10-13T09:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": null,
+      "huella": "05556152125b0c0a353495a7775ae948c89d3f1e744748abdabf4bae11a431de"
+    },
+    {
+      "n": 2,
+      "tipo": "registro",
+      "contenido": {
+        "id": "pred-rebote",
+        "investigacion_id": "demo-caida-lumen",
+        "hipotesis_id": "H-B",
+        "hipotesis_original": "[DEMO] El índice cerrará el 27 de octubre por encima del mínimo del 12 de octubre.",
+        "resultado_observable": "Cierre oficial del 27 de octubre vs mínimo del 12",
+        "horizonte": {
+          "desde": "2026-10-13T10:00:00-06:00",
+          "hasta": "2026-10-27T15:00:00-06:00"
+        },
+        "criterios": {
+          "acertada": "Cierre del 27 > mínimo del 12",
+          "fallida": "Cierre del 27 ≤ mínimo del 12",
+          "indeterminada": "No hay cierre oficial publicado"
+        },
+        "fuentes_conocidas": [
+          {
+            "titulo": "[DEMO] Comunicado del Banco Central",
+            "publicada_en": "2026-10-12T19:00:00-06:00",
+            "ficticia": true
+          },
+          {
+            "titulo": "[DEMO] Boletín de cierre",
+            "publicada_en": "2026-10-12T15:30:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "supuestos": [],
+        "version_reglas": "csi-reglas 0.1 (manual, sin IA)",
+        "referencia": {
+          "descripcion": "Referencia simple: tras una caída grande, el índice suele quedar por encima del mínimo",
+          "resultado_esperado": "Cierre del 27 > mínimo del 12"
+        }
+      },
+      "registrado_en": "2026-10-13T09:05:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "05556152125b0c0a353495a7775ae948c89d3f1e744748abdabf4bae11a431de",
+      "huella": "9331a9fb9b778ca796a0073012adb677e7fccee6b9a7f0721c78b54747fe11db"
+    },
+    {
+      "n": 3,
+      "tipo": "registro",
+      "contenido": {
+        "id": "pred-flujos",
+        "investigacion_id": "demo-caida-lumen",
+        "hipotesis_id": "H-B",
+        "hipotesis_original": "[DEMO] Los datos oficiales de flujos mostrarán salidas netas de fondos el 12 de octubre.",
+        "resultado_observable": "Estadística oficial de flujos por día",
+        "horizonte": {
+          "desde": "2026-10-13T10:00:00-06:00",
+          "hasta": "2026-10-31T23:59:00-06:00"
+        },
+        "criterios": {
+          "acertada": "Salidas netas el 12",
+          "fallida": "Entradas netas el 12",
+          "indeterminada": "Los datos no permiten aislar el día"
+        },
+        "fuentes_conocidas": [
+          {
+            "titulo": "[DEMO] Comunicado del Banco Central",
+            "publicada_en": "2026-10-12T19:00:00-06:00",
+            "ficticia": true
+          },
+          {
+            "titulo": "[DEMO] Boletín de cierre",
+            "publicada_en": "2026-10-12T15:30:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "supuestos": [],
+        "version_reglas": "csi-reglas 0.1 (manual, sin IA)",
+        "referencia": {
+          "descripcion": "Sin cambio: flujos cercanos a cero",
+          "resultado_esperado": "Flujos sin salida neta relevante"
+        }
+      },
+      "registrado_en": "2026-10-13T09:10:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "9331a9fb9b778ca796a0073012adb677e7fccee6b9a7f0721c78b54747fe11db",
+      "huella": "7df7d8870e4bf01a2417dd8093a164085307e081d914f5cab00e9a63edce9c77"
+    },
+    {
+      "n": 4,
+      "tipo": "registro",
+      "contenido": {
+        "id": "pred-regulador",
+        "investigacion_id": "demo-caida-lumen",
+        "hipotesis_id": "H-D",
+        "hipotesis_original": "[DEMO] La Comisión NO publicará una investigación por manipulación antes del 5 de noviembre.",
+        "resultado_observable": "Comunicado de la Comisión de Valores",
+        "horizonte": {
+          "desde": "2026-10-14T00:00:00-06:00",
+          "hasta": "2026-11-05T23:59:00-06:00"
+        },
+        "criterios": {
+          "acertada": "Ningún comunicado de investigación en el horizonte",
+          "fallida": "Se publica una investigación",
+          "indeterminada": "Comunicado ambiguo"
+        },
+        "fuentes_conocidas": [
+          {
+            "titulo": "[DEMO] Comunicado del Banco Central",
+            "publicada_en": "2026-10-12T19:00:00-06:00",
+            "ficticia": true
+          },
+          {
+            "titulo": "[DEMO] Boletín de cierre",
+            "publicada_en": "2026-10-12T15:30:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "supuestos": [],
+        "version_reglas": "csi-reglas 0.1 (manual, sin IA)",
+        "referencia": {
+          "descripcion": "Sin cambio: la Comisión no anuncia investigaciones",
+          "resultado_esperado": "Ningún comunicado"
+        }
+      },
+      "registrado_en": "2026-10-13T09:15:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "7df7d8870e4bf01a2417dd8093a164085307e081d914f5cab00e9a63edce9c77",
+      "huella": "a52c7fceca1b61f08cea55219f8833ca499d87c36a774f5d6e9feae2f6c43e1e"
+    },
+    {
+      "n": 5,
+      "tipo": "evaluacion",
+      "contenido": {
+        "prediccion_id": "pred-bc-facilidad",
+        "resultado": "fallida",
+        "resultado_referencia": "acertada",
+        "evidencia": [
+          {
+            "titulo": "[DEMO] Comunicados del BC del 13 al 20 de octubre: solo declaraciones, sin facilidad nueva",
+            "publicada_en": "2026-10-21T08:00:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "nota": "[DEMO] Predicción equivocada: se conserva y cuenta como fallo."
+      },
+      "registrado_en": "2026-10-21T09:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "revisora-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "a52c7fceca1b61f08cea55219f8833ca499d87c36a774f5d6e9feae2f6c43e1e",
+      "huella": "c881f20386b88b77f5799c717cb24280e6445f63d45c847bbf05248056c6c118"
+    },
+    {
+      "n": 6,
+      "tipo": "correccion",
+      "contenido": {
+        "prediccion_id": "pred-bc-facilidad",
+        "motivo": "[DEMO] «Quise decir 30 días» (corrección posterior al resultado: no cuenta)",
+        "prediccion": {
+          "id": "pred-bc-facilidad",
+          "investigacion_id": "demo-caida-lumen",
+          "hipotesis_id": "H-B",
+          "hipotesis_original": "[DEMO] El Banco Central anunciará una facilidad de liquidez antes del 12 de noviembre.",
+          "resultado_observable": "Comunicado oficial que anuncie una facilidad nueva",
+          "horizonte": {
+            "desde": "2026-10-13T10:00:00-06:00",
+            "hasta": "2026-11-12T23:59:00-06:00"
+          },
+          "criterios": {
+            "acertada": "Se anuncia una facilidad nueva",
+            "fallida": "No se anuncia",
+            "indeterminada": "Ambiguo"
+          },
+          "fuentes_conocidas": [
+            {
+              "titulo": "[DEMO] Comunicado del Banco Central",
+              "publicada_en": "2026-10-12T19:00:00-06:00",
+              "ficticia": true
+            },
+            {
+              "titulo": "[DEMO] Boletín de cierre",
+              "publicada_en": "2026-10-12T15:30:00-06:00",
+              "ficticia": true
+            }
+          ],
+          "supuestos": [],
+          "version_reglas": "csi-reglas 0.1 (manual, sin IA)",
+          "referencia": {
+            "descripcion": "Sin cambio",
+            "resultado_esperado": "No hay facilidad nueva"
+          }
+        }
+      },
+      "registrado_en": "2026-10-21T12:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "c881f20386b88b77f5799c717cb24280e6445f63d45c847bbf05248056c6c118",
+      "huella": "a90e95d9231a83bdb6be5e9a8435280988aa01098a1d2be26706a6182cbcd6c6"
+    },
+    {
+      "n": 7,
+      "tipo": "evaluacion",
+      "contenido": {
+        "prediccion_id": "pred-rebote",
+        "resultado": "acertada",
+        "resultado_referencia": "acertada",
+        "evidencia": [
+          {
+            "titulo": "[DEMO] Boletín de cierre del 27 de octubre",
+            "publicada_en": "2026-10-27T15:30:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "nota": "[DEMO] Acertó, igual que la referencia simple: no muestra ventaja ni prueba que la causa fuera la liquidez."
+      },
+      "registrado_en": "2026-10-28T09:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "revisora-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "a90e95d9231a83bdb6be5e9a8435280988aa01098a1d2be26706a6182cbcd6c6",
+      "huella": "109de4a345329a99bee331d69080dab27be7345744322721fa40b01c62ed4e0b"
+    },
+    {
+      "n": 8,
+      "tipo": "evaluacion",
+      "contenido": {
+        "prediccion_id": "pred-flujos",
+        "resultado": "indeterminada",
+        "resultado_referencia": "indeterminada",
+        "evidencia": [
+          {
+            "titulo": "[DEMO] Estadística de flujos de octubre (solo mensual)",
+            "publicada_en": "2026-11-01T10:00:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "nota": "[DEMO] Solo hay datos mensuales: no permiten aislar el 12 de octubre."
+      },
+      "registrado_en": "2026-11-02T09:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "revisora-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "109de4a345329a99bee331d69080dab27be7345744322721fa40b01c62ed4e0b",
+      "huella": "2d6148c090a1d058c80d63a89e6164985609d36443ecaad6984dfca9cfadba28"
+    },
+    {
+      "n": 9,
+      "tipo": "registro",
+      "contenido": {
+        "id": "pred-tasa-nov",
+        "investigacion_id": "demo-caida-lumen",
+        "hipotesis_id": "H-A",
+        "hipotesis_original": "[DEMO] El Banco Central mantendrá la tasa en la reunión del 20 de noviembre.",
+        "resultado_observable": "Decisión publicada el 20 de noviembre",
+        "horizonte": {
+          "desde": "2026-11-10T00:00:00-06:00",
+          "hasta": "2026-11-20T23:59:00-06:00"
+        },
+        "criterios": {
+          "acertada": "Tasa sin cambio",
+          "fallida": "Tasa cambia",
+          "indeterminada": "Reunión pospuesta"
+        },
+        "fuentes_conocidas": [
+          {
+            "titulo": "[DEMO] Comunicado del Banco Central",
+            "publicada_en": "2026-10-12T19:00:00-06:00",
+            "ficticia": true
+          },
+          {
+            "titulo": "[DEMO] Boletín de cierre",
+            "publicada_en": "2026-10-12T15:30:00-06:00",
+            "ficticia": true
+          }
+        ],
+        "supuestos": [],
+        "version_reglas": "csi-reglas 0.1 (manual, sin IA)",
+        "referencia": {
+          "descripcion": "Sin cambio: la tasa sigue igual",
+          "resultado_esperado": "Tasa sin cambio"
+        }
+      },
+      "registrado_en": "2026-11-03T10:00:00-06:00",
+      "registrado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo",
+        "autenticacion": "declarada"
+      },
+      "huella_anterior": "2d6148c090a1d058c80d63a89e6164985609d36443ecaad6984dfca9cfadba28",
+      "huella": "5093c7d567b4b59b392a25e5cd0f3494ff174d4e6bb70db1e3c48b927c4dadb1"
+    }
+  ],
+  "demo": {
+    "ahora_simulado": "2026-11-06T12:00:00-06:00"
+  }
+}
