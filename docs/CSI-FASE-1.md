@@ -79,7 +79,21 @@ Registro solo anexado con cadena SHA-256: `registro` (antes del horizonte; fuent
 
 ## 8. Pruebas ejecutadas
 
-RESULTADOS_PRUEBAS
+Todo en este entorno (Linux, Chromium con SwiftShader) **[verificado]**:
+
+| Suite | Resultado |
+|---|---|
+| Node `node pruebas/ejecutar.mjs` | **359 pasaron, 0 fallaron** (331 del PR #23 + 28 de CSI) |
+| `pruebas.html` en Chromium | 359 / 0 |
+| `pruebas/navegador/csi.cjs` | **39 OK** (piso 3D y 2D, 10 pestañas, laboratorio de principio a fin, Nexus sin aprobar, celular, pausa de la 3D) |
+| Regresión completa `pruebas/navegador/todas.cjs` | **27/27 scripts en verde** (incluye nexus.cjs 45, regresion 47, fase-k 48, fase-l 42, inmersivo 34, rendimiento-uhd 29) |
+| Reproducibilidad | `herramientas/csi.mjs demo --comprobar` y `nexus-demo.mjs --comprobar`: OK |
+
+Pruebas de CSI por tema (bloque 10): contratos y claves desconocidas, probabilidades rechazadas, historial y cambios silenciosos, fechas e información futura, hechos vs inferencias e intenciones, escenarios contradictorios, simulador determinista, actores sin suponer coordinación, acertada/fallida/indeterminada/sin evaluar, correcciones posteriores, cadena de predicciones, circularidad con Nexus, privacidad, DEMO/REAL, piso con contrato v1 y compatibilidad con el PR #23 (lecciones 0.2 intactas).
+
+**Lo que la regresión encontró y corregí**: el botón «CSI» hacía desbordar la cabecera en celulares de 390 px (la página se ampliaba a 422 px) y rompía 3 scripts. Tras el arreglo cabe de 320 a 430 px. Nota honesta: en la base del PR #23 (`99deed1`), en este entorno, `movil-medidas.cjs` y `regresion.cjs` también fallaban (el iPhone SE de 320 px ya desbordaba a 377); con este PR pasan. No investigué a fondo la falla de `regresion.cjs` en la base.
+
+**Rendimiento**: no medido en tu Intel UHD. En SwiftShader el piso CSI usa 84 llamadas de dibujo frente a 97 de Compago, y con el laboratorio abierto la 3D dibuja 0 cuadros.
 
 ## 9. Ramas, commits y PR
 
