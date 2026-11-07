@@ -7,7 +7,7 @@ import {
   VERSION_CSI, ID, esObj, L, esAutor, texto, esFechaConZona, esFechaODia, ms, huellaDe, sha256, jsonCanonico, mismoId, clon,
   claves, controlesComunes, validarFuentes, esFuenteNexus, seguroAntes, FUENTES_DOCUMENTALES, VERSIONES_CSI, VERSION_CSI_2,
 } from "./base.js";
-import { validarFuentes02, esPendiente, citaConProcedencia } from "./fuentes.js";
+import { validarFuentes02, esPendiente, citaConProcedencia, RESULTADOS_COTEJO } from "./fuentes.js";
 import { buscarPsicologia, buscarCoordinacion } from "./lenguaje.js";
 
 export const CONTRATO_INVESTIGACION = "cauce.csi.investigacion";
@@ -243,7 +243,7 @@ export async function crearInvestigacion({ id, titulo, pregunta, acontecimiento,
   return { ok: true, inv: await anexar(inv, { fecha, autor, accion: "crear", detalle: titulo }) };
 }
 
-export const ACCIONES = ["definir_alcance", "agregar_actor", "agregar_fuente", "agregar_enunciado", "retirar_enunciado", "agregar_incentivo", "agregar_hipotesis", "agregar_observacion", "vincular_evidencia", "agregar_objecion", "responder_objecion", "agregar_escenario", "editar", "revision"];
+export const ACCIONES = ["definir_alcance", "agregar_actor", "agregar_fuente", "agregar_enunciado", "retirar_enunciado", "agregar_incentivo", "agregar_hipotesis", "agregar_observacion", "vincular_evidencia", "agregar_objecion", "responder_objecion", "agregar_escenario", "editar", "revision", "cotejar_fuente"];
 const EDITABLES = ["titulo", "pregunta", "supuestos", "incertidumbre"];
 
 /**
@@ -297,6 +297,22 @@ export async function aplicarCambio(original, cambio, { autor, fecha }) {
       const o = busca("objeciones", d.objecion_id);
       if (!o) return { ok: false, errores: [`objeción «${d.objecion_id}» no existe.`] };
       o.estado = "respondida"; o.respuesta = d.respuesta; detalle = d.objecion_id; break;
+    }
+    case "cotejar_fuente": {
+      // Volver a comparar una fuente con su original. Nunca borra: una corrección guarda el extracto anterior, y si una
+      // cita de un enunciado deja de tener procedencia la validación lo rechaza (hay que retirar el enunciado antes).
+      if (!es02(inv)) return { ok: false, errores: ["cotejar_fuente existe desde la versión 0.2."] };
+      const f = busca("fuentes", d.fuente_id);
+      if (!f) return { ok: false, errores: [`fuente «${d.fuente_id}» no existe.`] };
+      if (!RESULTADOS_COTEJO.includes(d.resultado)) return { ok: false, errores: [`resultado: ${RESULTADOS_COTEJO.join(" | ")}.`] };
+      const c = { fecha, autor: { tipo: autor.tipo, identificador: autor.identificador }, resultado: d.resultado, metodo: d.metodo, detalle: d.detalle };
+      if (d.resultado === "corregido") {
+        if (!texto(d.extracto_corregido) || d.extracto_corregido === f.extracto) return { ok: false, errores: ["corregido: extracto_corregido distinto del actual."] };
+        c.extracto_anterior = f.extracto ?? ""; f.extracto = d.extracto_corregido;
+      } else if (d.extracto_corregido !== undefined) return { ok: false, errores: ["extracto_corregido solo con resultado «corregido»."] };
+      if (d.huella_contenido !== undefined) { f.huella_contenido = d.huella_contenido; f.copia_local = d.copia_local; f.metodo_consulta = "copia_local"; }
+      f.cotejos = [...L(f.cotejos), c];
+      detalle = `${d.fuente_id} ${d.resultado}`; break;
     }
     case "agregar_escenario": if (!inv.escenarios.includes(d.escenario_id)) inv.escenarios.push(d.escenario_id); detalle = d.escenario_id; break;
     case "editar":

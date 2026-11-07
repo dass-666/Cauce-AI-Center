@@ -22,7 +22,10 @@ export const ESTADOS_FUENTE = ["consultada", "pendiente"];
 export const TIPOS_EXTRACTO = ["cita_textual", "parafrasis", "dato"];
 export const METODOS_CONSULTA = ["manual", "herramienta_sesion", "copia_local"];
 const CLAVES_02 = ["id", "titulo", "editor", "tipo", "publicada_en", "consultada_en", "disponible_en", "disponible_segun", "enlace", "referencia", "autor_actor_id", "ficticia",
-  "clase", "estado", "pendiente_motivo", "extracto", "extracto_tipo", "metodo_consulta", "huella_contenido", "copia_local", "limitaciones", "origen"];
+  "clase", "estado", "pendiente_motivo", "extracto", "extracto_tipo", "metodo_consulta", "huella_contenido", "copia_local", "limitaciones", "origen", "cotejos"];
+/** Resultado de volver a comparar una fuente con su original (acción cotejar_fuente). */
+export const RESULTADOS_COTEJO = ["coincide", "parcial", "corregido", "no_localizado"];
+const CLAVES_COTEJO = ["fecha", "autor", "resultado", "metodo", "detalle", "extracto_anterior"];
 
 /** Fecha en que la información se pudo conocer: disponible_en si se declaró; si no, la publicación de la copia. */
 export const fechaConocimiento = (f) => f?.disponible_en ?? f?.publicada_en ?? null;
@@ -37,6 +40,8 @@ export function conocidaDespues(f, instante) {
   return !!iv && Number.isFinite(t) && iv[0] > t;
 }
 export const esPendiente = (f) => f?.estado === "pendiente";
+/** Último cotejo registrado de una fuente (o null si nunca se cotejó). */
+export const ultimoCotejo = (f) => L(f?.cotejos).at(-1) ?? null;
 /** Origen para medir independencia: dos copias del mismo comunicado NO son dos fuentes independientes. */
 export const origenDe = (f) => String(f?.origen ?? f?.autor_actor_id ?? f?.editor ?? "?").trim().toLowerCase();
 
@@ -98,6 +103,21 @@ export function validarFuentes02(fuentes, { es_demo, ruta = "fuentes", e, aviso 
     if (f.estado === "pendiente") {
       if (!texto(f.pendiente_motivo)) e(`${r}una fuente pendiente explica por qué (sin acceso, sin conexión, solo se verificó el título…).`);
       if (f.extracto_tipo === "cita_textual") e(`${r}una fuente pendiente no puede aportar citas textuales (no se verificaron).`);
+    }
+    if (f.cotejos !== undefined) {
+      if (!Array.isArray(f.cotejos)) e(`${r}cotejos: lista.`);
+      else f.cotejos.forEach((c, j) => {
+        const rc = `${r}cotejos[${j}].`;
+        if (!esObj(c)) return e(`${rc} debe ser un objeto.`);
+        claves(c, CLAVES_COTEJO, rc, e);
+        if (!esFechaConZona(c.fecha)) e(`${rc}fecha: instante con zona.`);
+        if (!RESULTADOS_COTEJO.includes(c.resultado)) e(`${rc}resultado: ${RESULTADOS_COTEJO.join(" | ")}.`);
+        if (!METODOS_CONSULTA.includes(c.metodo)) e(`${rc}metodo: ${METODOS_CONSULTA.join(" | ")}.`);
+        if (!texto(c.detalle)) e(`${rc}detalle: qué se comparó y qué se encontró.`);
+        if (c.resultado === "corregido" && !texto(c.extracto_anterior)) e(`${rc}una corrección conserva el extracto anterior (no se borra lo que se dijo).`);
+        if (c.resultado !== "corregido" && c.extracto_anterior !== undefined) e(`${rc}extracto_anterior solo en una corrección.`);
+        if (esFechaConZona(c.fecha) && esFechaConZona(f.consultada_en) && Date.parse(c.fecha) < Date.parse(f.consultada_en)) e(`${rc}un cotejo no puede ser anterior a la consulta.`);
+      });
     }
     if (f.huella_contenido !== undefined) {
       if (!/^[0-9a-f]{64}$/.test(String(f.huella_contenido))) e(`${r}huella_contenido: SHA-256 en hexadecimal (64 caracteres).`);

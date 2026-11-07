@@ -275,6 +275,7 @@ function nexus(csi, redibujar) {
 }
 
 // ---------- Fase 2: fuentes, flujo, Abogado del Diablo y mapa ----------
+const COTEJO_TXT = { coincide: "Coincide con el original", parcial: "Coincide en parte", corregido: "CORREGIDO tras cotejar", no_localizado: "No se pudo cotejar" };
 const dia = (f) => (f && f.length === 10 ? f : f ? fecha(f) : "—");
 function fuentesPanel(csi) {
   if (!csi.investigaciones.length) return el("p", { clase: "sala-vacio" }, "Sin investigaciones.");
@@ -298,7 +299,9 @@ function fuentesPanel(csi) {
         f.estado === "pendiente" ? el("p", { clase: "sala-nota nexus-mal" }, `Pendiente: ${f.pendiente_motivo}`) : null,
         f.extracto ? el("blockquote", { clase: "csi-extracto", "data-extracto": f.extracto_tipo ?? "" }, f.extracto) : null,
         el("p", { clase: "sala-nota" }, f.huella_contenido ? `Huella de la copia: ${f.huella_contenido.slice(0, 16)}… (${f.copia_local})` : "Sin huella: no hay copia verificable guardada."),
-        L(f.limitaciones).length ? [el("h5", {}, "Limitaciones"), lista(f.limitaciones)] : null))),
+        L(f.limitaciones).length ? [el("h5", {}, "Limitaciones"), lista(f.limitaciones)] : null,
+        L(f.cotejos).length ? [el("h5", {}, "Cotejo con el original"), el("ul", { "data-cotejos": f.id }, L(f.cotejos).map((c) => el("li", { "data-cotejo": c.resultado },
+          `${COTEJO_TXT[c.resultado] ?? c.resultado} · ${fecha(c.fecha)} · ${c.detalle}`)))] : null))),
       linea.length ? [el("h4", {}, "¿Qué se podía conocer en cada momento?"), el("div", { clase: "csi-tabla-envoltura" }, el("table", { clase: "csi-tabla", "data-linea": "" },
         el("thead", {}, el("tr", {}, ...["Momento", "Fuentes ya públicas", "Hechos y declaraciones ya sustentables", "Todavía no"].map((t) => el("th", { scope: "col" }, t)))),
         el("tbody", {}, ...linea.map((c) => el("tr", {}, el("td", {}, c.etiqueta), el("td", {}, c.fuentes.join(", ") || "—"), el("td", {}, c.enunciados.join(", ") || "—"), el("td", {}, c.aun_no.join(", ") || "—"))))))] : null);

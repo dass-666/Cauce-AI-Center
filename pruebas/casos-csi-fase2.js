@@ -353,6 +353,35 @@ export function registrarCasosCSIFase2() {
     const malo = clon(exp); malo.alcance = null;
     verdadero(!(await construirDesdeExpediente(malo)).ok, "sin alcance, el expediente histórico no se construye");
   });
+  prueba("CSI 2 · cotejo: corregir un extracto conserva el anterior, queda en el historial y no rompe la cadena", async () => {
+    let inv = await completa();
+    const n = inv.historial.length;
+    inv = await paso(inv, "cotejar_fuente", { fuente_id: "f2", resultado: "coincide", metodo: "manual", detalle: "Releído: coincide." }, 20);
+    inv = await paso(inv, "cotejar_fuente", { fuente_id: "f3", resultado: "corregido", metodo: "manual", detalle: "Faltaba el final de la frase.", extracto_corregido: "Explicación posterior de la junta, con su final." }, 21);
+    const f3 = inv.fuentes.find((f) => f.id === "f3");
+    igual(f3.extracto, "Explicación posterior de la junta, con su final.");
+    igual(f3.cotejos[0].extracto_anterior, "Explicación posterior de la junta.");
+    igual(inv.historial.length, n + 2);
+    igual(inv.historial.at(-1).accion, "cotejar_fuente");
+    verdadero((await verificarHistorial(inv)).ok);
+    igual(validarInvestigacion(inv).errores, []);
+    verdadero(!(await intento(inv, "cotejar_fuente", { fuente_id: "f3", resultado: "corregido", metodo: "manual", detalle: "x", extracto_corregido: f3.extracto }, 22)).ok, "corrección idéntica");
+    verdadero(!(await intento(inv, "cotejar_fuente", { fuente_id: "f2", resultado: "coincide", metodo: "manual", detalle: "x", extracto_corregido: "otro" }, 22)).ok, "extracto sin «corregido»");
+    verdadero(!(await intento(inv, "cotejar_fuente", { fuente_id: "nada", resultado: "coincide", metodo: "manual", detalle: "x" }, 22)).ok, "fuente inexistente");
+    verdadero(!(await intento(inv, "cotejar_fuente", { fuente_id: "f2", resultado: "seguro", metodo: "manual", detalle: "x" }, 22)).ok, "resultado inválido");
+  });
+  prueba("CSI 2 · cotejo: una corrección que deja sin procedencia la cita de un enunciado se rechaza; huella exige copia", async () => {
+    const inv = await completa();
+    const r = await intento(inv, "cotejar_fuente", { fuente_id: "f1", resultado: "corregido", metodo: "manual", detalle: "El original dice otra cosa.", extracto_corregido: "\"La junta mantuvo la tasa.\"" }, 20);
+    verdadero(!r.ok && tiene(r.errores, /cita|procedencia/i), r.errores?.join(" | "));
+    const sinCopia = await intento(inv, "cotejar_fuente", { fuente_id: "f2", resultado: "coincide", metodo: "copia_local", detalle: "Descargado.", huella_contenido: "a".repeat(64) }, 20);
+    verdadero(!sinCopia.ok && tiene(sinCopia.errores, /copia_local/), sinCopia.errores?.join(" | "));
+    const ok = await intento(inv, "cotejar_fuente", { fuente_id: "f2", resultado: "coincide", metodo: "copia_local", detalle: "Descargado.", huella_contenido: "a".repeat(64), copia_local: "copias/f2.html" }, 20);
+    verdadero(ok.ok, ok.errores?.join(" | "));
+    igual(ok.inv.fuentes.find((f) => f.id === "f2").metodo_consulta, "copia_local");
+    const malo = clon(ok.inv); malo.fuentes[1].cotejos[0].fecha = "2020-01-01T00:00:00Z";
+    verdadero(tiene(validarInvestigacion(malo).errores, /anterior a la consulta/));
+  });
   prueba("CSI 2 · compatibilidad: el DEMO 0.1 sigue válido; una investigación 0.1 no acepta claves 0.2; leerCSI añade flujo y Abogado", async () => {
     const d = await construirDemoCSI();
     const inv = d.investigaciones.investigaciones[0];

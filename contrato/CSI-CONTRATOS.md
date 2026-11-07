@@ -68,7 +68,7 @@ Un documento 0.1 con una clave 0.2 es un error (claves desconocidas = error). El
 
 ## Fuente 0.2 (`app/csi/fuentes.js`)
 
-`{id, titulo, editor, tipo, clase, estado, publicada_en, consultada_en?, disponible_en?, disponible_segun?, enlace? | referencia?, autor_actor_id?, origen?, extracto?, extracto_tipo?, metodo_consulta?, huella_contenido?, copia_local?, limitaciones[], pendiente_motivo?, ficticia?}`
+`{id, titulo, editor, tipo, clase, estado, publicada_en, consultada_en?, disponible_en?, disponible_segun?, enlace? | referencia?, autor_actor_id?, origen?, extracto?, extracto_tipo?, metodo_consulta?, huella_contenido?, copia_local?, limitaciones[], pendiente_motivo?, ficticia?, cotejos?[]}`
 
 | Regla | Detalle |
 |---|---|
@@ -79,6 +79,7 @@ Un documento 0.1 con una clave 0.2 es un error (claves desconocidas = error). El
 | Procedencia | REAL exige `enlace` (http/https) o `referencia` y al menos una limitación. `huella_contenido` (SHA-256) exige `copia_local`. |
 | Duplicados | mismo enlace (sin `?`, `#` ni `/` final) o misma huella = error. |
 | Independencia | `origen` (por defecto `autor_actor_id` o `editor`): dos copias del mismo comunicado tienen el mismo origen. |
+| Cotejo | Acción `cotejar_fuente` `{fuente_id, resultado: coincide\|parcial\|corregido\|no_localizado, metodo, detalle, extracto_corregido?, huella_contenido?, copia_local?}`. Anexa `{fecha, autor, resultado, metodo, detalle, extracto_anterior?}` a `cotejos` y queda en el historial. Una corrección conserva el extracto anterior; si deja sin procedencia la cita de un enunciado, se rechaza (retira antes el enunciado). Una huella pasa `metodo_consulta` a `copia_local`. Un cotejo no puede ser anterior a la consulta. |
 
 ## Investigación 0.2
 
