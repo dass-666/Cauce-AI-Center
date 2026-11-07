@@ -39,7 +39,7 @@ locales de las lecciones (con cifras exactas) y las salidas derivadas de la base
 | `resultado_impacto_y_sensibilidad_respaldo.json` | **privado** (derivado de la base); sus cifras coinciden con las que declaran L3, L5, L6 y L10 locales | `6a16daec47f2960241f9b75337b579ef87131141c0fec180ff366f353a601136` |
 | *(control)* `resultado_tests_corte_estricto_contra_actual.txt` | 7 FAIL + 1 ERROR, **mismo veredicto prueba por prueba** que el original de la entrega | `275ce73b223dd839e612ea6439b899820e1a5c3668a99a23f82611ebb69af3a4` |
 
-- Procedencia completa (huellas de cada entrada, comandos, equipo): `C:\Users\MSIGF\Documents\Tezcatlipoca-rev3-reproduccion-2026-11-07\PROCEDENCIA.json`
+- Procedencia completa (huellas de cada entrada, comandos, equipo): `C:\Users\<usuario>\Documents\Tezcatlipoca-rev3-reproduccion-2026-11-07\PROCEDENCIA.json`
   (SHA-256 `0cfd2aec0f1e2bc9d5d1dcba7909352c9b61067c8db2590f324917358b875926`), junto a las salidas. Carpeta privada: no va a git.
 - **Límite (R05):** lo reprodujo la misma familia de IA que escribió las pruebas. No es la reproducción independiente que pide R05.
 

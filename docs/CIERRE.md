@@ -71,7 +71,7 @@ Base de código: rama `claude/project-thread-fwbit2`, encima de PR #25 (`claude/
 
 ## 7. Abrir en la MSI (lo que sí está verificado y lo que no)
 
-- **HECHO**: la MSI tiene Git 2.56 y Python 3.13; el clon `C:\Users\MSIGF\Cauce-AI-Center` apunta a `origin = github.com/dass-666/Cauce-AI-Center` y está en la rama de la fase G. No hay Node (solo el de Electron), así que la validación en la MSI es con `pruebas.html`, no con `probar.bat`.
+- **HECHO**: la MSI tiene Git 2.56 y Python 3.13; el clon `C:\Users\<usuario>\Cauce-AI-Center` apunta a `origin = github.com/dass-666/Cauce-AI-Center` y está en la rama de la fase G. No hay Node (solo el de Electron), así que la validación en la MSI es con `pruebas.html`, no con `probar.bat`.
 - **Pasos** (`ABRIR-CIERRE.bat`, en la raíz de la rama): doble clic en el .bat del clon. Hace `git fetch origin claude/project-thread-fwbit2` y `git checkout -B claude/project-thread-fwbit2 origin/claude/project-thread-fwbit2`, y luego arranca `iniciar.bat`. Si el clon tiene cambios locales, se detiene y lo dice; no borra nada.
 - **Corregido el 7-nov-2026 (HECHO en la MSI, en un clon de prueba)**: copiado a mano en un clon de otra rama, el .bat se detectaba **a sí mismo** como cambio local (`?? ABRIR-CIERRE.bat`) y no avanzaba. Ahora:
   - se excluye de esa revisión;
