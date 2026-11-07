@@ -51,6 +51,8 @@ Reglas que se cumplen por código, cada una con su prueba en `pruebas/casos-csi-
 
 Hay un caso histórico real retrospectivo con 10 fuentes consultadas y 1 pendiente, alcance registrado antes de las fuentes, 4 hipótesis (2 sin evidencia) y 15 alertas del Abogado. **No está en este repositorio público:** publicarlo requiere la autorización de Diego, y antes hay que cotejar sus citas con los originales. El expediente, las referencias con URL y las respuestas a las 8 preguntas están en la entrega privada del proyecto (`cauce/csi-fase-2/`). Para usarlo, copia el expediente a `datos/csi/historico/` (ver su `LEEME.md`).
 
+**Cotejo (7-nov-2026):** 11 de las 12 fuentes del caso se cotejaron contra copias byte a byte con SHA-256 (acción `cotejar_fuente`, que conserva el extracto anterior). Todas las citas aparecen en el original; 5 recortes mal marcados se corrigieron y una fuente sigue pendiente.
+
 ## 5. Mapa de actores
 
 - **[HECHO]** Cada afirmación lleva su clase: HECHO, DECLARACIÓN, INFERENCIA, HIPÓTESIS o ESCENARIO.
@@ -107,12 +109,12 @@ En `/mnt/project-files/cauce/csi-fase-2/capturas/`. Se tomaron en Chromium con G
 
 ## 10. Pruebas
 
-- **[HECHO]** Node: **384 pasaron, 0 fallaron** (`node pruebas/ejecutar.mjs`), 25 de ellas nuevas de la fase 2. Cubren:
+- **[HECHO]** Node: **386 pasaron, 0 fallaron** (`node pruebas/ejecutar.mjs`), 27 de ellas nuevas de la fase 2 (2 del cotejo de fuentes). Cubren:
   - fuentes inexistentes, fechas incorrectas, información futura, citas sin procedencia y duplicados;
   - hipótesis contradictorias, inferencias presentadas como hechos y lenguaje psicológico;
   - anclas modificadas, predicciones posteriores al resultado y acreditación tardía;
   - referencia simple, filtro de Nexus y DEMO frente a REAL.
-- **[HECHO]** Pruebas de mutación: al desactivar la regla de duplicados o la del ancla tardía, las pruebas fallan. Al restaurar el código, vuelven a 384/384.
+- **[HECHO]** Pruebas de mutación: al desactivar la regla de duplicados o la del ancla tardía, las pruebas fallan. Al restaurar el código, vuelven a 384/384; la regla del cotejo que conserva el extracto anterior se probó igual (386/386).
 - **[HECHO]** Chromium `csi-fase2.cjs`: **42/42**, sin errores de consola. Cubre escritorio y celular, 2D y 3D, anclas en el navegador y archivos de ancla manipulados.
 - **[HECHO]** Regresión completa de Chromium (`pruebas/navegador/todas.cjs`): **28/28 guiones en verde**, 0 fallas (incluye csi.cjs 39/39, nexus.cjs 45/45 y regresion.cjs 47/47; algunos guiones solo toman capturas y cuentan 0 comprobaciones).
 - **[SIN VERIFICAR]** Rendimiento en tu Intel UHD: no lo medí. Ningún número de cps de este informe viene de tu equipo.
@@ -130,7 +132,7 @@ Ver `docs/VALIDAR-CSI-FASE-2.md` (unos 15 minutos). Se resume en:
 - recorrer las pestañas del caso histórico;
 - generar, descargar y alterar un ancla en DEMO;
 - medir los cps del piso CSI y de Compago con `?medir=1`;
-- abrir `pruebas.html`, que debe decir 384/0.
+- abrir `pruebas.html`, que debe decir 386/0.
 
 ## 13. Limitaciones y siguiente fase
 
