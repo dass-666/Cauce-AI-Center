@@ -115,7 +115,7 @@ if (SAL) fs.mkdirSync(SAL, { recursive: true });
   await p.locator('[data-lab-propuesta="H1"]').click(); await p.waitForTimeout(300);
   msg = (await csi.locator('.csi-mensajes').innerText()).split('\n')[0];
   ok('laboratorio: la propuesta llega a Nexus sin aprobarse (decisión humana pendiente)', /Nexus dice «con_objeciones»; decisión humana pendiente/.test(msg), msg);
-  ok('laboratorio: descargas de investigación y predicciones disponibles', (await csi.locator('a[download="investigacion.json"]').count()) === 1 && (await csi.locator('a[download="predicciones.json"]').count()) === 1);
+  ok('laboratorio: descargas de investigaciones, predicciones y expediente disponibles', (await csi.locator('a[download="investigaciones.json"]').count()) === 1 && (await csi.locator('a[download="predicciones.json"]').count()) === 1 && (await csi.locator('a[download^="expediente-"]').count()) >= 1);
   await foto(p, 'csi-laboratorio', true);
 
   // Convivencia: Nexus y la sala cierran CSI; Esc vuelve al edificio.

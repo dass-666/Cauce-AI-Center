@@ -49,7 +49,7 @@ Reglas que se cumplen por código, cada una con su prueba en `pruebas/casos-csi-
 
 ## 4. Investigación histórica
 
-Caso real retrospectivo: **fin del tipo mínimo del franco suizo (15-ene-2015)**. Diego autorizó su publicación el 7-nov-2026, después de cotejarlo. El informe con las respuestas, las referencias y las huellas está en `docs/CSI-CASO-BNS-2015.md`, y el expediente en `datos/csi/casos-publicados/expediente-bns-2015.json`. Para verlo en el laboratorio, sigue `datos/csi/historico/LEEME.md`.
+Caso real retrospectivo: **fin del tipo mínimo del franco suizo (15-ene-2015)**. Diego autorizó su publicación el 7-nov-2026, después de cotejarlo. El informe con las respuestas, las referencias y las huellas está en `docs/CSI-CASO-BNS-2015.md`, y el expediente en `datos/csi/casos-publicados/expediente-bns-2015.json`. El laboratorio lo reconstruye solo en el navegador (botón «HISTÓRICO»), sin Node; `datos/csi/historico/LEEME.md` explica cómo trabajar un caso propio. Son 13 registros de fuente: 12 cotejados con huella y 1 pendiente (el enlace equivocado de 2011, conservado a propósito).
 
 **Cotejo (7-nov-2026):** Las fuentes del caso se cotejaron contra copias byte a byte con SHA-256 (acción `cotejar_fuente`, que conserva el extracto anterior). Todas las citas aparecen en el original y 5 recortes mal marcados se corrigieron. La declaración del BNS de 2011, que estaba pendiente, se recuperó con su enlace real; las 12 fuentes tienen huella.
 

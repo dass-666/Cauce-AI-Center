@@ -109,6 +109,15 @@ export function validarLeccion(l) {
     for (const k of ["unidad", "independencia", "naturaleza", "naturaleza_resultado", "seleccion_en_muestra", "supuestos"]) obligatorio(m, k, "muestra.");
     if (!("n" in m) && !("n_rango" in m)) e("muestra necesita n o n_rango.");
     for (const k of ["n", "n_independiente", "n_efectivo", "n_comparaciones"]) if (m[k] !== undefined && m[k] !== null && !(Number.isInteger(m[k]) && m[k] >= 0)) e(`muestra.${k}: entero ≥ 0 o null.`);
+    // Cierre: n_rango = [mínimo, máximo] de enteros ≥ 0 (reemplaza a n cuando el conteo exacto no se divulga). Si n es un
+    // número, n_rango debe contenerlo. Un n_rango con otra forma no se interpreta: es error, no «se ignora».
+    if (m.n_rango !== undefined && m.n_rango !== null) {
+      const r = m.n_rango;
+      if (!(Array.isArray(r) && r.length === 2 && r.every((x) => Number.isInteger(x) && x >= 0) && r[0] <= r[1])) e("muestra.n_rango: [mínimo, máximo] de enteros ≥ 0 con mínimo ≤ máximo.");
+      else if (Number.isInteger(m.n) && (m.n < r[0] || m.n > r[1])) e(`muestra.n (${m.n}) está fuera de n_rango [${r[0]}, ${r[1]}].`);
+    }
+    // n: null sin n_rango sigue siendo válido en 0.2/0.3 (= «conteo todavía no conocido», como en las candidatas Ek Chuah);
+    // R03 y R08 lo tratan como falta de información, nunca como «cumple».
     if (m.naturaleza === "desconocida" && l.version_esquema === "0.2") e('muestra.naturaleza «desconocida» no existe en 0.2: usa version_esquema "0.3" (el registro 0.2 no se reinterpreta).');
     else enumera(m.naturaleza, l.version_esquema === "0.3" ? NATURALEZAS_03 : NATURALEZAS, "muestra.naturaleza");
     enumera(m.naturaleza_resultado, NATURALEZAS_RESULTADO, "muestra.naturaleza_resultado");

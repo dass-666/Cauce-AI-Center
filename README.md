@@ -2,7 +2,7 @@
 
 Oficina virtual para observar el trabajo real de nuestros sistemas (Ek Chuah, Compago y, después, Tezcatlipoca y trading). Cada proyecto es un piso, cada área un departamento y cada proceso un personaje que cambia de estado **solo cuando hay un registro que lo respalda**.
 
-**Estado: fase G (sin fusionar).** Compago puede mostrar datos reales. Ek Chuah ya tiene la configuración para conectar su exportador de solo lectura (ver abajo), pero todavía no está conectado a datos reales.
+**Estado: cierre de producto (ramas apiladas, sin fusionar; ver `docs/CIERRE.md`).** Compago puede mostrar datos reales. Ek Chuah ya tiene la configuración para conectar su exportador de solo lectura (ver abajo), pero todavía no está conectado a datos reales. Incluye el laboratorio de investigación CSI (tecla I) con el caso histórico publicado del franco suizo, y Nexus (lecciones y propuestas, aprobación solo por línea de comandos).
 
 - Costo: $0. Sin servicios externos, sin bibliotecas en tiempo de ejecución, sin IA.
 - Funciona solo en tu computadora (`127.0.0.1`); no se publica en internet ni en el servidor compartido.
@@ -70,6 +70,13 @@ La franja amarilla **DATOS DE DEMOSTRACIÓN** indica que nada de lo que ves es a
 | Requiere revisión | "?" ámbar; en 3D levanta la mano | Algo espera una decisión humana |
 | Sin información | Silla vacía y pantalla apagada (en 3D, si estaba, se levanta y sale) | No hay evidencia, o los datos están viejos o desconectados |
 
+## CSI y Nexus (sin Node)
+
+- **Tecla I** (o `?csi=demo`, `?csi=historico`, `?csi=real`) abre el laboratorio CSI. Arriba, «Ver: REAL · HISTÓRICO · DEMO» separa los tres conjuntos; la banda de color dice cuál estás viendo.
+- **HISTÓRICO** reconstruye en el navegador el caso publicado (`datos/csi/casos-publicados/`); **DEMO** es inventado y lo dice; **REAL** lee `datos/csi/registro/` (fuera de git).
+- **Nueva investigación** es un laboratorio: lo que escribes se guarda como borrador en este navegador y se recupera al recargar. Nada se escribe en disco desde el navegador: los botones «Descargar» bajan el expediente (.md), la investigación (.json) o la colección para copiarla al almacén.
+- **Nexus** (tecla N) muestra lecciones y propuestas y solo descarga; aprobar o rechazar se hace con `node herramientas/nexus.mjs`.
+
 ## Pruebas
 
 - **Sin instalar nada:** con `iniciar.bat` en marcha, abre <http://127.0.0.1:8765/pruebas.html>.
@@ -89,6 +96,11 @@ Cubren el contrato (archivos válidos e inválidos), las reglas contra actividad
 | `datos/proyectos.json` | Registro de pisos: archivo real (`estado`) y demostración (`demo`) de cada proyecto |
 | `datos/demo/` | Datos de demostración, marcados `[DEMO]` |
 | `datos/reales/` | Donde escriben los adaptadores (no va a git) |
+| `app/csi/` | Laboratorio CSI: contrato, registro, cotejo, flujo, Abogado del Diablo, informe (.md) |
+| `datos/csi/casos-publicados/` | Casos históricos autorizados para publicar (índice + expedientes) |
+| `datos/csi/registro/`, `datos/csi/historico/` | Almacén REAL e HISTÓRICO de trabajo (no van a git) |
+| `app/nexus/` | Lecciones y propuestas Nexus (validación, reglas R01–R10, integridad) |
+| `herramientas/` | Línea de comandos: `csi.mjs` (expediente, revisar, informe) y `nexus.mjs` (aprobar/rechazar) |
 | `conectar_compago.bat` | Arranca el exportador de Compago cada N segundos |
 | `escena/` | Posición de los departamentos (celdas en 2D, metros en 3D) |
 | `pruebas/` | Pruebas automáticas |

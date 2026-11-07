@@ -120,3 +120,11 @@ naturaleza (hoy Ek Chuah) se dibuja como antes.
 | Compago | `ImportJob`/`ImportBatch`, `SearchRun`, `SourceCheck`, `apps/core/estado.py`, conteos de oportunidades | La importación se aplica en una sola transacción y no guarda avance por fila: no hay porcentaje real. |
 
 Condiciones para ambos: abrir la base en modo solo lectura (o con un usuario de solo lectura), consultas acotadas e indexadas, frecuencia baja (cada 5–15 min o al terminar una tarea), y nunca en el servidor compartido.
+
+## CSI y Nexus en el cierre (2026-11-07)
+
+- `app/csi/informe.js` genera el **expediente en Markdown** (`csi-informe 0.1`) de una investigación: pregunta, alcance, fuentes con huellas y cotejos, enunciados, hipótesis, objeciones, flujo, Abogado del Diablo, qué falta e historial. Es determinista: el mismo expediente produce el mismo texto. Se usa desde el navegador (botón «Descargar expediente (.md)») y desde `herramientas/csi.mjs informe`.
+- `datos/csi/casos-publicados/indice.json` (`cauce.csi.casos-publicados` 0.1) lista los casos históricos que Diego autorizó a publicar. Si `datos/csi/historico/` está vacía, `app/app.js` los reconstruye en el navegador con `construirDesdeExpediente` y la banda HISTÓRICO dice «reconstruido en este navegador». Si la carpeta local tiene archivos (válidos o dañados), manda la carpeta local.
+- El laboratorio «Nueva investigación» guarda un **borrador** en `localStorage` (`cauce.csi.borrador`) después de cada cambio y lo recupera al recargar; «Descartar borrador» lo borra. Es el único estado que el navegador conserva además de las preferencias. Nada se escribe en disco desde el navegador: «Guardar en el almacén» descarga `investigaciones.json` (colección `cauce.csi.investigaciones`, `app/csi/registro.js › coleccionInvestigaciones`) para copiarla a `datos/csi/registro/` o `datos/csi/demo/`.
+- Un almacén REAL con archivos dañados se muestra bajo la banda REAL con el aviso del archivo; nunca cae al DEMO en silencio.
+- Nexus: `muestra.n_rango = [min, max]` se valida en `app/nexus/leccion.js`; R08 trata `n_comparaciones: null` como «no divulgado» (`app/nexus/gerente.js › rangoComparaciones`), detallado en `contrato/NEXUS-CONTRATOS.md`.

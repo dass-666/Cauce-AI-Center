@@ -294,16 +294,57 @@ async function leerYDibujarCSI(conjunto = null) {
     return { docs, avisos: rs.filter((r) => r.tipo !== "ok" && r.tipo !== "no_encontrado").map((r) => r.mensaje), hay: rs.slice(0, 4).some((r) => r.tipo === "ok") };
   };
   const leidos = Object.fromEntries(await Promise.all(CONJUNTOS_CSI.map(async ([id, , base]) => [id, await leerDe(base)])));
+  // Cierre: si la carpeta local del HISTÓRICO está vacía, el caso publicado se construye aquí mismo desde su expediente
+  // (mismo motor que una investigación hecha a mano), así se consulta sin Node. Con archivos locales, estos mandan.
+  if (!leidos.historico.hay && !leidos.historico.avisos.length) leidos.historico = await historicoPublicado();
   const pedido = conjunto ?? csiUI.conjunto ?? new URLSearchParams(location.search).get("csi");
   // Por defecto, como en la fase 1: el almacén REAL si tiene algo; si no, el DEMO. El HISTÓRICO se elige a mano (o ?csi=historico).
-  const elegido = leidos[pedido]?.hay ? pedido : (leidos.registro.hay || leidos.registro.avisos.length) ? "registro" : "demo";
+  // Un conjunto con archivos dañados (avisos) también se puede elegir: así la persona ve el problema donde está.
+  const disponible = (id) => !!leidos[id] && (leidos[id].hay || leidos[id].avisos.length > 0);
+  const elegido = disponible(pedido) ? pedido : disponible("registro") ? "registro" : "demo";
   csiUI.conjunto = elegido;
   const r = leidos[elegido];
   const csi = await leerCSI(r.docs, { ahoraMs: elegido === "demo" ? null : Date.now() });
   csi.errores.unshift(...r.avisos);
+  // Cierre: si el almacén REAL solo tiene archivos dañados, leerCSI no ve ningún documento y supondría DEMO; el conjunto
+  // elegido manda, para que el error se muestre bajo la banda REAL y no bajo «caso ficticio».
+  if (elegido === "registro" && !r.hay) { csi.es_demo = false; csi.naturaleza = "real"; }
   if (!csiAbierto()) return;
-  dibujarCSI($("#csi"), csi, { alCerrar: () => ponerCSI(false), conjunto: elegido, conjuntos: CONJUNTOS_CSI.map(([id, etiqueta]) => ({ id, etiqueta, hay: leidos[id].hay })),
+  dibujarCSI($("#csi"), csi, { alCerrar: () => ponerCSI(false), conjunto: elegido, conjuntos: CONJUNTOS_CSI.map(([id, etiqueta]) => ({ id, etiqueta, hay: disponible(id) })),
+    origenHistorico: elegido === "historico" ? (r.origen ?? "local") : null,
     alConjunto: (id) => { olvidarCalculosCSI(); leerYDibujarCSI(id).then(() => $(`[data-conjunto="${id}"]`)?.focus({ preventScroll: true })); } });
+}
+
+/**
+ * Casos históricos publicados (datos/csi/casos-publicados/indice.json): cada expediente se reconstruye con
+ * construirDesdeExpediente, igual que con «node herramientas/csi.mjs expediente». Si un expediente falla, se avisa y no se
+ * muestra nada de él. Devuelve la misma forma que leerDe(): { docs, avisos, hay, origen }.
+ */
+async function historicoPublicado() {
+  const vacio = { docs: { actores: null, investigaciones: null, escenarios: null, predicciones: null, anclas: null }, avisos: [], hay: false, origen: "publicado" };
+  const ind = await cargarJSON("datos/csi/casos-publicados/indice.json");
+  if (ind.tipo === "no_encontrado") return vacio;
+  if (ind.tipo !== "ok") return { ...vacio, avisos: [ind.mensaje] };
+  const casos = Array.isArray(ind.datos?.casos) ? ind.datos.casos.filter((c) => typeof c?.expediente === "string" && /^[\w.-]+\.json$/.test(c.expediente)) : [];
+  if (!casos.length) return vacio;
+  const { construirDesdeExpediente } = await import("./csi/expediente.js");
+  const avisos = [];
+  const docs = { actores: null, investigaciones: { contrato: "cauce.csi.investigaciones", version_contrato: "0.1", es_demo: false, investigaciones: [] }, escenarios: { contrato: "cauce.csi.escenarios", version_contrato: "0.1", es_demo: false, escenarios: [] }, predicciones: null, anclas: null };
+  for (const c of casos) {
+    const r = await cargarJSON(`datos/csi/casos-publicados/${c.expediente}`);
+    if (r.tipo !== "ok") { avisos.push(`Caso publicado ${c.id ?? c.expediente}: ${r.mensaje}`); continue; }
+    let b;
+    try { b = await construirDesdeExpediente(r.datos); } catch (e) { b = { ok: false, errores: [e.message] }; }
+    if (!b.ok) { avisos.push(`Caso publicado ${c.id ?? c.expediente} no se pudo reconstruir: ${b.errores.slice(0, 3).join(" | ")}`); continue; }
+    docs.investigaciones.investigaciones.push(...b.docs.investigaciones.investigaciones);
+    docs.escenarios.escenarios.push(...b.docs.escenarios.escenarios);
+    if (b.docs.actores) {
+      if (!docs.actores) docs.actores = b.docs.actores;
+      else for (const k of ["fuentes", "actores", "relaciones"]) { const ids = new Set(docs.actores[k].map((x) => x.id)); docs.actores[k].push(...b.docs.actores[k].filter((x) => !ids.has(x.id))); }
+    }
+  }
+  const hay = docs.investigaciones.investigaciones.length > 0;
+  return { docs: hay ? docs : vacio.docs, avisos, hay, origen: "publicado" };
 }
 
 function empresaActual() {

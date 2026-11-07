@@ -14,6 +14,8 @@ import { TIPOS_FUENTE_02, CLASES_FUENTE, ESTADOS_FUENTE, lineaConocimiento, fech
 import { NATURALEZAS_ESTUDIO } from "../csi/investigacion.js";
 import { revisarAbogado, objecionesSugeridas, AUTOR_ABOGADO } from "../csi/abogado.js";
 import { crearAncla, verificarContraAncla, instruccionesPublicacion, textoPublicable, TEMPORAL_TXT } from "../csi/ancla.js";
+import { informeInvestigacion } from "../csi/informe.js";
+import { coleccionInvestigaciones } from "../csi/registro.js";
 
 const PESTANAS = [["resumen", "Resumen"], ["investigaciones", "Investigaciones"], ["fuentes", "Fuentes"], ["actores", "Actores"], ["relaciones", "Mapa y relaciones"], ["hipotesis", "Hipótesis"], ["flujo", "Flujo de 10 pasos"], ["arbol", "Árbol de decisiones"], ["evidencias", "Evidencias y objeciones"], ["abogado", "Abogado del Diablo"], ["predicciones", "Predicciones"], ["nexus", "Propuesta a Nexus"], ["laboratorio", "Nueva investigación"]];
 const CLASE_TXT = { primaria: "Primaria", secundaria: "Secundaria", interpretacion: "Interpretación" };
@@ -23,14 +25,44 @@ const ESTADO_HIP = { incompleta: "Incompleta", contradicha: "Contradicha", en_di
 const ESTADO_PRED = { pendiente: "Pendiente", en_curso: "En curso", sin_evaluar: "Vencida sin evaluar", acertada: "Acertada", fallida: "Fallida", indeterminada: "Indeterminada" };
 const ESTADO_EXP = { sin_evidencia: "Sin evidencia", con_senales_a_favor: "Con señales a favor", con_senales_en_contra: "Con señales en contra", mixta: "Mixta" };
 const estadoUI = { pestana: "resumen", tipoActor: "", propuesta: null, ancla: null, verificacion: null };
-/** Laboratorio de la sesión (no se guarda solo: se descarga). */
-const lab = { inv: null, pred: null, mensajes: [] };
+/**
+ * Laboratorio: la investigación en curso vive en memoria y, además, como BORRADOR en el almacenamiento local de este
+ * navegador (cierre), para no perderla al recargar. El borrador no es el almacén: lo que cuenta es lo que la persona
+ * descarga y guarda en datos/csi/registro/.
+ */
+const lab = { inv: null, pred: null, mensajes: [], restaurado: false, guardado_en: null };
+const CLAVE_BORRADOR = "cauce.csi.borrador";
+function guardarBorrador() {
+  try {
+    if (!lab.inv) { localStorage.removeItem(CLAVE_BORRADOR); lab.guardado_en = null; return; }
+    lab.guardado_en = new Date().toISOString();
+    localStorage.setItem(CLAVE_BORRADOR, JSON.stringify({ version: 1, guardado_en: lab.guardado_en, inv: lab.inv, pred: lab.pred }));
+  } catch { /* sin almacenamiento (modo privado, cuota): el laboratorio sigue funcionando en memoria */ }
+}
+function restaurarBorrador() {
+  if (lab.restaurado) return false;
+  lab.restaurado = true;
+  try {
+    const b = JSON.parse(localStorage.getItem(CLAVE_BORRADOR) ?? "null");
+    if (!b || b.version !== 1 || !b.inv || typeof b.inv.id !== "string") return false;
+    lab.inv = b.inv; lab.pred = b.pred ?? null; lab.guardado_en = b.guardado_en ?? null;
+    lab.mensajes = [{ ok: true, t: `Borrador recuperado de este navegador (guardado ${b.guardado_en ? fecha(b.guardado_en) : "sin fecha"}): «${b.inv.titulo}» (${b.inv.es_demo ? "DEMO" : "REAL"}). No está en el almacén: descárgalo para conservarlo.` }];
+    return true;
+  } catch { return false; }
+}
+function descartarBorrador() { lab.inv = null; lab.pred = null; lab.mensajes = [{ ok: true, t: "Borrador descartado. El almacén (datos/csi/registro/) no cambia." }]; guardarBorrador(); }
 
 const chip = (t, clase = "") => el("span", { clase: `nexus-chip csi-chip ${clase}` }, t);
 const lista = (xs, vacio = "—") => (xs.length ? el("ul", { clase: "csi-lista" }, ...xs.map((x) => el("li", {}, x))) : el("p", { clase: "sala-nota" }, vacio));
 const cifra = (v, t, clase = "") => el("div", { clase: `sala-cifra ${clase}`, role: "listitem" }, el("strong", {}, String(v)), el("span", {}, t));
 const seccion = (titulo, ...hijos) => el("section", { clase: "sala-seccion csi-seccion" }, el("h3", {}, titulo), ...hijos);
 const descarga = (doc, nombre, texto) => el("a", { clase: "boton boton-chico", href: URL.createObjectURL(new Blob([`${JSON.stringify(doc, null, 2)}\n`], { type: "application/json" })), download: nombre }, texto);
+const descargaTexto = (contenido, nombre, texto) => el("a", { clase: "boton boton-chico", href: URL.createObjectURL(new Blob([contenido], { type: "text/markdown;charset=utf-8" })), download: nombre }, texto);
+const ORIGEN_TXT = { demo: "caso DEMO ficticio", historico: "caso HISTÓRICO (retrospectivo)", real: "almacén REAL local (datos/csi/registro/)" };
+/** Expediente legible (.md) de una investigación, con los actores y escenarios del conjunto que se está viendo. */
+const descargaExpediente = (csi, inv, extra = "") => descargaTexto(
+  informeInvestigacion(inv, { actores: csi?.actores?.doc ?? null, escenarios: L(csi?.escenarios).map((x) => x.esc), naturaleza: csi?.naturaleza ?? null, ahora: new Date().toISOString(), origen: `${ORIGEN_TXT[csi?.naturaleza] ?? csi?.naturaleza ?? "laboratorio"}${extra}` }),
+  `expediente-${inv.id}.md`, "Descargar expediente (.md)");
 
 /**
  * @param nodo   contenedor (#csi)
@@ -44,15 +76,17 @@ export function dibujarCSI(nodo, csi, op) {
       el("p", { clase: "sala-sub" }, "CSI investiga · Nexus cuestiona · Diego decide. Estudia incentivos y decisiones posibles; no afirma intenciones ocultas ni conoce el futuro.")),
     el("button", { type: "button", clase: "boton", onclick: op.alCerrar, title: "Cerrar CSI y volver al edificio (I o Esc)" }, "Ir al edificio ›"));
   if (!csi) { nodo.replaceChildren(cabeza, el("p", { clase: "sala-vacio" }, "Leyendo CSI…")); return; }
+  if (!lab.inv) restaurarBorrador();
   const fuente = csi.es_demo
     ? el("p", { clase: "nexus-fuente nexus-demo csi-fuente", "data-fuente": "demo", role: "note" }, el("strong", {}, "DEMO · CASO FICTICIO"), " · País, mercado, actores, fuentes y cifras inventados. Nada de esto describe a una institución real.")
     : csi.naturaleza === "historico"
-      ? el("p", { clase: "nexus-fuente csi-fuente csi-historico", "data-fuente": "historico", role: "note" }, el("strong", {}, "HISTÓRICO · REAL RETROSPECTIVO"), " · Acontecimiento real ya ocurrido, analizado después con fuentes públicas fechadas. No es una predicción: nada aquí se registró antes del resultado. Copia local (datos/csi/historico/), no publicada.")
+      ? el("p", { clase: "nexus-fuente csi-fuente csi-historico", "data-fuente": "historico", "data-origen": op.origenHistorico ?? "local", role: "note" }, el("strong", {}, "HISTÓRICO · REAL RETROSPECTIVO"), " · Acontecimiento real ya ocurrido, analizado después con fuentes públicas fechadas. No es una predicción: nada aquí se registró antes del resultado. ",
+        op.origenHistorico === "publicado" ? "Caso publicado con autorización (datos/csi/casos-publicados/), reconstruido en este navegador desde su expediente con el mismo motor que una investigación hecha a mano; las copias de las fuentes no se publican, solo sus huellas." : "Copia local de trabajo (datos/csi/historico/), fuera del repositorio.")
       : el("p", { clase: "nexus-fuente nexus-fuente-real csi-fuente", "data-fuente": "real", role: "note" }, el("strong", {}, "REAL"), " · Almacén local de CSI (datos/csi/registro/). Identidades declaradas, sin autenticar.");
   const conjuntos = L(op.conjuntos).length > 1 ? el("p", { clase: "csi-botones csi-conjuntos", role: "group", "aria-label": "Qué datos ver" }, "Ver: ",
     ...op.conjuntos.map((c) => el("button", { type: "button", clase: `boton boton-chico${c.id === op.conjunto ? " nexus-activo" : ""}`, "data-conjunto": c.id, "aria-pressed": String(c.id === op.conjunto), disabled: !c.hay, title: c.hay ? null : "Sin datos en esta carpeta", onclick: () => op.alConjunto?.(c.id) }, c.etiqueta))) : null;
   const barra = el("div", { clase: "csi-pestanas", role: "tablist", "aria-label": "Paneles de CSI" }, ...PESTANAS.map(([k, t]) =>
-    el("button", { type: "button", role: "tab", clase: `boton boton-chico${estadoUI.pestana === k ? " nexus-activo" : ""}`, "aria-selected": String(estadoUI.pestana === k), "data-pestana": k, onclick: () => { estadoUI.pestana = k; redibujar(); nodo.querySelector(`[data-pestana="${k}"]`)?.focus(); } }, t)));
+    el("button", { type: "button", role: "tab", clase: `boton boton-chico${estadoUI.pestana === k ? " nexus-activo" : ""}`, "aria-selected": String(estadoUI.pestana === k), "data-pestana": k, title: k === "laboratorio" && lab.inv ? `Borrador en curso: ${lab.inv.titulo}` : null, onclick: () => { estadoUI.pestana = k; redibujar(); nodo.querySelector(`[data-pestana="${k}"]`)?.focus(); } }, k === "laboratorio" && lab.inv ? `${t} ●` : t)));
   const errores = csi.errores.length ? el("div", { clase: "nexus-errores", role: "alert" }, el("strong", {}, `${csi.errores.length} problema(s); lo afectado no se muestra:`), lista(csi.errores.slice(0, 8))) : null;
   // El laboratorio conserva, entre redibujos, qué formularios están abiertos y lo escrito en ellos.
   estadoUI.abiertos = new Set([...nodo.querySelectorAll("details[open][data-form]")].map((d) => d.dataset.form));
@@ -93,7 +127,8 @@ const fuentesDe = (inv, ids) => L(ids).map((id) => L(inv.fuentes).find((f) => f.
 function investigaciones(csi) {
   if (!csi.investigaciones.length) return el("p", { clase: "sala-vacio" }, "Sin investigaciones. Crea una en «Nueva investigación».");
   return csi.investigaciones.map(({ inv, integridad }) => el("article", { clase: "nexus-tarjeta csi-inv", "data-investigacion": inv.id },
-    el("div", { clase: "sala-tarjeta-cabeza" }, el("h4", {}, inv.titulo), chip(`Revisión: ${inv.revision.estado}`)),
+    el("div", { clase: "sala-tarjeta-cabeza" }, el("h4", {}, inv.titulo), chip(`Revisión: ${inv.revision.estado}`), inv.naturaleza_estudio ? chip(inv.naturaleza_estudio === "demo" ? "DEMO" : inv.naturaleza_estudio === "historico" ? "HISTÓRICO" : "REAL · prospectivo", inv.es_demo ? "nexus-incompleto" : "") : null),
+    el("p", { clase: "csi-botones" }, descargaExpediente(csi, inv), " ", descarga(inv, `investigacion-${inv.id}.json`, "Descargar investigación (.json)")),
     el("p", { clase: "nexus-enunciado" }, inv.pregunta),
     el("p", { clase: "sala-nota" }, `${inv.id} · acontecimiento: ${inv.acontecimiento.descripcion} (${inv.acontecimiento.fecha}) · creada ${fecha(inv.creada_en)} por ${inv.creada_por.identificador} (declarado) · incertidumbre ${inv.incertidumbre.nivel}: ${inv.incertidumbre.descripcion}`),
     inv.revision.nota ? el("p", { clase: "sala-nota" }, inv.revision.nota) : null,
@@ -300,7 +335,7 @@ function fuentesPanel(csi) {
         f.extracto ? el("blockquote", { clase: "csi-extracto", "data-extracto": f.extracto_tipo ?? "" }, f.extracto) : null,
         el("p", { clase: "sala-nota" }, f.huella_contenido ? `Huella de la copia: ${f.huella_contenido.slice(0, 16)}… (${f.copia_local})` : "Sin huella: no hay copia verificable guardada."),
         L(f.limitaciones).length ? [el("h5", {}, L(f.cotejos).length ? "Limitaciones (anotadas al consultar; ver el cotejo)" : "Limitaciones"), lista(f.limitaciones)] : null,
-        L(f.cotejos).length ? [el("h5", {}, "Cotejo con el original"), el("ul", { "data-cotejos": f.id }, L(f.cotejos).map((c) => el("li", { "data-cotejo": c.resultado },
+        L(f.cotejos).length ? [el("h5", {}, "Cotejo con el original"), el("ul", { clase: "csi-lista", "data-cotejos": f.id }, L(f.cotejos).map((c) => el("li", { "data-cotejo": c.resultado },
           `${COTEJO_TXT[c.resultado] ?? c.resultado} · ${fecha(c.fecha)} · ${c.detalle}`)))] : null))),
       linea.length ? [el("h4", {}, "¿Qué se podía conocer en cada momento?"), el("div", { clase: "csi-tabla-envoltura" }, el("table", { clase: "csi-tabla", "data-linea": "" },
         el("thead", {}, el("tr", {}, ...["Momento", "Fuentes ya públicas", "Hechos y declaraciones ya sustentables", "Todavía no"].map((t) => el("th", { scope: "col" }, t)))),
@@ -360,20 +395,20 @@ function laboratorio(csi, redibujar) {
     if (!lab.inv) return decir(false, "Primero crea la investigación.");
     const r = await aplicarCambio(lab.inv, { accion, datos }, { autor: autor(), fecha: ahoraConZona() });
     if (!r.ok) return decir(false, r.errores.join(" · "));
-    lab.inv = r.inv; decir(true, `${accion}: listo (historial ${r.inv.historial.length}).`);
+    lab.inv = r.inv; guardarBorrador(); decir(true, `${accion}: listo (historial ${r.inv.historial.length}).`);
   };
   const practica = () => document.getElementById("csi-practica")?.checked !== false;
   const form = (titulo, k, hijos, accion) => el("details", { clase: "sala-seccion", "data-form": k, open: estadoUI.abiertos?.has(k) || (k === "crear" && !lab.inv) }, el("summary", {}, titulo), el("div", { clase: "csi-form" }, ...hijos, el("button", { type: "button", clase: "boton boton-chico", "data-enviar": k, onclick: accion }, "Aplicar")));
   const an = lab.inv ? analizarInvestigacion(lab.inv) : null;
   const res = lab.pred ? resumirPredicciones(lab.pred, Date.now()) : null;
   return [
-    el("p", { clase: "sala-nota" }, "Construye una investigación paso a paso. Todo pasa por las mismas reglas que el caso DEMO; nada se guarda solo: descarga los archivos y guárdalos en datos/csi/registro/ (local, fuera de git). Sin IA de pago."),
+    el("p", { clase: "sala-nota" }, "Construye una investigación paso a paso. Todo pasa por las mismas reglas que el caso DEMO. Lo que escribes queda como borrador en este navegador (sobrevive a recargar la página, no a borrar sus datos); el almacén solo cambia cuando descargas los archivos y los guardas en datos/csi/registro/ (local, fuera de git). Sin IA de pago."),
     el("p", {}, campo("alias", "Tu alias (identidad declarada):", { valor: "diego" }), " ", el("label", {}, el("input", { type: "checkbox", id: "csi-practica", checked: !lab.inv || lab.inv.es_demo }), " Práctica (DEMO: fuentes ficticias)"), " ", selector("naturaleza", "Si es REAL:", NATURALEZAS_ESTUDIO.filter((n) => n !== "demo"))),
     el("div", { clase: "csi-mensajes", role: "status", "aria-live": "polite" }, ...lab.mensajes.map((m) => el("p", { clase: m.ok ? "sala-nota" : "nexus-mal" }, m.t))),
     form("1. Crear investigación", "crear", [campo("id", "Id"), campo("titulo", "Título"), campo("pregunta", "Pregunta principal", { area: true }), campo("acont", "Acontecimiento"), campo("fecha", "Fecha del acontecimiento", { ph: "AAAA-MM-DD" })], async () => {
       const r = await crearInvestigacion({ id: val("id"), titulo: val("titulo"), pregunta: val("pregunta"), acontecimiento: { descripcion: val("acont"), fecha: val("fecha") }, autor: autor(), fecha: ahoraConZona(), es_demo: practica(), version: "0.2", naturaleza_estudio: practica() ? "demo" : val("naturaleza") || "prospectivo" });
       if (!r.ok) return decir(false, r.errores.join(" · "));
-      lab.inv = r.inv; lab.pred = registroVacioPredicciones(r.inv.es_demo); decir(true, `Investigación ${r.inv.id} creada (${r.inv.es_demo ? "DEMO" : `REAL · ${r.inv.naturaleza_estudio}`}).`);
+      lab.inv = r.inv; lab.pred = registroVacioPredicciones(r.inv.es_demo); guardarBorrador(); decir(true, `Investigación ${r.inv.id} creada (${r.inv.es_demo ? "DEMO" : `REAL · ${r.inv.naturaleza_estudio}`}).`);
     }),
     form("1b. Alcance y criterios de fuentes (antes de la primera fuente; no se reescribe)", "alcance", [campo("a-desc", "Alcance", { area: true }), campo("a-desde", "Periodo desde", { ph: "AAAA-MM-DD" }), campo("a-hasta", "Periodo hasta", { ph: "AAAA-MM-DD" }), campo("a-criterios", "Criterios de selección (separa con ;)", { area: true }), campo("a-incluye", "Incluye (;)"), campo("a-excluye", "Excluye (;)")],
       () => cambio("definir_alcance", { descripcion: val("a-desc"), periodo: { desde: val("a-desde"), hasta: val("a-hasta") }, criterios_fuentes: puntos("a-criterios"), incluye: puntos("a-incluye"), excluye: puntos("a-excluye") })),
@@ -414,24 +449,33 @@ function laboratorio(csi, redibujar) {
       if (!contenido.hipotesis_id) delete contenido.hipotesis_id;
       const r = await agregarEntrada(lab.pred, { tipo: "registro", contenido, registrado_en: ahoraConZona(), registrado_por: autor() });
       if (!r.ok) return decir(false, r.errores.join(" · "));
-      lab.pred = r.doc; decir(true, `Predicción ${contenido.id} registrada (entrada ${r.doc.entradas.length}).`);
+      lab.pred = r.doc; guardarBorrador(); decir(true, `Predicción ${contenido.id} registrada (entrada ${r.doc.entradas.length}).`);
     }),
     form("8. Evaluar predicción", "evaluar", [campo("v-id", "Predicción (id)"), selector("v-res", "Resultado", RESULTADOS), selector("v-ref", "Resultado de la referencia", RESULTADOS), campo("v-ev", "Evidencia del resultado (título)"), campo("v-fecha", "Publicada", { ph: "AAAA-MM-DDThh:mm" }), campo("v-nota", "Nota")], async () => {
       if (!lab.pred) return decir(false, "No hay predicciones en esta sesión.");
       const evidencia = val("v-ev") ? [{ titulo: val("v-ev"), publicada_en: instante(val("v-fecha")), ...(lab.pred.es_demo ? { ficticia: true } : {}) }] : [];
       const r = await agregarEntrada(lab.pred, { tipo: "evaluacion", contenido: { prediccion_id: val("v-id"), resultado: val("v-res"), resultado_referencia: val("v-ref"), evidencia, nota: val("v-nota") }, registrado_en: ahoraConZona(), registrado_por: autor() });
       if (!r.ok) return decir(false, r.errores.join(" · "));
-      lab.pred = r.doc; decir(true, "Evaluación registrada (la predicción original no cambia).");
+      lab.pred = r.doc; guardarBorrador(); decir(true, "Evaluación registrada (la predicción original no cambia).");
     }),
     lab.inv ? seccion(`Tu investigación: ${lab.inv.titulo} (${lab.inv.es_demo ? "DEMO" : "REAL"})`,
       el("p", { clase: "sala-nota" }, `Enunciados: ${Object.entries(an.conteo).map(([k, v]) => `${TIPO_TXT[k]} ${v}`).join(" · ")} · revisión ${an.revision}`),
       lista(an.hipotesis.map((h) => `${h.id}: ${ESTADO_HIP[h.estado]}${h.motivos.length ? ` — ${h.motivos.join("; ")}` : ""}`), "Sin hipótesis."),
       res ? el("p", { clase: "sala-nota" }, `Predicciones: ${res.total} · ${res.filas.map((f) => `${f.id}: ${ESTADO_PRED[f.estado]}`).join(" · ")}`) : null,
-      el("p", {}, descarga(lab.inv, "investigacion.json", "Descargar investigación"), " ", lab.pred ? descarga(lab.pred, "predicciones.json", "Descargar predicciones") : null, " ",
+      el("p", { clase: "sala-nota", "data-borrador": lab.guardado_en ? "guardado" : "memoria" }, lab.guardado_en ? `Borrador guardado en este navegador ${fecha(lab.guardado_en)} (historial ${lab.inv.historial.length}). ` : "Borrador solo en memoria (este navegador no permite guardar). ",
+        el("button", { type: "button", clase: "enlace", "data-descartar-borrador": "", onclick: () => { descartarBorrador(); redibujar(); } }, "Descartar borrador")),
+      el("h5", {}, "Guardar en el almacén"),
+      el("p", { clase: "sala-nota", "data-guardar": lab.inv.es_demo ? "demo" : "real" }, lab.inv.es_demo
+        ? "Es práctica (DEMO): no la guardes en el almacén real. Puedes descargar los archivos para revisarlos; se llaman como los del almacén."
+        : "Descarga los dos archivos y guárdalos con ese mismo nombre en datos/csi/registro/ (si ya existen, respáldalos antes: la descarga de investigaciones.json ya incluye las investigaciones REAL que esta página tenía cargadas). Luego pulsa «Actualizar» o recarga: la pestaña REAL los mostrará, con historial y huellas íntegros."),
+      el("p", { clase: "csi-botones" }, descarga(coleccionInvestigaciones(lab.inv, csi?.es_demo === lab.inv.es_demo && csi?.naturaleza !== "historico" ? { contrato: "cauce.csi.investigaciones", version_contrato: "0.1", es_demo: csi.es_demo, investigaciones: csi.investigaciones.map((x) => x.inv) } : null).doc, "investigaciones.json", "Descargar investigaciones.json"), " ",
+        lab.pred ? descarga(lab.pred, "predicciones.json", "Descargar predicciones.json") : null, " ", descargaExpediente(csi, lab.inv, " · borrador del laboratorio")),
+      el("p", { clase: "csi-botones" },
         el("button", { type: "button", clase: "boton boton-chico", "data-lab-abogado": "", onclick: async () => {
           const rv = revisarAbogado(lab.inv, { predicciones: res });
           const sug = objecionesSugeridas(lab.inv, rv);
           for (const o of sug) { const r = await aplicarCambio(lab.inv, { accion: "agregar_objecion", datos: { objecion: o } }, { autor: AUTOR_ABOGADO, fecha: ahoraConZona() }); if (r.ok) lab.inv = r.inv; }
+          guardarBorrador();
           decir(true, `Abogado del Diablo (código): ${rv.alertas_total} alerta(s); ${sug.length} objeción(es) nuevas registradas como abiertas. Responderlas es trabajo tuyo.`);
         } }, "Abogado del Diablo"), " ",
         ...lab.inv.hipotesis.map((h) => el("button", { type: "button", clase: "boton boton-chico", "data-lab-propuesta": h.id, onclick: () => {
@@ -441,7 +485,7 @@ function laboratorio(csi, redibujar) {
   ];
 }
 
-/** Para pruebas: limpia el laboratorio de la sesión. */
-export function reiniciarLaboratorioCSI() { lab.inv = null; lab.pred = null; lab.mensajes = []; estadoUI.pestana = "resumen"; estadoUI.propuesta = null; estadoUI.ancla = null; estadoUI.verificacion = null; }
+/** Para pruebas: limpia el laboratorio de la sesión (y su borrador guardado). */
+export function reiniciarLaboratorioCSI() { lab.inv = null; lab.pred = null; lab.mensajes = []; lab.restaurado = true; guardarBorrador(); estadoUI.pestana = "resumen"; estadoUI.propuesta = null; estadoUI.ancla = null; estadoUI.verificacion = null; }
 /** Al cambiar de conjunto (DEMO / HISTÓRICO / REAL) se olvida lo calculado sobre el anterior. */
 export function olvidarCalculosCSI() { estadoUI.propuesta = null; estadoUI.ancla = null; estadoUI.verificacion = null; }
