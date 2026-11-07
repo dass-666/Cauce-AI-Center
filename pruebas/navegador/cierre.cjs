@@ -82,7 +82,7 @@ const mod = (r) => import(pathToFileURL(path.join(RAIZ, r)).href);
   await pestana('investigaciones');
   const exp = await bajar(p, 'a[download="expediente-hist-bns-minimo-2015.md"]');
   ok('2. el expediente .md del caso suizo se descarga y dice lo mismo que la pantalla (HISTÓRICO, 12 consultadas, 1 pendiente, 9/10, 15 alertas, 100 cambios)',
-    exp.nombre === 'expediente-hist-bns-minimo-2015.md' && /HISTÓRICO · REAL RETROSPECTIVO/.test(exp.texto) && /## 3\. Fuentes \(12 consultadas · 1 pendientes · 0 sin copia verificable\)/.test(exp.texto) && /9 de 10 pasos/.test(exp.texto) && /15 alerta\(s\)/.test(exp.texto) && /Historial \(100 cambios/.test(exp.texto) && /Caso publicado|caso HISTÓRICO/.test(exp.texto));
+    exp.nombre === 'expediente-hist-bns-minimo-2015.md' && /HISTÓRICO · REAL RETROSPECTIVO/.test(exp.texto) && /## 3\. Fuentes \(12 consultadas · 1 pendiente · 0 sin copia verificable\)/.test(exp.texto) && /9 de 10 pasos/.test(exp.texto) && /15 alerta\(s\)/.test(exp.texto) && /Historial \(100 cambios/.test(exp.texto) && /Caso publicado|caso HISTÓRICO/.test(exp.texto));
   ok('2. el expediente .md no contiene rutas privadas ni copias de terceros', !/[A-Z]:\\/.test(exp.texto) && !/<html/i.test(exp.texto) && exp.texto.length < 120_000);
   if (SAL) fs.writeFileSync(path.join(SAL, 'expediente-hist-bns-minimo-2015.md'), exp.texto);
 
