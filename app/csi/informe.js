@@ -63,7 +63,8 @@ export function informeInvestigacion(inv, { actores = null, escenarios = [], nat
     s.push(`- **Incluye:** ${L(a.incluye).map(md).join("; ") || "—"}`, `- **Excluye:** ${L(a.excluye).map(md).join("; ") || "—"}`, "");
   } else s.push("## 2. Alcance", "", inv.version_contrato === "0.2" ? "_Sin alcance registrado (en una investigación 0.2 se registra antes de la primera fuente)._" : "_El contrato 0.1 no registra alcance._", "");
 
-  s.push(`## 3. Fuentes (${exp.consultadas.length} consultadas · ${exp.pendientes.length} pendientes · ${exp.sin_huella.length} sin copia verificable)`, "");
+  const pl = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  s.push(`## 3. Fuentes (${pl(exp.consultadas.length, "consultada", "consultadas")} · ${pl(exp.pendientes.length, "pendiente", "pendientes")} · ${exp.sin_huella.length} sin copia verificable)`, "");
   s.push("Tres fechas distintas: publicada (la copia citada), disponible (desde cuándo era pública; es la que cuenta para «qué se podía saber») y consultada (cuándo se leyó; nunca cuenta como conocimiento). Una fuente PENDIENTE no respalda ningún enunciado. La huella SHA-256 identifica la copia privada que se usó; las copias de terceros no se publican.", "");
   s.push(...tabla(["Id", "Fuente", "Clase", "Estado", "Publicada", "Disponible", "Consultada", "Huella de la copia", "Cotejo"],
     L(inv.fuentes).map((f) => fila(f.id, `${f.titulo} · ${f.editor} · ${f.tipo}${f.enlace ? ` · ${f.enlace}` : f.referencia ? ` · ${f.referencia}` : ""}`, f.clase ?? "—", f.estado === "pendiente" ? `PENDIENTE: ${f.pendiente_motivo ?? ""}` : f.estado ?? "0.1",
