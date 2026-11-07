@@ -269,6 +269,9 @@ function R08(l) {
   const nr = m.naturaleza_resultado, nat = m.naturaleza;
   if (c.objeto === "beneficio_economico" && nr !== "resultado_operativo_real") return N(`Afirma beneficio económico con un resultado «${nr}»: un backtest o simulación no es beneficio real (T06).`, ["muestra.naturaleza_resultado", "confianza.objeto"]);
   if (c.objeto === "beneficio_economico" && nat !== "real_comercial") return N(`Afirma beneficio económico con datos «${nat}»; un caso sintético o de demo nunca prueba éxito comercial (T14).`, ["muestra.naturaleza", "confianza.objeto"]);
+  // Contrato 0.3: naturaleza desconocida. Sin saber de qué datos sale, nada se puede afirmar más allá de un método con
+  // confianza baja; todo lo demás queda «no evaluado» (nunca cumple por omisión). Inalcanzable con lecciones 0.2.
+  if (nat === "desconocida" && (c.objeto !== "metodo" || c.nivel !== "baja")) return E(`Naturaleza de los datos desconocida: no se puede juzgar una confianza «${c.nivel}» sobre «${c.objeto}» (contrato 0.3).`, ["muestra.naturaleza", "confianza"]);
   if ((nat === "sintetica" || nat === "demo") && c.objeto !== "metodo") return N(`Datos ${nat}: solo pueden respaldar el método, no un efecto (T14).`, ["muestra.naturaleza", "confianza.objeto"]);
   const costos = L(m.supuestos).filter((s) => (s && typeof s === "object" && /costo|comisi|fricci|desliz/i.test(s.variable ?? "") && Number(s.valor) === 0 && s.conocido === false)
     || (typeof s === "string" && /costos?[^.;]*(=|:|en)\s*0\b/i.test(s) && /desconoc|no se conoc|sin dato/i.test(s)));
