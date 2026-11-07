@@ -51,7 +51,7 @@ Reglas que se cumplen por código, cada una con su prueba en `pruebas/casos-csi-
 
 Hay un caso histórico real retrospectivo con 10 fuentes consultadas y 1 pendiente, alcance registrado antes de las fuentes, 4 hipótesis (2 sin evidencia) y 15 alertas del Abogado. **No está en este repositorio público:** publicarlo requiere la autorización de Diego, y antes hay que cotejar sus citas con los originales. El expediente, las referencias con URL y las respuestas a las 8 preguntas están en la entrega privada del proyecto (`cauce/csi-fase-2/`). Para usarlo, copia el expediente a `datos/csi/historico/` (ver su `LEEME.md`).
 
-**Cotejo (7-nov-2026):** 11 de las 12 fuentes del caso se cotejaron contra copias byte a byte con SHA-256 (acción `cotejar_fuente`, que conserva el extracto anterior). Todas las citas aparecen en el original; 5 recortes mal marcados se corrigieron y una fuente sigue pendiente.
+**Cotejo (7-nov-2026):** Las fuentes del caso se cotejaron contra copias byte a byte con SHA-256 (acción `cotejar_fuente`, que conserva el extracto anterior). Todas las citas aparecen en el original y 5 recortes mal marcados se corrigieron. La declaración del BNS de 2011, que estaba pendiente, se recuperó con su enlace real; las 12 fuentes tienen huella.
 
 ## 5. Mapa de actores
 
