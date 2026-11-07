@@ -1,0 +1,232 @@
+{
+ "contrato": "cauce.estado-proyecto",
+ "version": "1.0.0",
+ "proyecto": {
+  "id": "compago",
+  "nombre": "Compago"
+ },
+ "generado_en": "2026-11-03T14:57:05Z",
+ "vigencia_segundos": 900,
+ "es_demo": false,
+ "fuente": {
+  "tipo": "adaptador",
+  "nombre": "Compago · exportar_cauce",
+  "version": "1.0.0"
+ },
+ "departamentos": [
+  {
+   "id": "importacion",
+   "nombre": "Importación de catálogos",
+   "descripcion": "Cola de importación de Compago (ImportJob). Cada lote se aplica completo en una sola transacción.",
+   "indicadores": [
+    {
+     "etiqueta": "En cola",
+     "valor": 0
+    },
+    {
+     "etiqueta": "Aplicados 7 días",
+     "valor": 0
+    },
+    {
+     "etiqueta": "Fallidos 7 días",
+     "valor": 0
+    },
+    {
+     "etiqueta": "Consumidor",
+     "valor": "sin evidencia",
+     "nota": "sin latido registrado"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "importador",
+     "nombre": "Importador",
+     "rol": "Aplica los lotes aprobados en la vista previa",
+     "estado": "sin_datos",
+     "actividad": {
+      "descripcion": "No hay registro de que el consumidor de importaciones haya funcionado (sin latido)."
+     }
+    }
+   ]
+  },
+  {
+   "id": "busqueda",
+   "nombre": "Búsqueda de proveedores",
+   "descripcion": "Consultas a fuentes públicas (DENUE, OpenStreetMap). No se exportan los términos buscados.",
+   "indicadores": [
+    {
+     "etiqueta": "Consultas hoy",
+     "valor": 2
+    },
+    {
+     "etiqueta": "Resultados por revisar",
+     "valor": 0
+    }
+   ],
+   "agentes": [
+    {
+     "id": "buscador",
+     "nombre": "Buscadora",
+     "rol": "Consulta fuentes públicas de proveedores",
+     "estado": "finalizado",
+     "actividad": {
+      "descripcion": "Consulta a osm: 3 resultado(s), 0 nuevo(s).",
+      "inicio": "2026-11-03T14:57:05Z",
+      "fin": "2026-11-03T14:57:05Z"
+     },
+     "evidencia": {
+      "origen": "SearchRun",
+      "referencia": "id=6 · resultado=ok",
+      "observado_en": "2026-11-03T14:57:05Z"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fuentes",
+   "nombre": "Revisión de listas",
+   "descripcion": "Comando revisar_fuentes: revisa archivos nuevos de listas de proveedores. No se exportan nombres de archivo ni de proveedor.",
+   "indicadores": [
+    {
+     "etiqueta": "Listas atrasadas",
+     "valor": 0
+    },
+    {
+     "etiqueta": "Sin analizar",
+     "valor": 0,
+     "nota": "últimas 200 revisiones"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "revisor-fuentes",
+     "nombre": "Revisor",
+     "rol": "Detecta archivos nuevos de listas y prepara la vista previa",
+     "estado": "esperando",
+     "actividad": {
+      "descripcion": "No hay archivos de listas revisados."
+     }
+    }
+   ]
+  },
+  {
+   "id": "oportunidades",
+   "nombre": "Evaluación de oportunidades",
+   "descripcion": "Cuántas oportunidades hay en cada estado del flujo.",
+   "indicadores": [
+    {
+     "etiqueta": "Oportunidades",
+     "valor": 0
+    }
+   ],
+   "agentes": [
+    {
+     "id": "evaluador",
+     "nombre": "Seguimiento",
+     "rol": "Muestra el avance del flujo de oportunidades",
+     "estado": "esperando",
+     "actividad": {
+      "descripcion": "Las decisiones sobre oportunidades las toma una persona en Compago."
+     }
+    }
+   ]
+  },
+  {
+   "id": "margenes",
+   "nombre": "Márgenes y rentabilidad",
+   "descripcion": "Los escenarios se calculan al abrirlos en Compago; no hay un proceso que registre ejecuciones.",
+   "indicadores": [
+    {
+     "etiqueta": "Escenarios guardados",
+     "valor": 0
+    }
+   ],
+   "agentes": [
+    {
+     "id": "analista-margenes",
+     "nombre": "Analista",
+     "rol": "Calcula márgenes y capital necesario",
+     "estado": "sin_datos"
+    }
+   ]
+  },
+  {
+   "id": "auditoria",
+   "nombre": "Auditoría de datos",
+   "descripcion": "revisar_datos calcula las inconsistencias al ejecutarlo y no guarda el resultado; repetirlo en cada ciclo sería costoso.",
+   "indicadores": [
+    {
+     "etiqueta": "Inconsistencias",
+     "valor": null,
+     "nota": "no registradas"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "auditor-datos",
+     "nombre": "Auditora",
+     "rol": "Revisa vínculos, fechas, identificadores y datos sin fuente",
+     "estado": "sin_datos"
+    }
+   ]
+  },
+  {
+   "id": "supervision",
+   "nombre": "Supervisión",
+   "descripcion": "Comprobaciones de la página de estado de Compago (solo nivel y resumen, sin detalles).",
+   "indicadores": [
+    {
+     "etiqueta": "Respaldo",
+     "valor": "Aviso"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "supervisor",
+     "nombre": "Supervisora",
+     "rol": "Vigila respaldos y salud general",
+     "estado": "requiere_revision",
+     "actividad": {
+      "descripcion": "Respaldo: No hay respaldos registrados."
+     },
+     "evidencia": {
+      "origen": "apps.core.estado.respaldo",
+      "referencia": "nivel=aviso"
+     }
+    }
+   ]
+  },
+  {
+   "id": "uniq",
+   "nombre": "Integración UNIQ",
+   "descripcion": "Paquetes de ofertas emitidos para UNIQ (solo se lee el registro; no se contacta a UNIQ).",
+   "indicadores": [
+    {
+     "etiqueta": "Última solicitud",
+     "valor": "ninguna"
+    }
+   ],
+   "agentes": [
+    {
+     "id": "enlace-uniq",
+     "nombre": "Enlace",
+     "rol": "Entrega paquetes de ofertas a UNIQ",
+     "estado": "esperando",
+     "actividad": {
+      "descripcion": "No hay paquetes emitidos para UNIQ."
+     }
+    }
+   ]
+  }
+ ],
+ "alertas": [
+  {
+   "id": "supervision-respaldo",
+   "nivel": "advertencia",
+   "departamento_id": "supervision",
+   "titulo": "No hay respaldos registrados.",
+   "creada_en": "2026-11-03T14:57:05Z"
+  }
+ ],
+ "resultados": []
+}

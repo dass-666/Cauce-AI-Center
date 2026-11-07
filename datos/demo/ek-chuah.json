@@ -1,0 +1,118 @@
+{
+  "contrato": "cauce.estado-proyecto",
+  "version": "1.0.0",
+  "proyecto": { "id": "ek-chuah", "nombre": "Ek Chuah" },
+  "generado_en": "2026-11-03T16:28:00Z",
+  "vigencia_segundos": 900,
+  "es_demo": true,
+  "demo": { "ahora_simulado": "2026-11-03T16:30:00Z" },
+  "fuente": { "tipo": "demo", "nombre": "Ejemplo escrito a mano (no viene de Ek Chuah)", "version": "1" },
+  "departamentos": [
+    {
+      "id": "datos",
+      "nombre": "Obtención de datos",
+      "descripcion": "Descarga series de Banxico, INEGI y FRED (comando fetch-macro). En Ek Chuah cada descarga queda en la tabla fetch_log.",
+      "indicadores": [
+        { "etiqueta": "Series en catálogo", "valor": 13 },
+        { "etiqueta": "Fallas hoy", "valor": 0 }
+      ],
+      "agentes": [
+        {
+          "id": "descargador",
+          "nombre": "Descargador",
+          "rol": "Actualiza las series económicas desde fuentes oficiales",
+          "estado": "trabajando",
+          "actividad": {
+            "descripcion": "[DEMO] Descargando series de Banxico SIE",
+            "inicio": "2026-11-03T16:27:40Z",
+            "progreso": { "hecho": 7, "total": 13, "unidad": "series" }
+          },
+          "evidencia": { "origen": "fetch_log", "referencia": "[DEMO] status=running", "observado_en": "2026-11-03T16:28:00Z" }
+        }
+      ]
+    },
+    {
+      "id": "supervision",
+      "nombre": "Supervisión y alertas",
+      "descripcion": "Tarea diaria de Windows (9:00): descarga datos y envía alertas por reglas a Discord. Queda en alerts_sent y en logs/alertas_diarias.log.",
+      "indicadores": [
+        { "etiqueta": "Alertas hoy", "valor": 2 },
+        { "etiqueta": "Importantes", "valor": 0 }
+      ],
+      "agentes": [
+        {
+          "id": "vigia",
+          "nombre": "Vigía",
+          "rol": "Revisa reglas de alerta y avisa por Discord",
+          "estado": "finalizado",
+          "actividad": {
+            "descripcion": "[DEMO] Envío de alertas diarias",
+            "inicio": "2026-11-03T15:00:05Z",
+            "fin": "2026-11-03T15:00:41Z"
+          },
+          "evidencia": { "origen": "logs/alertas_diarias.log", "referencia": "[DEMO] Fin (código 0)" }
+        }
+      ]
+    },
+    {
+      "id": "informes",
+      "nombre": "Informes",
+      "descripcion": "Análisis semanal (domingo 20:00) y reportes de cuentas de práctica.",
+      "indicadores": [ { "etiqueta": "Próximo análisis", "valor": "domingo" } ],
+      "agentes": [
+        {
+          "id": "redactor",
+          "nombre": "Redactor",
+          "rol": "Envía el análisis semanal y los resúmenes",
+          "estado": "esperando",
+          "actividad": { "descripcion": "[DEMO] Sin tarea en curso; el próximo análisis es el domingo" }
+        }
+      ]
+    },
+    {
+      "id": "simulaciones",
+      "nombre": "Simulaciones",
+      "descripcion": "portfolio-sim, historia y practice-report. Ek Chuah hoy no registra cuándo se ejecutan, así que no hay evidencia de actividad.",
+      "indicadores": [ { "etiqueta": "Ejecuciones registradas", "valor": null, "nota": "Ek Chuah no las registra" } ],
+      "agentes": [
+        {
+          "id": "simulador",
+          "nombre": "Simulador",
+          "rol": "Simula carteras con datos históricos",
+          "estado": "trabajando",
+          "actividad": { "descripcion": "[DEMO] Ejemplo a propósito: dice 'trabajando' pero no trae evidencia" }
+        }
+      ]
+    },
+    {
+      "id": "riesgo",
+      "nombre": "Análisis de riesgo",
+      "descripcion": "risk-menu y pruebas de crisis (stress). Sin registro de ejecuciones.",
+      "agentes": [
+        { "id": "evaluador-riesgo", "nombre": "Evaluadora", "rol": "Compara opciones del menú contra sus límites de caída", "estado": "sin_datos" }
+      ]
+    },
+    {
+      "id": "auditoria",
+      "nombre": "Auditoría y verificación",
+      "descripcion": "Recordatorios de la bitácora y calificación mensual. Nada cambia sin aprobación del usuario.",
+      "agentes": [
+        {
+          "id": "auditor",
+          "nombre": "Auditor",
+          "rol": "Recuerda registros pendientes y revisiones que requieren decisión",
+          "estado": "requiere_revision",
+          "actividad": { "descripcion": "[DEMO] Valuación mensual pendiente de registrar en la bitácora", "inicio": "2026-11-01T15:00:00Z" },
+          "evidencia": { "origen": "alerts_sent", "referencia": "[DEMO] kind=recordatorio" }
+        }
+      ]
+    }
+  ],
+  "alertas": [
+    { "id": "demo-a1", "nivel": "info", "titulo": "[DEMO] Subasta de CETES mañana", "departamento_id": "supervision", "creada_en": "2026-11-03T15:00:30Z" },
+    { "id": "demo-a2", "nivel": "advertencia", "titulo": "[DEMO] Valuación mensual pendiente", "departamento_id": "auditoria", "agente_id": "auditor", "creada_en": "2026-11-01T15:00:00Z" }
+  ],
+  "resultados": [
+    { "id": "demo-r1", "titulo": "[DEMO] Ejemplo de informe", "descripcion": "Muestra cómo se abre un resultado", "departamento_id": "informes", "creado_en": "2026-11-02T02:00:00Z", "enlace": "datos/demo/informes/ejemplo.html" }
+  ]
+}

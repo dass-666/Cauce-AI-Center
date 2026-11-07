@@ -1,0 +1,7 @@
+{
+  "contrato": "cauce.nexus.politica",
+  "version_contrato": "0.2",
+  "aprobadores_declarados": ["diego"],
+  "autenticacion": "ninguna",
+  "nota": "Diego es el responsable humano final de las aprobaciones (decisión del 2026-11-06). Sin autenticación, «diego» es una identidad DECLARADA: el almacén solo acepta decisiones registradas con ese alias, pero no puede probar quién lo escribió."
+}

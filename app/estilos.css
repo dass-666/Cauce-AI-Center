@@ -1,0 +1,783 @@
+/* Centro de operaciones: oficina nocturna, inspirada en la referencia (letreros que brillan,
+   madera cálida, personajes pequeños). Todo con CSS: sin imágenes ni bibliotecas. */
+
+:root {
+  --fondo: #0d1220;
+  --piso: #161d30;
+  --piso-linea: #1f2840;
+  --cuarto: #1a2236;
+  --borde: #2c3754;
+  --texto: #e8ecf5;
+  --texto-suave: #a3adc4;
+  --madera: #b98a5a;
+  --madera-oscura: #8a6440;
+  --pantalla: #0b0f19;
+  --piel: #f1c9a5;
+  --ropa: #3b5b9a;
+  --letrero: #0f1526;
+  --brillo: #ffd89a;
+
+  --c-trabajando: #4fb3ff;
+  --c-esperando: #8ea0c4;
+  --c-finalizado: #43c47a;
+  --c-error: #ff5d5d;
+  --c-revision: #ffb547;
+  --c-sin-datos: #5d667c;
+
+  color-scheme: dark;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--texto); min-height: 100vh; }
+a { color: var(--brillo); }
+h1, h2, h3 { margin: 0; }
+.solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Cabecera */
+.cabecera {
+  display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--borde); background: #0a0e19;
+}
+.marca { display: flex; gap: 10px; align-items: center; }
+.marca-logo { font-size: 28px; color: var(--brillo); }
+.marca h1 { font-size: 18px; }
+.marca-sub { margin: 0; font-size: 12px; color: var(--texto-suave); }
+.pisos { display: flex; gap: 6px; flex-wrap: wrap; }
+.piso, .boton {
+  background: var(--cuarto); color: var(--texto); border: 1px solid var(--borde);
+  border-radius: 8px; padding: 7px 12px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.piso[aria-selected="true"] { border-color: var(--brillo); box-shadow: 0 0 0 1px var(--brillo) inset; }
+.controles { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.interruptor { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outline-offset: 2px; }
+
+/* Bandas de estado */
+.banda-demo {
+  background: repeating-linear-gradient(-45deg, #4a3a10, #4a3a10 12px, #3b2e0c 12px, #3b2e0c 24px);
+  color: #ffe6a6; font-weight: 700; font-size: 13px; padding: 8px 16px; letter-spacing: .02em;
+}
+.conexion { padding: 8px 16px; font-size: 14px; border-bottom: 1px solid var(--borde); }
+.conexion-motivo { display: block; color: var(--texto-suave); font-size: 13px; margin-top: 2px; }
+.conexion-en_linea strong { color: var(--c-finalizado); }
+.conexion-desactualizado strong { color: var(--c-revision); }
+.conexion-desconectado strong, .conexion-invalido strong { color: var(--c-error); }
+.diagnostico { margin: 8px 16px 0; font-size: 13px; color: var(--texto-suave); }
+.diagnostico summary { cursor: pointer; color: var(--c-revision); }
+
+/* Distribución principal */
+.principal { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+.principal:has(.panel:not([hidden])) { grid-template-columns: minmax(0, 1fr) 340px; }
+
+/* Plano */
+.plano {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(var(--columnas, 3), minmax(0, 1fr));
+  grid-auto-rows: minmax(190px, auto);
+  padding: 14px; border-radius: 14px;
+  background:
+    linear-gradient(var(--piso-linea) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, var(--piso-linea) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--piso);
+}
+.plano[data-conexion="desactualizado"], .plano[data-conexion="desconectado"], .plano[data-conexion="invalido"] {
+  filter: saturate(.35);
+}
+.plano-vacio { grid-column: 1 / -1; text-align: center; color: var(--texto-suave); padding: 40px 16px; }
+.plano-vacio-titulo { font-size: 18px; color: var(--texto); }
+
+.cuarto {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--cuarto); border: 1px solid var(--borde); border-radius: 12px; padding: 10px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.02) inset, 0 8px 18px rgba(0,0,0,.25);
+}
+.cuarto.elegido { border-color: var(--brillo); }
+
+.letrero {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  background: var(--letrero); color: var(--texto); border: 1px solid #33426a; border-radius: 8px;
+  padding: 7px 10px; font: inherit; font-weight: 700; font-size: 14px; letter-spacing: .03em; cursor: pointer;
+  box-shadow: 0 0 12px rgba(120,160,255,.12);
+}
+.letrero-nombre { flex: 1; text-transform: uppercase; }
+.letrero-luz { width: 10px; height: 10px; border-radius: 50%; background: var(--color-estado, var(--c-sin-datos)); box-shadow: 0 0 8px var(--color-estado, transparent); }
+.letrero-alertas { color: var(--c-revision); font-size: 12px; }
+
+.indicadores { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.indicador { background: #10172a; border-radius: 6px; padding: 4px 8px; font-family: ui-monospace, Consolas, monospace; }
+.indicador dt { font-size: 11px; color: var(--texto-suave); }
+.indicador dd { margin: 0; font-size: 14px; color: var(--brillo); }
+
+.puestos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.puestos-vacio { color: var(--texto-suave); font-size: 13px; margin: 0; }
+
+/* Colores por estado (los usan letrero, personaje y panel) */
+.estado-trabajando { --color-estado: var(--c-trabajando); }
+.estado-esperando { --color-estado: var(--c-esperando); }
+.estado-finalizado { --color-estado: var(--c-finalizado); }
+.estado-error { --color-estado: var(--c-error); }
+.estado-revision { --color-estado: var(--c-revision); }
+.estado-sin-datos { --color-estado: var(--c-sin-datos); }
+
+/* Personaje */
+.personaje {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; width: 86px;
+  background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 4px 2px;
+  color: var(--texto); font: inherit; cursor: pointer;
+}
+.personaje:hover { background: rgba(255,255,255,.04); }
+.personaje.elegido { border-color: var(--brillo); background: rgba(255,216,154,.06); }
+.escena-puesto { position: relative; width: 64px; height: 58px; display: block; }
+.escritorio { position: absolute; left: 2px; right: 2px; bottom: 6px; height: 12px; background: var(--madera); border-radius: 3px; box-shadow: 0 6px 0 -2px var(--madera-oscura); }
+.monitor {
+  position: absolute; left: 32px; bottom: 18px; width: 24px; height: 17px; border-radius: 3px;
+  background: var(--pantalla); border: 2px solid #2a3350;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-estado) 60%, transparent) inset;
+}
+.cabeza { position: absolute; left: 10px; bottom: 30px; width: 18px; height: 18px; border-radius: 50%; background: var(--piel); box-shadow: 0 -4px 0 0 #3a2a20 inset; }
+.cuerpo { position: absolute; left: 7px; bottom: 16px; width: 24px; height: 16px; border-radius: 9px 9px 3px 3px; background: var(--ropa); }
+.burbuja {
+  position: absolute; right: -6px; top: -6px; min-width: 20px; height: 20px; border-radius: 10px; padding: 0 4px;
+  display: grid; place-items: center; font-size: 12px; font-weight: 700;
+  background: var(--color-estado); color: #0b0f19;
+}
+.gafete { font-size: 12px; font-weight: 600; max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.estado-texto { font-size: 11px; color: var(--color-estado); }
+
+/* Animaciones por estado: programadas, sin IA, reaccionan solo al estado de los datos */
+.personaje.estado-trabajando .cabeza { animation: teclear 0.9s ease-in-out infinite; }
+.personaje.estado-trabajando .monitor { animation: parpadeo 1.6s steps(2) infinite; }
+.personaje.estado-trabajando .burbuja { animation: girar 3s linear infinite; }
+.personaje.estado-esperando .cuerpo, .personaje.estado-esperando .cabeza { animation: respirar 4s ease-in-out infinite; }
+.personaje.estado-error .burbuja { animation: sacudir .6s ease-in-out infinite; }
+.personaje.estado-error .cabeza { transform: translateY(-4px); }
+.personaje.estado-revision .burbuja { animation: rebote 1.4s ease-in-out infinite; }
+/* Sin información: silla vacía. Nunca se dibuja a alguien trabajando sin evidencia. */
+.personaje.estado-sin-datos .cabeza, .personaje.estado-sin-datos .cuerpo { opacity: 0; }
+.personaje.estado-sin-datos .escena-puesto { opacity: .5; filter: grayscale(1); }
+.personaje.estado-sin-datos .monitor { box-shadow: none; }
+/* Naturaleza del puesto (fase E2): sin figura cuando no hay nadie que mostrar. */
+.personaje.sin-figura .cabeza, .personaje.sin-figura .cuerpo { opacity: 0; animation: none; }
+.personaje.puesto-humano .escritorio::after { content: "HUMANO"; position: absolute; left: 50%; top: 1px; transform: translateX(-50%); font-size: 7px; font-weight: 700; color: #1b2440; background: #e8ecf5; padding: 0 3px; border-radius: 2px; }
+.personaje.puesto-equipo .escena-puesto::before, .personaje.puesto-terminal .escena-puesto::before { content: ""; position: absolute; right: 4px; bottom: 16px; width: 9px; height: 16px; border-radius: 2px; background: #6b7694; box-shadow: inset 0 3px 0 var(--color-estado); }
+.naturaleza-texto { font-size: 10px; color: var(--tenue, #9aa6c4); }
+
+@keyframes teclear { 50% { transform: translateY(2px); } }
+@keyframes parpadeo { 50% { filter: brightness(1.6); } }
+@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes respirar { 50% { transform: translateY(1px); } }
+@keyframes sacudir { 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+@keyframes rebote { 50% { transform: translateY(-3px); } }
+
+.bajo-consumo *, .bajo-consumo *::before, .bajo-consumo *::after { animation: none !important; transition: none !important; }
+.bajo-consumo .letrero, .bajo-consumo .cuarto, .bajo-consumo .monitor { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+}
+
+/* Panel de detalle */
+.panel {
+  position: relative; background: #121a2c; border: 1px solid var(--borde); border-radius: 12px; padding: 16px;
+  align-self: start; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto;
+}
+.panel-cerrar { position: absolute; top: 8px; right: 8px; background: none; border: 0; color: var(--texto); font-size: 22px; cursor: pointer; }
+.detalle h2 { font-size: 20px; margin-bottom: 6px; }
+.detalle h3 { font-size: 14px; margin: 16px 0 6px; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .05em; }
+.detalle-tipo { margin: 0; font-size: 12px; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .06em; }
+.detalle-nota { color: var(--texto-suave); font-size: 13px; }
+.etiqueta-estado { display: inline-block; margin: 0; padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; background: var(--color-estado); color: #0b0f19; }
+.datos { margin: 10px 0 0; display: grid; gap: 8px; }
+.dato dt { font-size: 12px; color: var(--texto-suave); }
+.dato dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.caja-error, .caja-aviso { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 13px; }
+.caja-error { background: rgba(255,93,93,.12); border: 1px solid rgba(255,93,93,.5); }
+.caja-aviso { background: rgba(255,181,71,.1); border: 1px solid rgba(255,181,71,.45); }
+.caja-error p, .caja-aviso ul { margin: 4px 0 0; }
+.lista { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 6px; }
+.alerta-critica strong { color: var(--c-error); }
+.alerta-advertencia strong { color: var(--c-revision); }
+.lista small { color: var(--texto-suave); }
+
+.pie { padding: 8px 16px 24px; font-size: 12px; color: var(--texto-suave); }
+
+/* Celular: un cuarto por fila y el detalle como hoja inferior */
+@media (max-width: 760px) {
+  .plano { grid-template-columns: 1fr; }
+  .cuarto { grid-column: auto !important; grid-row: auto !important; }
+  .principal, .principal:has(.panel:not([hidden])) { grid-template-columns: 1fr; padding: 10px; }
+  .panel { position: fixed; left: 0; right: 0; bottom: 0; top: auto; max-height: 45vh; border-radius: 14px 14px 0 0; z-index: 10; }
+  .controles { width: 100%; justify-content: space-between; }
+}
+
+/* Vista 3D (app/vistas/vista3d). El lienzo ocupa el área de la oficina; los controles flotan encima. */
+.segmentado { display: flex; }
+.segmentado .boton { border-radius: 0; }
+.segmentado .boton:first-child { border-radius: 8px 0 0 8px; }
+.segmentado .boton:last-child { border-radius: 0 8px 8px 0; border-left: 0; }
+.boton[aria-pressed="true"] { border-color: var(--brillo); color: var(--brillo); }
+.boton-chico { padding: 4px 10px; font-size: 13px; }
+.aviso-vista { margin: 0; padding: 8px 16px; background: #3a1f1f; color: #ffd0d0; font-size: 13px; }
+.oficina.modo-3d { position: relative; height: clamp(360px, calc(100vh - 210px), 980px); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
+.vista3d { position: absolute; inset: 0; }
+.vista3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.vista3d canvas:active { cursor: grabbing; }
+.vista3d-barra {
+  position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  pointer-events: none; font-size: 14px;
+}
+.vista3d-barra > * { pointer-events: auto; }
+.vista3d-selector {
+  background: var(--letrero); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px;
+  padding: 6px 10px; font: inherit; max-width: 60vw;
+}
+.vista3d-barra .interruptor { background: #0f1526cc; padding: 5px 9px; border-radius: 8px; }
+.vista3d-fuente { font-weight: 800; letter-spacing: .06em; padding: 5px 10px; border-radius: 8px; font-size: 13px; }
+.vista3d-fuente.es-demo { background: #ffb547; color: #1a1200; }
+.vista3d-fuente.es-real { background: #12361f; color: #7ff0a8; border: 1px solid #43c47a; }
+.vista3d-fuente.es-sin { background: #222a3d; color: #b9c3dd; border: 1px solid #4a5677; }
+.vista3d-aviso {
+  position: absolute; left: 10px; right: 10px; bottom: 58px; margin: 0; padding: 8px 12px; border-radius: 8px;
+  background: #0f1526e6; border: 1px solid var(--borde); color: var(--texto-suave); font-size: 13px;
+}
+.vista3d[data-conexion="desactualizado"] .vista3d-aviso,
+.vista3d[data-conexion="desconectado"] .vista3d-aviso,
+.vista3d[data-conexion="invalido"] .vista3d-aviso { color: #ffd0d0; border-color: var(--c-error); }
+.vista3d-personajes { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; gap: 6px; overflow-x: auto; }
+.chip {
+  flex: none; background: #0f1526e6; color: var(--texto); border: 1px solid var(--borde); border-left: 4px solid var(--c-sin-datos);
+  border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; min-height: 36px;
+}
+.chip.estado-trabajando { border-left-color: var(--c-trabajando); }
+.chip.estado-esperando { border-left-color: var(--c-esperando); }
+.chip.estado-finalizado { border-left-color: var(--c-finalizado); }
+.chip.estado-error { border-left-color: var(--c-error); }
+.chip.estado-revision { border-left-color: var(--c-revision); }
+.chip[aria-pressed="true"] { border-color: var(--brillo); }
+.vista3d-medidas {
+  position: absolute; right: 10px; top: 54px; margin: 0; padding: 6px 8px; border-radius: 6px;
+  background: #000c; color: #9fe; font-size: 11px; max-width: min(460px, 70vw);
+}
+.vista3d-medidas pre { margin: 0 0 6px; white-space: pre-wrap; user-select: text; }
+@media (max-width: 760px) {
+  .oficina.modo-3d { height: 62vh; min-height: 320px; border-radius: 10px; }
+  .controles { flex-wrap: wrap; }
+}
+
+/* Edificio 3D: nombres de los departamentos (HTML nítido sobre el lienzo) */
+.vista3d-etiquetas { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.etiqueta-dep {
+  position: absolute; left: 0; top: 0; pointer-events: auto; white-space: nowrap;
+  display: flex; gap: 6px; align-items: center; padding: 4px 9px; border-radius: 999px;
+  background: #0f1526e0; color: var(--texto); border: 1px solid var(--borde); font: inherit; font-size: 12px; cursor: pointer;
+}
+.etiqueta-dep.elegida { border-color: var(--brillo); color: var(--brillo); }
+.etiqueta-luz { width: 9px; height: 9px; border-radius: 50%; background: var(--c-sin-datos); flex: none; }
+.etiqueta-dep.estado-trabajando .etiqueta-luz, .tablero-estado.estado-trabajando .etiqueta-luz { background: var(--c-trabajando); }
+.etiqueta-dep.estado-esperando .etiqueta-luz, .tablero-estado.estado-esperando .etiqueta-luz { background: var(--c-esperando); }
+.etiqueta-dep.estado-finalizado .etiqueta-luz, .tablero-estado.estado-finalizado .etiqueta-luz { background: var(--c-finalizado); }
+.etiqueta-dep.estado-error .etiqueta-luz, .tablero-estado.estado-error .etiqueta-luz { background: var(--c-error); }
+.etiqueta-dep.estado-revision .etiqueta-luz, .tablero-estado.estado-revision .etiqueta-luz { background: var(--c-revision); }
+.etiqueta-alertas { color: var(--c-revision); }
+@media (max-width: 760px) { .etiqueta-dep { font-size: 10px; padding: 3px 7px; } }
+@media (max-width: 760px) { .etiqueta-dep { white-space: nowrap; } .etiqueta-luz { display: inline-block; margin-right: 4px; } }
+
+/* Minimapa del piso (abajo a la derecha). En celular no se muestra: la interfaz móvil nueva es otra fase. */
+.vista3d-minimapa { position: absolute; right: 10px; bottom: 10px; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; line-height: 0; }
+.vista3d-minimapa canvas { width: 180px; height: 120px; cursor: pointer; }
+@media (max-width: 760px) {
+  .vista3d-minimapa { display: none; }
+}
+
+/* Tablero de operaciones */
+.tablero-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.tablero-insignia { font-weight: 800; letter-spacing: .06em; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+.tablero-insignia.es-demo { background: #ffb547; color: #1a1200; }
+.tablero-insignia.es-real { background: #12361f; color: #7ff0a8; border: 1px solid #43c47a; }
+.tablero-suave { color: var(--texto-suave); font-size: 13px; }
+.tablero-estados { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.tablero-estado { white-space: nowrap; flex: none; font-size: 13px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--borde); }
+.tablero-desplegable { position: relative; font-size: 13px; }
+.tablero-desplegable summary { cursor: pointer; padding: 2px 8px; border: 1px solid var(--borde); border-radius: 6px; list-style: none; }
+.tablero-desplegable[open] summary { border-color: var(--texto-suave); }
+.tablero-lista { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; width: min(460px, 90vw); max-height: 50vh; overflow: auto;
+  background: #0f1526f2; border: 1px solid var(--borde); border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
+.tablero-lista p { margin: 0; }
+.tablero-alerta, .tablero-cambio { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.tablero-nivel { font-weight: 700; font-size: 12px; padding: 0 6px; border-radius: 4px; background: #2a3150; }
+.nivel-critica .tablero-nivel { background: var(--c-error); color: #1a0000; }
+.nivel-advertencia .tablero-nivel { background: var(--c-revision); color: #1a1200; }
+.enlace { background: none; border: 0; padding: 0; color: #ffd89a; text-decoration: underline; cursor: pointer; font: inherit; }
+@media (max-width: 760px) { .tablero-lista { left: 0; right: auto; } }
+.tablero-estado .etiqueta-luz { display: inline-block; margin-right: 5px; }
+@media (max-width: 760px) {
+  .tablero-estados { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+  .tablero-fuente, .tablero-fecha { display: none; }
+  .luz-fija { display: none; } /* en celular la luz de la hora ya garantiza un mínimo visible */
+}
+.etiqueta-dep[hidden] { display: none; }
+/* Avisos y botones de personajes solo ocupan lo que miden: deja más pantalla libre para el edificio. */
+.vista3d-aviso { right: auto; max-width: calc(100% - 230px); }
+.vista3d-personajes { right: auto; max-width: calc(100% - 230px); }
+@media (max-width: 760px) { .vista3d-aviso, .vista3d-personajes { max-width: calc(100% - 20px); } }
+.vista3d-etiquetas .etiqueta-dep { touch-action: none; } /* deslizar sobre una etiqueta también cambia de departamento */
+
+/* Fase C2 — interfaz para celular: barra inferior ◀ [departamento ▾] ▶ ⋯ con lista y menú.
+   En escritorio no existe (.vista3d-movil solo se crea en celular). */
+.vista3d-movil { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3; }
+.movil-barra { display: flex; gap: 6px; align-items: stretch; background: var(--fondo); padding: 4px; margin: -4px; border-radius: 14px; } /* opaca: lo de atrás no se transparenta */
+.movil-flecha, .movil-actual, .movil-fila, .movil-opcion {
+  background: #0f1526f0; color: var(--texto); border: 1px solid var(--borde); border-radius: 10px; font: inherit; cursor: pointer;
+}
+.movil-flecha { flex: none; width: 46px; min-height: 46px; font-size: 18px; }
+.movil-flecha:disabled { opacity: .4; }
+.movil-actual { flex: 1; min-width: 0; min-height: 46px; display: flex; gap: 8px; align-items: center; justify-content: center; padding: 0 10px; font-size: 15px; font-weight: 600; }
+.movil-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.movil-alertas { flex: none; font-size: 12px; font-weight: 700; color: #1a1200; background: var(--c-revision); border-radius: 999px; padding: 1px 7px; }
+.movil-hoja[hidden] { display: none; }
+.movil-hoja { position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); max-height: min(55vh, 420px); overflow: auto;
+  background: #0b1020f7; border: 1px solid var(--borde); border-radius: 12px; padding: 6px; display: grid; gap: 4px; }
+.movil-fila { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "luz nombre alertas" "luz detalle alertas"; gap: 0 10px; align-items: center; text-align: left; padding: 9px 12px; min-height: 48px; }
+.movil-fila .etiqueta-luz { grid-area: luz; width: 12px; height: 12px; }
+.movil-fila-nombre { grid-area: nombre; font-weight: 600; }
+.movil-fila-detalle { grid-area: detalle; font-size: 12px; color: var(--texto-suave); }
+.movil-fila .movil-alertas { grid-area: alertas; }
+.movil-fila[aria-selected="true"] { border-color: var(--brillo); }
+.movil-opcion { text-align: left; padding: 11px 12px; min-height: 44px; }
+.movil-opcion[aria-checked="true"] { border-color: var(--brillo); color: var(--brillo); }
+.movil-menu-titulo { margin: 6px 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--texto-suave); }
+.movil-actual .etiqueta-luz { width: 11px; height: 11px; }
+.movil-actual.estado-trabajando .etiqueta-luz, .movil-fila.estado-trabajando .etiqueta-luz { background: var(--c-trabajando); }
+.movil-actual.estado-esperando .etiqueta-luz, .movil-fila.estado-esperando .etiqueta-luz { background: var(--c-esperando); }
+.movil-actual.estado-finalizado .etiqueta-luz, .movil-fila.estado-finalizado .etiqueta-luz { background: var(--c-finalizado); }
+.movil-actual.estado-error .etiqueta-luz, .movil-fila.estado-error .etiqueta-luz { background: var(--c-error); }
+.movil-actual.estado-revision .etiqueta-luz, .movil-fila.estado-revision .etiqueta-luz { background: var(--c-revision); }
+/* Con la barra móvil: arriba solo queda la insignia REAL/DEMO; avisos y personajes suben sobre la barra. */
+.vista3d.es-movil .vista3d-barra > :not(.vista3d-fuente) { display: none; }
+.vista3d.es-movil .vista3d-aviso { top: 46px; bottom: auto; font-size: 12px; padding: 6px 10px; }
+
+@media (max-width: 760px) {
+  /* Cabecera compacta: el edificio es lo principal. REAL/DEMO y conexión quedan pegados arriba al bajar. */
+  .cabecera { padding: 8px 10px; gap: 8px; }
+  /* El título queda para lectores de pantalla: en celular la pantalla es para el edificio. */
+  .marca { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .pisos .piso { padding: 5px 10px; font-size: 13px; }
+  /* Fase F: con muchos proyectos el selector se apilaba (266 px con 23). Ahora es una sola fila que se desliza. */
+  .pisos { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; max-width: 100%; }
+  .pisos .piso { flex: none; }
+  .controles .boton, .controles .interruptor { font-size: 13px; }
+  .banda-demo { padding: 4px 10px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conexion { position: sticky; top: 0; z-index: 12; background: var(--fondo); padding: 6px 10px; font-size: 13px; }
+  .conexion .conexion-motivo { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tablero-fila { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .tablero-fila > * { flex: none; }
+  .principal, .principal:has(.panel:not([hidden])) { padding: 8px; }
+  .oficina.modo-3d { scroll-margin-top: 78px; height: calc(100svh - 150px); min-height: 380px; max-height: 900px; }
+  .panel { max-height: 50vh; overflow: auto; z-index: 14; }
+  /* La barra queda fija abajo (como una app) y el detalle se abre encima de ella, sin taparla. */
+  .vista3d.es-movil .vista3d-movil { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 16; }
+  /* De abajo hacia arriba: barra, botones de personajes y, si se abre, el detalle. Nada tapa la barra. */
+  .vista3d.es-movil .vista3d-personajes { position: fixed; left: 8px; right: 8px; max-width: none; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); z-index: 15; }
+  body:has(.vista3d-movil) .panel { bottom: calc(106px + env(safe-area-inset-bottom, 0px)); max-height: 32vh; border-radius: 14px; left: 6px; right: 6px; }
+  body:has(.vista3d-movil) { padding-bottom: 110px; }
+}
+
+/* Fase D3 — celular: indicadores que caben, horizontal con poco alto y detalle a un lado. */
+.tablero-estado-icono { display: none; }
+/* Texto oculto a la vista pero leído por lectores de pantalla; el padre relativo evita que ensanche la página. */
+.tablero-estado { position: relative; }
+@media (max-width: 760px) {
+  .tablero-estado { padding: 1px 7px; }
+  .tablero-estado .etiqueta-luz { display: none; }
+  .tablero-estado-icono { display: inline; margin-right: 3px; }
+  .tablero-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+/* Celular vertical: los indicadores van en su propia línea para que se vean todos sin desplazar. */
+@media (max-width: 760px) and (orientation: portrait) {
+  .tablero-fila { flex-wrap: wrap; }
+  .tablero-estados { flex: 1 0 100%; order: 5; }
+  .tablero-fila { gap: 4px 8px; }
+  .tablero-desplegable summary { padding: 2px 6px; }
+  /* La fecha exacta entre paréntesis se oculta; "Dato de hace…" sigue visible. */
+  .tablero-fecha { display: none; }
+}
+/* Celular horizontal (poco alto): una sola franja arriba y el detalle como columna a la derecha. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .cabecera { position: relative; padding: 4px 8px; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+  .marca { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cabecera .boton, .cabecera .piso { padding: 4px 9px; font-size: 13px; }
+  .cabecera .interruptor { font-size: 12px; white-space: nowrap; }
+  .pisos, .controles { flex-wrap: nowrap; }
+  .controles { width: auto; }
+  .banda-demo { display: none; } /* la insignia DEMO sigue en la franja fija de abajo y en la escena */
+  .conexion { position: sticky; top: 0; z-index: 12; background: var(--fondo); padding: 4px 8px; font-size: 12px; }
+  .conexion .conexion-motivo { display: none; }
+  .tablero-fila { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 4px 8px; }
+  .tablero-fila > * { flex: none; }
+  .tablero-estado { padding: 0 6px; font-size: 12px; }
+  .tablero-estado .etiqueta-luz { display: none; }
+  .tablero-estado-icono { display: inline; margin-right: 3px; }
+  .tablero-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .tablero-fuente, .tablero-fecha { display: none; }
+  .principal, .principal:has(.panel:not([hidden])) { padding: 4px 8px; grid-template-columns: 1fr; }
+  .oficina.modo-3d { scroll-margin-top: 34px; height: calc(100svh - 40px); min-height: 240px; }
+  .vista3d.es-movil .vista3d-aviso { top: 40px; max-width: 55%; }
+  body:has(.vista3d-movil) .panel {
+    position: fixed; top: 38px; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); left: auto; right: 6px;
+    width: min(38vw, 340px); max-height: none; overflow: auto; border-radius: 12px; z-index: 14;
+    align-self: stretch; /* el panel base usa `start`; en un elemento fijo eso lo encoge al contenido y lo sube a y=0 */
+  }
+  body:has(.vista3d-movil):has(.panel:not([hidden])) .vista3d.es-movil .vista3d-personajes { right: calc(min(38vw, 340px) + 14px); }
+  .vista3d.es-movil .vista3d-movil { left: 8px; right: 8px; }
+  body:has(.vista3d-movil) { padding-bottom: 70px; }
+}
+
+/* ===== Fase G: experiencia visual (medida con pruebas/navegador/auditoria-visual.cjs) ===== */
+.ocultar-movil { display: inline; }
+.boton-inmersivo[hidden] { display: none; }
+.salir-inmersivo[hidden] { display: none; }
+.vista3d-aviso .aviso-corto { display: none; }
+.boton:hover, .piso:hover { border-color: #46557c; }
+.boton, .piso, .tablero-desplegable summary { transition: border-color .15s, background-color .15s; }
+.tablero-desplegable summary:hover { border-color: #46557c; }
+
+@media (max-width: 760px) {
+  .ocultar-movil { display: none; }
+  /* Pestañas y controles con objetivo táctil de 36 px; la cabecera en dos filas bajas. */
+  .cabecera { padding: 6px 8px; gap: 6px; }
+  .pisos .piso, .cabecera .boton { min-height: 36px; padding: 4px 10px; font-size: 14px; }
+  .controles { gap: 8px; width: 100%; flex-wrap: nowrap; }
+  .controles .segmentado { flex: none; }
+  .controles .interruptor { flex: 1; min-height: 36px; }
+  .texto-control { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .icono-control { font-size: 18px; line-height: 1; }
+  #recargar, .boton-inmersivo { min-width: 40px; }
+  /* Franja DEMO completa (sin "...") en una línea corta. */
+  .banda-demo { white-space: normal; padding: 3px 10px; }
+  /* Estados con su nombre (sin símbolos que interpretar): punto de color + número + palabra. */
+  .conexion { font-size: 12px; padding-left: 8px; padding-right: 8px; }
+  .tablero-fila { gap: 4px 5px; }
+  .tablero-desplegable summary { padding: 2px 5px; }
+  .tablero-estado { padding: 0 6px; font-size: 11px; }
+  .tablero-estados { gap: 4px; }
+  .tablero-estado .etiqueta-luz { display: inline-block; width: 8px; height: 8px; margin-right: 4px; }
+  .tablero-estado-icono { display: none; }
+  .tablero-estado-texto { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+  .tablero-estados { flex-wrap: wrap; overflow: visible; }
+  /* Con datos en línea, el motivo repite lo que ya dicen la franja y la insignia; un error sí se muestra. */
+  .conexion-en_linea .conexion-motivo { display: none; }
+  /* El aviso informativo es una pastilla de una línea arriba a la derecha, en la fila de la insignia. */
+  .vista3d.es-movil .vista3d-aviso.aviso-info { top: 10px; left: auto; right: 10px; bottom: auto; max-width: calc(100% - 110px);
+    padding: 4px 10px; border-radius: 999px; white-space: nowrap; font-size: 12px; }
+  /* El texto completo queda para lectores de pantalla (la forma corta está oculta para ellos). */
+  .vista3d-aviso.aviso-info .aviso-largo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .vista3d-aviso.aviso-info .aviso-corto { display: inline; }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  .tablero-estados { flex: 1 0 100%; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Horizontal: una sola fila. Estados como punto de color + número (el mismo color que las etiquetas
+     del edificio); el nombre completo queda en el título y para lectores de pantalla. */
+  .tablero-estados { flex: none; flex-wrap: nowrap; }
+  .tablero-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cabecera .boton, .cabecera .piso { min-height: 0; }
+  .pisos { flex: 1 1 auto; }
+  .controles { width: auto; flex: none; }
+  .controles .interruptor { flex: none; min-height: 0; }
+  /* La insignia REAL/DEMO del tablero queda justo encima: la de la escena se quita para dar alto al edificio. */
+  .vista3d.es-movil .vista3d-fuente { display: none; }
+  .vista3d.es-movil .vista3d-aviso.aviso-info { top: 8px; }
+}
+
+/* Modo inmersivo: el edificio ocupa la ventana; arriba queda una franja con REAL/DEMO, conexión,
+   edad del dato y alertas (los errores de conexión siguen completos). No es pantalla completa del navegador. */
+html.inmersivo body { overflow: hidden; padding-bottom: 0; }
+html.inmersivo .cabecera, html.inmersivo .banda-demo, html.inmersivo .pie, html.inmersivo .vista3d-minimapa { display: none; }
+html.inmersivo .principal { padding: 0; }
+html.inmersivo .oficina.modo-3d { position: fixed; inset: 0; height: 100svh; max-height: none; min-height: 0; border-radius: 0; border: 0; z-index: 1; }
+html.inmersivo .conexion {
+  position: fixed; top: 8px; left: 8px; right: auto; max-width: calc(100% - 70px); z-index: 13;
+  background: #0b1020e8; border: 1px solid var(--borde); border-radius: 10px; padding: 5px 10px; font-size: 13px;
+}
+html.inmersivo .conexion .tablero-fila { flex-wrap: nowrap; gap: 8px; }
+html.inmersivo .tablero-estados, html.inmersivo [data-k="cambios"], html.inmersivo .tablero-fuente, html.inmersivo .tablero-fecha { display: none; }
+html.inmersivo .conexion-en_linea .conexion-motivo { display: none; }
+html.inmersivo .salir-inmersivo { position: fixed; top: 8px; right: 8px; z-index: 13; min-height: 36px; background: #0b1020e8; }
+html.inmersivo .vista3d-barra { top: 56px; }
+html.inmersivo .vista3d-fuente { display: none; }
+/* Errores o datos corregidos del archivo: siguen a la vista, debajo de la franja de estado. */
+html.inmersivo #diagnostico:not([hidden]) { position: fixed; top: 52px; left: 8px; z-index: 13; max-width: calc(100% - 16px);
+  background: #0b1020f0; border: 1px solid var(--borde); border-radius: 10px; padding: 4px 10px; margin: 0; }
+html.inmersivo body:has(#diagnostico:not([hidden])) .vista3d-barra,
+html.inmersivo body:has(#diagnostico:not([hidden])) .vista3d.es-movil .vista3d-aviso.aviso-info { top: 92px; } /* REAL/DEMO ya está en la franja fija de arriba */
+html.inmersivo .vista3d.es-movil .vista3d-aviso.aviso-info { top: 56px; }
+html.inmersivo .panel { position: fixed; top: 56px; right: 8px; bottom: 8px; left: auto; width: min(380px, 42vw); max-height: none; overflow: auto; z-index: 14; }
+@media (max-width: 760px) {
+  html.inmersivo .salir-inmersivo { font-size: 0; width: 40px; padding: 0; }
+  html.inmersivo .salir-inmersivo::before { content: "✕"; font-size: 18px; }
+  html.inmersivo .conexion { font-size: 12px; padding: 4px 8px; }
+  html.inmersivo body:has(.vista3d-movil) .panel { top: auto; left: 6px; right: 6px; width: auto; bottom: calc(106px + env(safe-area-inset-bottom, 0px)); max-height: 32vh; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  html.inmersivo body:has(.vista3d-movil) .panel { top: 48px; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); left: auto; right: 6px; width: min(38vw, 340px); max-height: none; }
+  html.inmersivo .vista3d-barra, html.inmersivo .vista3d.es-movil .vista3d-aviso.aviso-info { top: 46px; }
+}
+
+/* ===== Fase I: estado de cada piso en el selector (sale de su archivo; no anima nada) ===== */
+.piso { display: inline-flex; align-items: center; gap: 6px; position: relative; }
+.piso-estado { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: .02em; padding: 1px 6px; border-radius: 999px; border: 1px solid currentColor; line-height: 1.4; }
+.piso-luz { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.piso-real { color: #5fd38d; }
+.piso-demo { color: #f2c14e; }
+.piso-desactualizado { color: #f0a35e; }
+.piso-invalido { color: #ff7b7b; }
+.piso-desconectado { color: #9aa6c2; }
+.reintentar-3d { color: #ffe3e3; text-decoration: underline; font-weight: 600; }
+/* En celular la fila de pisos es estrecha: queda el punto de color; el texto sigue para lectores (aria-label). */
+@media (max-width: 760px), (max-height: 500px) and (orientation: landscape) {
+  .piso-estado { border: 0; padding: 0; }
+  .piso-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* ---------- Fase K: sala de control ---------- */
+.boton-sala { display: inline-flex; align-items: center; gap: 4px; border-color: #3d4a70; }
+.boton-sala[aria-pressed="true"] { border-color: var(--brillo); box-shadow: 0 0 0 1px var(--brillo) inset; }
+.sala-contador { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--c-error); color: #1a0000; font-weight: 800; font-size: 12px; line-height: 20px; text-align: center; }
+html.sala-abierta #oficina, html.sala-abierta #panel, html.sala-abierta #conexion,
+html.sala-abierta #banda-demo, html.sala-abierta #diagnostico, html.sala-abierta #aviso-vista { display: none !important; }
+html.sala-abierta .principal { grid-template-columns: 1fr !important; }
+.sala-control[hidden], .llegada[hidden] { display: none; }
+.sala-control { background: #0f1424; border: 1px solid var(--borde); border-radius: 14px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.sala-cabeza { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.sala-cabeza h2 { font-size: 20px; }
+.sala-cabeza h2:focus { outline: none; }
+.sala-sub, .sala-nota { margin: 2px 0 0; font-size: 12.5px; color: var(--texto-suave); }
+.sala-suave { color: var(--texto-suave); font-style: normal; }
+.sala-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
+.sala-cifra { background: var(--cuarto); border: 1px solid var(--borde); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.sala-cifra strong { font-size: 22px; line-height: 1.1; }
+.sala-cifra span { font-size: 12px; color: var(--texto-suave); }
+.sala-cifra.c-real strong { color: #5fd38d; }
+.sala-cifra.c-demo strong { color: #f2c14e; }
+.sala-cifra.c-aviso strong { color: var(--c-revision); }
+.sala-cifra.c-error strong { color: var(--c-error); }
+.sala-cuerpo { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.sala-columna { display: grid; gap: 14px; min-width: 0; }
+.sala-seccion { min-width: 0; }
+.sala-seccion > h3, .sala-h3-linea { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-suave); margin: 0 0 8px; display: inline; }
+.sala-seccion > h3 { display: block; }
+.sala-eventos > summary { cursor: pointer; list-style: revert; }
+.sala-proyectos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.sala-tarjeta { background: var(--cuarto); border: 1px solid var(--borde); border-left: 4px solid var(--c-sin-datos); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; }
+.sala-k-real { border-left-color: #43c47a; }
+.sala-k-demo { border-left-color: #f2c14e; }
+.sala-k-desactualizado { border-left-color: var(--c-revision); }
+.sala-k-invalido { border-left-color: var(--c-error); }
+.piso-pendiente { color: #9aa6c2; }
+.sala-tarjeta .piso-estado { border: 1px solid currentColor; padding: 1px 6px; }
+.sala-tarjeta .piso-estado-texto { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+.sala-tarjeta.es-actual { box-shadow: 0 0 0 1px #3d4a70 inset; }
+.sala-tarjeta-cabeza { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.sala-tarjeta h4 { margin: 0; font-size: 15px; }
+.sala-tarjeta-conexion { margin: 0; font-size: 13px; font-weight: 600; }
+.sala-datos { margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--texto-suave); }
+.sala-datos li { color: var(--texto-suave); }
+.sala-tarjeta .sala-nota { color: var(--texto-suave); }
+.sala-tarjeta-atencion { margin: 0; font-size: 12.5px; color: var(--c-revision) !important; font-weight: 600; }
+.sala-ir { justify-self: start; margin-top: 4px; }
+.sala-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sala-item { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: var(--cuarto); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+.sala-item-texto { flex: 1 1 200px; min-width: 0; }
+.sala-nivel, .sala-cat { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #2a3350; white-space: nowrap; }
+.nivel-critica .sala-nivel, .nivel-error .sala-nivel, .nivel-invalido .sala-nivel, .cat-error { background: #4a1820; color: #ffb3b3; }
+.nivel-advertencia .sala-nivel, .nivel-requiere_revision .sala-nivel, .nivel-desactualizado .sala-nivel, .cat-vencida, .cat-alerta { background: #4a3812; color: #ffd98a; }
+.cat-finalizacion { background: #12361f; color: #7ff0a8; }
+.cat-estado, .cat-conexion, .cat-fuente { background: #1d2c4a; color: #a9cbff; }
+.sala-vacio { margin: 0; font-size: 13px; color: var(--texto-suave); }
+.llegada { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 30; margin: 0; background: #11182b; border: 1px solid var(--brillo); color: var(--texto); padding: 8px 14px; border-radius: 999px; font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.45); }
+.piso.recien-elegido { animation: resaltar-piso 1.2s ease-out 2; }
+@keyframes resaltar-piso { 0% { box-shadow: 0 0 0 3px var(--brillo); } 100% { box-shadow: 0 0 0 1px var(--brillo) inset; } }
+@media (prefers-reduced-motion: reduce) { .piso.recien-elegido { animation: none; box-shadow: 0 0 0 3px var(--brillo); } }
+@media (max-width: 900px) { .sala-cuerpo { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .sala-control { padding: 10px; border-radius: 10px; gap: 10px; }
+  .sala-cabeza h2 { font-size: 17px; }
+  .sala-cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .sala-cifra { padding: 5px 7px; gap: 0; }
+  .sala-cifra strong { font-size: 17px; }
+  .sala-cifra span { font-size: 11px; line-height: 1.25; }
+  .sala-proyectos { grid-template-columns: 1fr; }
+  .sala-control .boton, .sala-control .boton-chico { min-height: 44px; padding: 8px 12px; }
+  .boton-sala .sala-contador { min-width: 18px; line-height: 18px; }
+  .llegada { top: auto; bottom: calc(118px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 24px); }
+}
+/* K: con 6 pisos, los que no tienen conexión muestran solo su punto (el texto sigue para lectores y en el título). */
+.pisos .piso-desconectado { border: 0; padding: 0; }
+.pisos .piso-desconectado .piso-estado-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* K: con el detalle abierto (o pantallas medianas) los accesos de cámara quedan como icono; el nombre sigue en aria-label y título. */
+.principal:has(.panel:not([hidden])) .vista3d-barra .texto-k { display: none; }
+@media (max-width: 1180px) { .vista3d-barra .texto-k { display: none; } }
+.chip-seguir[aria-pressed="true"] { border-color: var(--brillo); color: var(--brillo); }
+.historial { display: grid; gap: 4px; }
+.historial li { font-size: 13px; }
+.atajos { display: block; margin-top: 4px; font-size: 12px; color: var(--texto-suave); }
+.atajos kbd { font: inherit; font-size: 11px; padding: 0 5px; border: 1px solid var(--borde); border-radius: 4px; background: var(--cuarto); color: var(--texto); }
+@media (max-width: 760px), (pointer: coarse) { .atajos { display: none; } }
+
+/* ---------- Fase L ---------- */
+/* Fundido corto al cambiar de piso o de modo (sin él con «reducir movimiento»). */
+.vista3d canvas { transition: opacity 0.35s ease; }
+@media (prefers-reduced-motion: reduce) { .vista3d canvas { transition: none; } }
+
+/* Tarjeta flotante del personaje o puesto elegido: solo texto, no recibe clics (el panel tiene las acciones). */
+.vista3d-tarjeta {
+  position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none;
+  display: grid; gap: 1px; min-width: 150px; max-width: 230px;
+  padding: 6px 10px 7px; border-radius: 8px; border: 1px solid var(--borde); border-left: 4px solid var(--c-sin-datos);
+  background: rgba(13, 18, 32, 0.92); color: var(--texto); font-size: 12px; line-height: 1.3;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.vista3d-tarjeta[hidden] { display: none; }
+.vista3d-tarjeta strong { font-size: 13px; }
+.vista3d-tarjeta .tarjeta-dep, .vista3d-tarjeta .tarjeta-que { color: var(--texto-suave); }
+.vista3d-tarjeta .tarjeta-vacio { color: #ffd89a; font-style: italic; }
+.vista3d-tarjeta.estado-trabajando { border-left-color: var(--c-trabajando); }
+.vista3d-tarjeta.estado-esperando { border-left-color: var(--c-esperando); }
+.vista3d-tarjeta.estado-finalizado { border-left-color: var(--c-finalizado); }
+.vista3d-tarjeta.estado-error { border-left-color: var(--c-error); }
+.vista3d-tarjeta.estado-revision { border-left-color: var(--c-revision); }
+.vista3d-tarjeta[data-puesto="vacio"] { border-style: dashed; border-left-style: solid; }
+.vista3d.es-movil .vista3d-tarjeta { font-size: 11px; min-width: 120px; max-width: 180px; padding: 4px 8px; }
+
+/* Modo incrustado (?incrustado=1): para mostrarse dentro de otra página (futuro portal Cauce). Sin marca ni pie;
+   todo lo que dice REAL/DEMO, conexión, edad del dato y alertas sigue visible. */
+html.incrustado .marca, html.incrustado .pie { display: none; }
+html.incrustado .cabecera { padding-top: 6px; padding-bottom: 6px; }
+
+/* Fase L: proyectos pendientes agrupados en la cabecera cuando hay muchos pisos. */
+.pisos-mas { position: relative; }
+.pisos-mas > summary { list-style: none; cursor: pointer; }
+.pisos-mas > summary::-webkit-details-marker { display: none; }
+.pisos-mas-lista { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; display: grid; gap: 4px; min-width: 220px;
+  padding: 6px; background: var(--letrero); border: 1px solid var(--borde); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+.pisos-mas-lista .piso { justify-content: space-between; width: 100%; }
+@media (max-width: 760px) { .pisos-mas[open] .pisos-mas-lista { position: fixed; top: 64px; left: 8px; right: 8px; } }
+
+/* Fase L: sala de control: aparece con un fundido corto, accesos rápidos, identidad y pendientes compactos. */
+.sala-control:not([hidden]) { animation: sala-entra 0.22s ease-out; }
+@keyframes sala-entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sala-control:not([hidden]) { animation: none; } }
+.sala-accesos { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
+.sala-accesos .sala-acceso-alerta { border-color: var(--c-revision); color: #ffd89a; }
+@media (min-width: 1100px) { .sala-accesos { display: none; } } /* en pantalla grande todo cabe a la vista */
+.sala-tarjeta { position: relative; overflow: hidden; }
+.sala-tarjeta[style*="--identidad"]::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--identidad); opacity: 0.9; }
+.sala-estilo { margin: 0; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--texto-suave); }
+.sala-tarjeta-compacta { padding: 8px 12px; opacity: 0.85; }
+.sala-tarjeta-compacta .sala-nota { font-size: 12px; }
+.sala-control h3[id] { scroll-margin-top: 80px; }
+.sala-accesos a.boton { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* ---------- Nexus fase 1: oficina de supervisión (reutiliza el estilo de la sala de control) ---------- */
+html.nexus-abierto #oficina, html.nexus-abierto #panel, html.nexus-abierto #conexion,
+html.nexus-abierto #banda-demo, html.nexus-abierto #diagnostico, html.nexus-abierto #aviso-vista { display: none !important; }
+html.nexus-abierto .principal { grid-template-columns: 1fr !important; }
+.nexus[hidden] { display: none; }
+.nexus { border-color: #4a3d70; }
+.nexus-demo { margin: 0; padding: 8px 12px; border-radius: 10px; background: #3a2f0b; color: #ffe08a; font-size: 13px; }
+.nexus-errores { padding: 8px 12px; border-radius: 10px; background: #3a1414; color: #ffc4c4; font-size: 13px; }
+.nexus-errores ul { margin: 4px 0 0; padding-left: 18px; }
+.nexus-tarjetas { display: grid; align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 10px; }
+.nexus-tarjeta { background: var(--cuarto); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; overflow-wrap: anywhere; }
+.nexus-tarjeta h4 { font-size: 14px; margin: 0; }
+.nexus-retirada { opacity: .6; }
+.nexus-enunciado { margin: 0; font-size: 13px; }
+.nexus-nivel { margin: 0; font-size: 12.5px; }
+.nexus-sostiene { color: var(--c-revision); }
+.nexus-chip { flex: none; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--borde); white-space: nowrap; }
+.nexus-sin_objeciones { color: #5fd38d; border-color: #2f6b47; }
+.nexus-incompleto { color: var(--c-revision); border-color: #6b5a2f; }
+.nexus-con_objeciones { color: var(--c-error); border-color: #6b2f2f; }
+.nexus-etapa-aprobada, .nexus-etapa-adoptada { color: #9ec5ff; border-color: #2f4a6b; }
+.nexus-reglas, .nexus-historial, .nexus-bloqueos { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 3px; font-size: 12.5px; }
+.nexus-historial { padding-left: 18px; list-style: decimal; }
+.nexus-bloqueos { padding-left: 14px; list-style: disc; color: var(--c-revision); }
+.nexus-regla { display: grid; grid-template-columns: 16px 1fr; gap: 4px; }
+.nexus-regla.r-cumple .nexus-icono { color: #5fd38d; }
+.nexus-regla.r-no_cumple .nexus-icono { color: var(--c-error); }
+.nexus-regla.r-no_evaluado .nexus-icono { color: var(--c-revision); }
+.nexus textarea { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, Consolas, monospace; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 8px; padding: 8px; }
+.nexus-mal { color: var(--c-error); }
+.nexus-salida ul { font-size: 12.5px; }
+.nexus summary { cursor: pointer; }
+/* Fase 1.5: fuente DEMO/REAL, integridad, filtros, candidatas e importación. Sin animaciones (Intel UHD). */
+.nexus-fuente { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+.nexus-fuente-real { background: #0f2f24; color: #b9f3d3; border: 1px solid #2f6b47; }
+.nexus-integridad { margin: 0; font-size: 12.5px; }
+.nexus-integridad ul { margin: 4px 0 0; padding-left: 18px; }
+.nexus button.sala-cifra { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.nexus .sala-cifra.nexus-activo { outline: 2px solid #9ec5ff; outline-offset: -2px; }
+.nexus-filtros { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13px; margin: 0 0 8px; }
+.nexus-filtros select { font: inherit; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 6px; }
+.nexus-falta, .nexus-admision { font-size: 12.5px; padding: 6px 8px; border-radius: 8px; background: #2a2410; color: #ffe08a; }
+.nexus-falta ul, .nexus-admision ul { margin: 4px 0 0; padding-left: 16px; }
+.nexus-admite { background: #0f2f24; color: #b9f3d3; }
+.nexus-candidata { border-style: dashed; border-color: #6b5a2f; }
+.nexus-chip-candidata { color: #ffe08a; border-color: #6b5a2f; }
+.nexus-regla.r-no_aplica .nexus-icono { color: var(--texto-suave, #9aa3b5); }
+
+/* ---------- CSI: laboratorio de Inteligencia Estratégica (reutiliza sala de control y Nexus; sin animaciones) ---------- */
+html.csi-abierto #oficina, html.csi-abierto #panel, html.csi-abierto #conexion,
+html.csi-abierto #banda-demo, html.csi-abierto #diagnostico, html.csi-abierto #aviso-vista { display: none !important; }
+html.csi-abierto .principal { grid-template-columns: 1fr !important; }
+.csi { border-color: #2f5e6b; }
+.csi:not([hidden]) { animation: none; }
+.csi-pestanas { display: flex; flex-wrap: wrap; gap: 6px; }
+.csi-cuerpo { display: grid; gap: 12px; min-width: 0; }
+.csi-seccion { display: grid; gap: 8px; min-width: 0; }
+.csi-seccion h3 { margin: 0; font-size: 16px; }
+.csi h5 { margin: 6px 0 2px; font-size: 12.5px; color: var(--texto-suave); }
+.csi-lista { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13px; }
+.csi-fuentes { display: block; color: var(--texto-suave); font-size: 11.5px; }
+.csi-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+.csi-col { border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+.csi-col-hecho { border-color: #2f6b47; } .csi-col-declaracion { border-color: #2f4a6b; }
+.csi-col-inferencia { border-color: #6b5a2f; } .csi-col-simulacion, .csi-col-prediccion { border-color: #5a2f6b; border-style: dashed; }
+.csi-tabla-envoltura { overflow-x: auto; max-width: 100%; }
+.csi-tabla { border-collapse: collapse; font-size: 12.5px; width: 100%; min-width: 640px; }
+.csi-tabla th, .csi-tabla td { border-bottom: 1px solid var(--borde); padding: 4px 6px; text-align: left; vertical-align: top; }
+.csi-flujo { margin: 0; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--cuarto); overflow-wrap: anywhere; }
+.csi-arbol { margin: 0; padding-left: 16px; list-style: none; border-left: 1px dashed var(--borde); }
+.csi-arbol summary { cursor: pointer; font-size: 13px; }
+.csi-bloqueada > details > summary { color: var(--c-error); text-decoration: line-through; }
+.csi-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 6px 10px; align-items: end; }
+.csi-campo { display: grid; gap: 2px; font-size: 12.5px; }
+.csi-campo input, .csi-campo select, .csi-campo textarea { font: inherit; background: #0b0f1c; color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; padding: 5px 6px; min-width: 0; }
+.csi-botones { display: flex; flex-wrap: wrap; gap: 6px; }
+.csi-mensajes p { margin: 0; }
+/* CSI añadió un botón a la cabecera: en celulares angostos los controles se aprietan para no desbordar la página. */
+@media (max-width: 430px) {
+  .controles { gap: 4px; }
+  .controles .boton-sala, #recargar, .boton-inmersivo, .controles .segmentado .boton { padding-left: 8px; padding-right: 8px; min-width: 0; }
+  .controles .interruptor { min-width: 0; font-size: 12px; gap: 4px; }
+}
+/* CSI fase 2: HISTÓRICO / PREDICCIÓN, fuentes, mapa y Abogado (sin animaciones, Intel UHD). */
+.csi-historico { background: #12283a; border-color: #3d7fa8; color: #d6ecfa; }
+.csi-prediccion { background: #261a36; border-color: #8a5fc4; color: #eadcff; }
+.csi-conjuntos { align-items: center; font-size: 13px; margin: 0; }
+.csi-pendiente { border-style: dashed; border-color: #a8873d; }
+.csi-extracto { margin: 4px 0; padding: 6px 10px; border-left: 3px solid var(--borde); font-size: 12.5px; overflow-wrap: anywhere; }
+.csi-codigo { display: inline-block; max-width: 100%; overflow-wrap: anywhere; font-size: 12px; background: #0b0f1c; padding: 2px 6px; border-radius: 4px; }
+.csi-archivo { max-width: 160px; font-size: 11px; }
+.csi-pasos { margin: 0; padding-left: 4px; list-style: none; display: grid; gap: 6px; font-size: 13px; }
+.csi-pasos li { border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; overflow-wrap: anywhere; }
+.csi-mapa { max-width: 100%; overflow: hidden; }
+.csi-mapa-svg { width: 100%; height: auto; max-height: 380px; display: block; }
+.csi-mapa-linea { stroke: #6fb5c9; stroke-width: 2; }
+.csi-mapa-sin { stroke: #a8873d; stroke-dasharray: 5 4; }
+.csi-mapa-nodo { fill: #5fb3c4; stroke: #0b0f1c; stroke-width: 2; }
+.csi-mapa-banco_central { fill: #e0b84f; } .csi-mapa-gobierno { fill: #c97b5f; } .csi-mapa-participante_colectivo { fill: #9a8fd6; }
+.csi-mapa-nombre { fill: var(--texto); font-size: 12px; }
+.csi-mapa-rel { fill: var(--texto-suave); font-size: 10.5px; }
+.csi a[data-original] { color: #8fd0ff; }

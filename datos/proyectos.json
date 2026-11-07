@@ -1,0 +1,12 @@
+{
+  "descripcion": "Registro de proyectos (pisos). 'estado' es el archivo real que escribe el adaptador; si todavía no existe, se muestra 'demo'. 'pendiente' (opcional) explica por qué un proyecto no tiene conexión todavía; 'color' (opcional) es el color de identidad del piso; 'estilo' (opcional: comercial, financiero, alimentos, servicios, general) solo cambia la decoración del piso.",
+  "proyectos": [
+    { "id": "compago", "nombre": "Compago", "estado": "datos/reales/compago.json", "demo": "datos/demo/compago.json", "distribucion": "escena/compago.json", "color": "#e0a458", "estilo": "comercial" },
+    { "id": "ek-chuah", "nombre": "Ek Chuah", "estado": "datos/reales/ek-chuah.json", "demo": "datos/demo/ek-chuah.json", "distribucion": "escena/ek-chuah.json", "color": "#8fbc8f", "estilo": "financiero" },
+    { "id": "tezcatlipoca", "nombre": "Tezcatlipoca", "estado": "datos/reales/tezcatlipoca.json", "distribucion": null, "pendiente": "Repositorio sin localizar. No se conocen sus procesos (ver docs/TEZCATLIPOCA-REQUISITOS.md)." },
+    { "id": "montambre", "nombre": "Montambre", "estado": "datos/reales/montambre.json", "distribucion": "escena/montambre.json", "color": "#b48ead", "estilo": "alimentos" },
+    { "id": "csi", "nombre": "Inteligencia Estratégica (CSI)", "estado": "datos/reales/csi.json", "demo": "datos/demo/csi.json", "distribucion": "escena/csi.json", "color": "#5fb3c4", "estilo": "servicios" },
+    { "id": "cauceservice", "nombre": "CauceService", "estado": "datos/reales/cauceservice.json", "distribucion": null, "pendiente": "Repositorio sin localizar. No se conocen sus procesos." },
+    { "id": "repacar", "nombre": "Repacar / Auxilio Auto", "estado": "datos/reales/repacar.json", "distribucion": null, "pendiente": "Repositorio sin localizar. Falta confirmar si Repacar y Auxilio Auto son uno o dos proyectos." }
+  ]
+}

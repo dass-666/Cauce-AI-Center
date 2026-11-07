@@ -1,0 +1,36 @@
+{
+  "id": "proyecto-L1-2026-11-06",
+  "esquema": "cauce.leccion",
+  "version_esquema": "0.2",
+  "tipo": "metodo",
+  "origen": { "proyecto": "compago", "componente": "nombre-del-componente", "version_sistema": "versión o etiqueta", "commit": "abc1234", "tipo": "revision_humana" },
+  "autor": { "tipo": "humano", "identificador": "tu-alias" },
+  "hallazgo": "Una afirmación comprobable, sin promesa causal no demostrada.",
+  "antecedentes": [],
+  "evidencia": [
+    {
+      "tipo": "prueba_unitaria",
+      "referencia": "ruta/del/archivo o identificador",
+      "ubicacion": "main",
+      "commit": "abc1234",
+      "observado_en": "2026-11-01T10:00:00-06:00",
+      "conocido_en": "2026-11-01T10:00:00-06:00",
+      "base_conocimiento": "observed",
+      "proyecto_ejecutor": "compago",
+      "reproducible_declarado": false,
+      "reproduccion_independiente": null
+    }
+  ],
+  "procedencia": { "metodo": "revision_documental", "periodo_inicio": "2026-11-01", "periodo_fin": "2026-11-01", "alcance": "Qué cubre y qué no", "limitaciones_fuente": [] },
+  "fecha_hallazgo": "2026-11-05",
+  "vigente_hasta": "2027-05-06",
+  "muestra": { "n": 1, "unidad": "caso", "n_independiente": 1, "unidad_independencia": "caso", "n_efectivo": 1, "independencia": "no_aplica", "naturaleza": "sintetica", "naturaleza_resultado": "prueba_tecnica", "seleccion_en_muestra": false, "n_comparaciones": 1, "cobertura": "Qué parte del universo cubre", "supuestos": [] },
+  "confianza": { "nivel": "baja", "objeto": "metodo", "justificacion": "Por qué este nivel y sobre qué afirmación" },
+  "limitaciones": ["no_aplica_si: …"],
+  "aplicaciones_posibles": [],
+  "validacion": { "estado": "propuesta", "validado_en": [] },
+  "revisiones": [
+    { "fecha": "2026-11-06T10:00:00-06:00", "autor_tipo": "humano", "autor": "tu-alias", "decision": "propuesta", "justificacion": "Alta", "version": "r1" }
+  ],
+  "sensibilidad": "sin-datos-comerciales"
+}

@@ -1,0 +1,93 @@
+{
+  "id": "EK-L001",
+  "esquema": "cauce.leccion",
+  "version_esquema": "0.2",
+  "tipo": "metodo",
+  "origen": {
+    "proyecto": "ek-chuah",
+    "componente": "PENDIENTE: módulo que registra known_at",
+    "version_sistema": "PENDIENTE: sin commit de Ek Chuah verificado",
+    "tipo": "texto_ia"
+  },
+  "autor": {
+    "tipo": "ia",
+    "identificador": "claude-cauce-nexus"
+  },
+  "hallazgo": "Ek Chuah separa el instante en que un dato estuvo disponible (known_at) del instante observado; según el catálogo §9, cerca del 82 % de esos known_at son estimados, lo que impide conclusiones temporales fuertes. Afirmación NO verificada en el código.",
+  "antecedentes": [],
+  "evidencia": [
+    {
+      "tipo": "inventario_ia",
+      "referencia": "cauce-ai-center: docs/CAUCE_NEXUS_ARQUITECTURA_MAESTRA_v0.2.md §9 (resume una revisión de Ek Chuah que no está disponible en Cauce)",
+      "ubicacion": "fuera_de_repo",
+      "commit": "2591743fcb570f72c0d8abb6712d26190db423f6",
+      "sha256": "8443965983deba461e87088713de2310fbcdc5ba7719275654337b8c8dfdf835",
+      "observado_en": null,
+      "conocido_en": "2026-11-06T17:53:00Z",
+      "base_conocimiento": "observed",
+      "proyecto_ejecutor": "cauce",
+      "reproducible_declarado": false,
+      "reproduccion_independiente": null
+    }
+  ],
+  "procedencia": {
+    "metodo": "revision_documental",
+    "periodo_inicio": null,
+    "periodo_fin": null,
+    "alcance": "Solo la frase del §9 sobre «tiempo dual (known_at, 82% estimado)». La cifra de 82 % no se recalculó ni se sabe si fue medida o estimada.",
+    "limitaciones_fuente": [
+      "El informe original de Ek Chuah no está disponible: solo hay una línea del catálogo §9.",
+      "El catálogo se redactó con asistencia de IA: no acredita hechos (R01/R02).",
+      "No se leyó código, commits, pruebas ni corridas del repositorio de Ek Chuah."
+    ]
+  },
+  "fecha_hallazgo": "2026-11-06",
+  "vigente_hasta": "2027-02-06",
+  "muestra": {
+    "n": null,
+    "unidad": "PENDIENTE",
+    "n_independiente": null,
+    "unidad_independencia": null,
+    "n_efectivo": null,
+    "independencia": "desconocida",
+    "naturaleza": "sintetica",
+    "naturaleza_resultado": "sin_resultado",
+    "seleccion_en_muestra": false,
+    "n_comparaciones": null,
+    "cobertura": null,
+    "supuestos": []
+  },
+  "confianza": {
+    "nivel": "baja",
+    "objeto": "metodo",
+    "justificacion": "Solo hay un resumen secundario asistido por IA; no hay código, commit, prueba ni corrida verificados."
+  },
+  "limitaciones": [
+    "Candidata: NO está en el almacén real y no está validada en origen ni en destino.",
+    "muestra.naturaleza = «sintetica» es un valor provisional que el contrato 0.2 obliga a elegir (no admite «desconocida»); no está confirmado.",
+    "Ningún dato financiero, de rendimiento, límites o estrategia forma parte de esta lección.",
+    "La cifra de 82 % viene del catálogo; no se sabe sobre qué universo, periodo ni con qué consulta se obtuvo.",
+    "Con known_at mayoritariamente estimado, R04/R08 no permitirán confianza alta aunque llegue la evidencia (T21)."
+  ],
+  "aplicaciones_posibles": [
+    {
+      "proyecto": "tezcatlipoca",
+      "hipotesis": "Convergencia metodológica con Tezcatlipoca L10 (marcas de tiempo con zona); no es una prueba cruzada."
+    }
+  ],
+  "validacion": {
+    "estado": "propuesta",
+    "validado_en": []
+  },
+  "revisiones": [
+    {
+      "fecha": "2026-11-06T21:20:00Z",
+      "autor_tipo": "ia",
+      "autor": "claude-cauce-nexus",
+      "decision": "candidata",
+      "justificacion": "Borrador preparado con autorización de Diego (2026-11-06) a partir del catálogo §9. Falta evidencia primaria de Ek Chuah y una revisión humana independiente.",
+      "version": "c1"
+    }
+  ],
+  "sensibilidad": "sin-datos-comerciales"
+}

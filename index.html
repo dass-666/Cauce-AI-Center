@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cauce · Centro de operaciones</title>
+  <script>
+    // Fase L (portal): las rutas son relativas a esta carpeta. Si se abrió como /cauce (sin «/» final), se
+    // corrige a /cauce/ antes de cargar nada. ?incrustado=1 oculta marca y pie (para mostrarse dentro de otra página).
+    (function () {
+      var r = location.pathname, ultimo = r.split("/").pop();
+      if (r !== "/" && r.slice(-1) !== "/" && !/\.[a-z0-9]+$/i.test(ultimo)) { location.replace(r + "/" + location.search + location.hash); return; }
+      if (new URLSearchParams(location.search).get("incrustado") === "1") document.documentElement.classList.add("incrustado");
+    })();
+  </script>
+  <link rel="stylesheet" href="app/estilos.css">
+  <!-- three.js va copiado en vendor/ (sin CDN): funciona sin internet y sin servicios externos. -->
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }
+  </script>
+</head>
+<body>
+  <header class="cabecera">
+    <div class="marca">
+      <span class="marca-logo" aria-hidden="true">◈</span>
+      <div>
+        <h1>Centro de operaciones</h1>
+        <p class="marca-sub">Actividad real de nuestros sistemas, solo lectura</p>
+      </div>
+    </div>
+    <nav id="pisos" class="pisos" role="tablist" aria-label="Proyectos"></nav>
+    <div class="controles">
+      <button type="button" id="boton-sala" class="boton boton-sala" aria-pressed="false" aria-controls="sala-control"><span aria-hidden="true">◉</span><span class="texto-control"> Sala de control</span><span class="solo-lector"> (asuntos con datos reales:)</span> <span class="sala-contador" hidden></span></button>
+      <button type="button" id="boton-nexus" class="boton boton-sala" aria-pressed="false" aria-controls="nexus" title="Oficina Nexus: lecciones, recomendaciones y decisiones pendientes (N)"><span aria-hidden="true">✦</span><span class="texto-control"> Nexus</span></button>
+      <button type="button" id="boton-csi" class="boton boton-sala" aria-pressed="false" aria-controls="csi" title="Inteligencia Estratégica (CSI): investigaciones, actores, escenarios y predicciones (I)"><span aria-hidden="true">◇</span><span class="texto-control"> CSI</span></button>
+      <div class="segmentado" role="group" aria-label="Tipo de vista">
+        <button type="button" class="boton" data-vista="3d" aria-pressed="false">3D</button>
+        <button type="button" class="boton" data-vista="2d" aria-pressed="false">Plano</button>
+      </div>
+      <button type="button" class="boton boton-inmersivo" data-inmersivo aria-pressed="false" title="Dar toda la pantalla al edificio (Esc para salir)"><span aria-hidden="true">⛶</span><span class="texto-control"> Inmersivo</span></button>
+      <label class="interruptor"><input type="checkbox" id="bajo-consumo"> <span>Bajo consumo</span></label>
+      <button type="button" id="recargar" class="boton" title="Volver a leer los datos ahora"><span aria-hidden="true" class="icono-control">↻</span><span class="texto-control"> Actualizar</span></button>
+    </div>
+  </header>
+
+  <div id="banda-demo" class="banda-demo" role="note" hidden><span id="banda-demo-texto"></span></div>
+  <div id="conexion" class="conexion" role="status" aria-live="polite"></div>
+  <p id="aviso-vista" class="aviso-vista" role="status" hidden></p>
+  <details id="diagnostico" class="diagnostico" hidden>
+    <summary id="diagnostico-titulo"></summary>
+    <ul id="diagnostico-lista"></ul>
+  </details>
+
+  <button type="button" id="salir-inmersivo" class="boton salir-inmersivo" data-inmersivo hidden>✕ Salir del modo inmersivo</button>
+
+  <p id="llegada" class="llegada" role="status" hidden></p>
+
+  <main class="principal">
+    <section id="sala-control" class="sala-control" aria-labelledby="sala-titulo" hidden></section>
+    <section id="nexus" class="sala-control nexus" aria-labelledby="nexus-titulo" hidden></section>
+    <section id="csi" class="sala-control nexus csi" aria-labelledby="csi-titulo" hidden></section>
+    <div id="oficina" class="oficina"></div>
+    <aside id="panel" class="panel" hidden aria-label="Detalle"></aside>
+  </main>
+
+  <footer class="pie">
+    Un personaje solo aparece trabajando si su sistema dejó un registro que lo respalde.
+    <span class="atajos">Teclas: <kbd>S</kbd> sala de control · <kbd>N</kbd> Nexus · <kbd>I</kbd> CSI · <kbd>R</kbd> recepción · <kbd>A</kbd> siguiente alerta · <kbd>0</kbd> edificio completo · <kbd>1</kbd>–<kbd>9</kbd> departamento · <kbd>←</kbd> <kbd>→</kbd> vecino · <kbd>F</kbd> seguir personaje · <kbd>Retroceso</kbd> vista anterior · <kbd>Esc</kbd> cerrar.</span>
+    <a href="pruebas.html">Pruebas</a>
+  </footer>
+
+  <script type="module" src="app/app.js"></script>
+  <noscript>Este visualizador necesita JavaScript.</noscript>
+</body>
+</html>

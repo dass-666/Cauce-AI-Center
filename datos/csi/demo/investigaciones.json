@@ -1,0 +1,919 @@
+{
+  "contrato": "cauce.csi.investigaciones",
+  "version_contrato": "0.1",
+  "es_demo": true,
+  "demo": {
+    "ahora_simulado": "2026-11-06T12:00:00-06:00"
+  },
+  "investigaciones": [
+    {
+      "contrato": "cauce.csi.investigacion",
+      "version_contrato": "0.1",
+      "id": "demo-caida-lumen",
+      "titulo": "[DEMO] Caída abrupta del Índice Lumen 40",
+      "pregunta": "[DEMO] ¿Qué opciones estratégicas tenían instituciones y participantes tras la caída, y qué explica mejor la caída?",
+      "creada_en": "2026-10-12T20:00:00-06:00",
+      "creada_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "es_demo": true,
+      "acontecimiento": {
+        "descripcion": "[DEMO] El Índice Lumen 40 cae 9 % en una sesión",
+        "fecha": "2026-10-12",
+        "mercado": "Bolsa de Lumen (ficticia)"
+      },
+      "actores": [
+        "bc-lumen",
+        "fondo-arce",
+        "banco-torre",
+        "cnv-lumen",
+        "minoristas"
+      ],
+      "fuentes": [
+        {
+          "id": "bolsa-cierre",
+          "titulo": "[DEMO] Boletín de cierre del 12 de octubre",
+          "editor": "Bolsa de Lumen (ficticio)",
+          "tipo": "dato_estadistico",
+          "publicada_en": "2026-10-12T15:30:00-06:00",
+          "ficticia": true
+        },
+        {
+          "id": "bc-comunicado",
+          "titulo": "[DEMO] Comunicado: «usaremos todos los instrumentos a nuestro alcance»",
+          "editor": "Banco Central de Lumen (ficticio)",
+          "tipo": "declaracion_publica",
+          "publicada_en": "2026-10-12T19:00:00-06:00",
+          "ficticia": true,
+          "autor_actor_id": "bc-lumen"
+        },
+        {
+          "id": "arce-carta",
+          "titulo": "[DEMO] Carta a clientes: rescates por encima de lo usual",
+          "editor": "Arce Capital (ficticio)",
+          "tipo": "declaracion_publica",
+          "publicada_en": "2026-10-12T18:00:00-06:00",
+          "ficticia": true,
+          "autor_actor_id": "fondo-arce"
+        },
+        {
+          "id": "ine-inflacion",
+          "titulo": "[DEMO] Inflación anual septiembre: 5.1 % (meta 3 %)",
+          "editor": "Instituto de Estadística de Lumen (ficticio)",
+          "tipo": "dato_estadistico",
+          "publicada_en": "2026-10-09",
+          "ficticia": true
+        },
+        {
+          "id": "calendario",
+          "titulo": "[DEMO] Calendario oficial de publicaciones",
+          "editor": "Instituto de Estadística de Lumen (ficticio)",
+          "tipo": "documento_oficial",
+          "publicada_en": "2026-10-01",
+          "ficticia": true
+        },
+        {
+          "id": "diario-volumen",
+          "titulo": "[DEMO] Nota: «volumen del doble del promedio»",
+          "editor": "Diario Lumen (ficticio)",
+          "tipo": "prensa",
+          "publicada_en": "2026-10-12T17:00:00-06:00",
+          "ficticia": true
+        },
+        {
+          "id": "cnv-tenencias",
+          "titulo": "[DEMO] Reporte de tenencias de fondos al 14 de octubre",
+          "editor": "Comisión de Valores de Lumen (ficticio)",
+          "tipo": "documento_regulatorio",
+          "publicada_en": "2026-10-16T10:00:00-06:00",
+          "ficticia": true
+        }
+      ],
+      "enunciados": [
+        {
+          "registrado_en": "2026-10-12T21:00:00-06:00",
+          "fuentes": [
+            "bolsa-cierre"
+          ],
+          "id": "h1",
+          "tipo": "hecho",
+          "texto": "[DEMO] El índice cayó 9 % en la sesión del 12 de octubre.",
+          "sobre": "dato"
+        },
+        {
+          "registrado_en": "2026-10-12T21:05:00-06:00",
+          "fuentes": [
+            "bolsa-cierre"
+          ],
+          "id": "h2",
+          "tipo": "hecho",
+          "texto": "[DEMO] El volumen fue cuatro veces el promedio de 20 sesiones.",
+          "sobre": "dato"
+        },
+        {
+          "registrado_en": "2026-10-12T21:10:00-06:00",
+          "fuentes": [
+            "bolsa-cierre"
+          ],
+          "id": "h5",
+          "tipo": "hecho",
+          "texto": "[DEMO] El diferencial de compra-venta se triplicó al cierre.",
+          "sobre": "conducta"
+        },
+        {
+          "registrado_en": "2026-10-12T21:15:00-06:00",
+          "fuentes": [
+            "ine-inflacion"
+          ],
+          "id": "h4",
+          "tipo": "hecho",
+          "texto": "[DEMO] La inflación anual (5.1 %) está sobre la meta (3 %).",
+          "sobre": "dato"
+        },
+        {
+          "registrado_en": "2026-10-12T21:20:00-06:00",
+          "fuentes": [
+            "calendario"
+          ],
+          "id": "h6",
+          "tipo": "hecho",
+          "texto": "[DEMO] No hubo publicaciones macroeconómicas oficiales del 9 al 12 de octubre.",
+          "sobre": "contexto"
+        },
+        {
+          "registrado_en": "2026-10-12T21:25:00-06:00",
+          "fuentes": [
+            "bc-comunicado"
+          ],
+          "id": "d1",
+          "tipo": "declaracion",
+          "texto": "[DEMO] El Banco Central declaró que usará «todos los instrumentos a su alcance» (es lo que dijo, no prueba lo que hará).",
+          "sobre": "intencion",
+          "actor_id": "bc-lumen"
+        },
+        {
+          "registrado_en": "2026-10-12T21:30:00-06:00",
+          "fuentes": [
+            "arce-carta"
+          ],
+          "id": "d2",
+          "tipo": "declaracion",
+          "texto": "[DEMO] Arce Capital dice haber recibido rescates por encima de lo usual.",
+          "sobre": "conducta",
+          "actor_id": "fondo-arce"
+        },
+        {
+          "registrado_en": "2026-10-12T21:35:00-06:00",
+          "fuentes": [
+            "diario-volumen"
+          ],
+          "id": "p8",
+          "tipo": "hecho",
+          "texto": "[DEMO] Un diario reporta volumen del doble del promedio (contradice el boletín).",
+          "sobre": "dato",
+          "contradice": [
+            "h2"
+          ]
+        },
+        {
+          "registrado_en": "2026-10-12T21:40:00-06:00",
+          "fuentes": [],
+          "id": "i1",
+          "tipo": "inferencia",
+          "texto": "[DEMO] El Banco Central tendría incentivo a dar liquidez sin recortar la tasa, por la inflación.",
+          "actor_id": "bc-lumen",
+          "sobre": "intencion",
+          "inferido_de": [
+            "d1",
+            "h4"
+          ]
+        },
+        {
+          "registrado_en": "2026-10-12T21:45:00-06:00",
+          "fuentes": [],
+          "id": "i2",
+          "tipo": "inferencia",
+          "texto": "[DEMO] Arce podría querer comprar barato después (intención NO documentada: solo inferencia).",
+          "actor_id": "fondo-arce",
+          "sobre": "intencion",
+          "inferido_de": [
+            "d2"
+          ]
+        },
+        {
+          "registrado_en": "2026-10-13T08:35:00-06:00",
+          "fuentes": [],
+          "id": "s1",
+          "tipo": "simulacion",
+          "texto": "[DEMO] En la simulación, si el BC abre liquidez, Arce vende menos (no es un resultado real).",
+          "escenario_id": "esc-caida-lumen"
+        },
+        {
+          "registrado_en": "2026-10-13T08:40:00-06:00",
+          "fuentes": [],
+          "id": "pr1",
+          "tipo": "prediccion",
+          "texto": "[DEMO] El BC anunciará una facilidad de liquidez antes del 20 de octubre.",
+          "prediccion_id": "pred-bc-facilidad",
+          "actor_id": "bc-lumen"
+        },
+        {
+          "registrado_en": "2026-10-16T12:00:00-06:00",
+          "fuentes": [
+            "cnv-tenencias"
+          ],
+          "id": "h7",
+          "tipo": "hecho",
+          "texto": "[DEMO] El reporte de tenencias muestra que Arce REDUJO su posición y no hubo compras en bloque reportadas.",
+          "sobre": "conducta",
+          "actor_id": "fondo-arce"
+        }
+      ],
+      "incentivos": [
+        {
+          "id": "inc-bc",
+          "actor_id": "bc-lumen",
+          "texto": "[DEMO] Contener el contagio sin comprometer la meta de inflación.",
+          "basado_en": [
+            "d1",
+            "h4"
+          ]
+        },
+        {
+          "id": "inc-arce",
+          "actor_id": "fondo-arce",
+          "texto": "[DEMO] Conseguir liquidez para pagar rescates.",
+          "basado_en": [
+            "d2"
+          ]
+        }
+      ],
+      "hipotesis": [
+        {
+          "a_favor": [],
+          "en_contra": [
+            "h6"
+          ],
+          "supuestos": [],
+          "condiciones_refutacion": [
+            "Aparece una noticia fundamental en la ventana"
+          ],
+          "datos_faltantes": [
+            "Revisión de utilidades del sector"
+          ],
+          "id": "H-A",
+          "categoria": "fundamentales",
+          "enunciado": "[DEMO] La caída refleja un cambio de fundamentales."
+        },
+        {
+          "a_favor": [
+            "h2",
+            "h5",
+            "d2",
+            "h7"
+          ],
+          "en_contra": [],
+          "supuestos": [
+            "Los rescates de Arce son representativos de otros fondos"
+          ],
+          "condiciones_refutacion": [
+            "Los datos oficiales de flujos muestran entradas netas el 12 de octubre"
+          ],
+          "datos_faltantes": [
+            "Flujos de fondos del día"
+          ],
+          "id": "H-B",
+          "categoria": "liquidez",
+          "enunciado": "[DEMO] La caída se explica por ventas forzadas para pagar rescates."
+        },
+        {
+          "a_favor": [],
+          "en_contra": [
+            "h7"
+          ],
+          "supuestos": [],
+          "condiciones_refutacion": [
+            "Los reportes de tenencias no muestran compras en bloque"
+          ],
+          "datos_faltantes": [
+            "Reportes de tenencias"
+          ],
+          "id": "H-C",
+          "categoria": "oportunista",
+          "enunciado": "[DEMO] Grandes participantes compraron en la baja de forma oportunista."
+        },
+        {
+          "a_favor": [],
+          "en_contra": [],
+          "supuestos": [],
+          "condiciones_refutacion": [
+            "El regulador revisa y no encuentra irregularidades"
+          ],
+          "datos_faltantes": [
+            "Registros de órdenes (solo los tiene el regulador)",
+            "Comunicados del regulador"
+          ],
+          "id": "H-D",
+          "categoria": "manipulacion",
+          "enunciado": "[DEMO] Posible manipulación del precio (solo hipótesis)."
+        }
+      ],
+      "supuestos": [
+        "[DEMO] El boletín de la bolsa es más confiable que la prensa para el volumen."
+      ],
+      "incertidumbre": {
+        "nivel": "alta",
+        "descripcion": "[DEMO] Faltan flujos por día y registros de órdenes; hay dos cifras de volumen."
+      },
+      "objeciones": [
+        {
+          "estado": "abierta",
+          "hipotesis_id": "H-B",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo"
+          },
+          "id": "o1",
+          "tipo": "sesgo",
+          "texto": "[DEMO] La carta de Arce es autointeresada: puede exagerar rescates para justificar pérdidas."
+        },
+        {
+          "estado": "respondida",
+          "hipotesis_id": "H-B",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo"
+          },
+          "id": "o2",
+          "tipo": "explicacion_alternativa",
+          "texto": "[DEMO] Las ventas pudieron ser coberturas voluntarias, no forzadas.",
+          "respuesta": "[DEMO] El reporte de tenencias (h7) muestra reducción de posición coincidente con los rescates declarados."
+        },
+        {
+          "estado": "abierta",
+          "hipotesis_id": "H-D",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo"
+          },
+          "id": "o3",
+          "tipo": "dato_faltante",
+          "texto": "[DEMO] Sin registros de órdenes no se puede evaluar manipulación: no debe presentarse como explicación."
+        },
+        {
+          "estado": "abierta",
+          "hipotesis_id": null,
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo"
+          },
+          "id": "o4",
+          "tipo": "sesgo",
+          "texto": "[DEMO] Riesgo de narrativa: una sola caída no permite generalizar sobre cómo actúa el Banco Central."
+        }
+      ],
+      "escenarios": [
+        "esc-caida-lumen"
+      ],
+      "revision": {
+        "estado": "en_revision",
+        "nota": "Cambió después de la revisión de revisora-demo: necesita revisión nueva."
+      },
+      "historial": [
+        {
+          "n": 1,
+          "fecha": "2026-10-12T20:00:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "crear",
+          "detalle": "[DEMO] Caída abrupta del Índice Lumen 40",
+          "huella_anterior": null,
+          "huella_contenido": "bac56984d42da81dd138b9fcdacc3100c181a1fb0822ddc37b847da9c7c85250",
+          "huella": "d92b48bfb892602276fb97b3ad2a9dbed59f283ee4a9c4bf3d1da5b07f47effd"
+        },
+        {
+          "n": 2,
+          "fecha": "2026-10-12T20:05:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_fuente",
+          "detalle": "bolsa-cierre",
+          "huella_anterior": "d92b48bfb892602276fb97b3ad2a9dbed59f283ee4a9c4bf3d1da5b07f47effd",
+          "huella_contenido": "7f786f13a726d83700af24215e148a8a61f705d89493a19733d5afffc8aadf6c",
+          "huella": "fbe5fd6bcca050a9987bc541a353fbf5675bb93dec8999abd9bfa6b8c24b19ad"
+        },
+        {
+          "n": 3,
+          "fecha": "2026-10-12T20:06:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_fuente",
+          "detalle": "bc-comunicado",
+          "huella_anterior": "fbe5fd6bcca050a9987bc541a353fbf5675bb93dec8999abd9bfa6b8c24b19ad",
+          "huella_contenido": "4f71ab3a7a0736da20ebef8eeb1c80355bcd4a0312ddc2fb5028d7ee9b0902f6",
+          "huella": "4f49445737afe9d630f18dade533536e9eec2213337b0ac33e230869a97297c7"
+        },
+        {
+          "n": 4,
+          "fecha": "2026-10-12T20:07:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_fuente",
+          "detalle": "arce-carta",
+          "huella_anterior": "4f49445737afe9d630f18dade533536e9eec2213337b0ac33e230869a97297c7",
+          "huella_contenido": "7f4be4284b85ce5fe78c6c133c587f3fae463e5e5473097ceccd1cfb385ef7d5",
+          "huella": "8a3dbfd418ba65fe70a7af485491c3eceda605a7b02c10659ed57363b144ed20"
+        },
+        {
+          "n": 5,
+          "fecha": "2026-10-12T20:08:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_fuente",
+          "detalle": "ine-inflacion",
+          "huella_anterior": "8a3dbfd418ba65fe70a7af485491c3eceda605a7b02c10659ed57363b144ed20",
+          "huella_contenido": "580cfedef8245e45d6739c0f81e5338ca6d1ab209a70249c2d0e498a23a95cc3",
+          "huella": "b9fb5d07bbf2fd5265433b8b249c75fc02d1266ec5651ace7314841fb4d452b6"
+        },
+        {
+          "n": 6,
+          "fecha": "2026-10-12T20:09:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_fuente",
+          "detalle": "calendario",
+          "huella_anterior": "b9fb5d07bbf2fd5265433b8b249c75fc02d1266ec5651ace7314841fb4d452b6",
+          "huella_contenido": "fcc60e03c514641c1b75ae08ffb11e0a80b00adffab2e18c7cadc85f61c383d9",
+          "huella": "672244a6db4ef16bbb38c3b0b48960c1d995e82ad556a40b3ea6f4f90da4455b"
+        },
+        {
+          "n": 7,
+          "fecha": "2026-10-12T20:10:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_fuente",
+          "detalle": "diario-volumen",
+          "huella_anterior": "672244a6db4ef16bbb38c3b0b48960c1d995e82ad556a40b3ea6f4f90da4455b",
+          "huella_contenido": "b0c5a45b43fca66d20b836fd3697a82bd0b9fd1ae9c2cc0ce4982257656cf9e8",
+          "huella": "248192f032737636c3beceb83a4bd7d389455f9258e648f953d4af14400fb3c2"
+        },
+        {
+          "n": 8,
+          "fecha": "2026-10-12T20:11:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_fuente",
+          "detalle": "cnv-tenencias",
+          "huella_anterior": "248192f032737636c3beceb83a4bd7d389455f9258e648f953d4af14400fb3c2",
+          "huella_contenido": "1361a53df62385dd5e6e5ed8cbdd1902efe04229f00248a0fda04d4cdb1e51b9",
+          "huella": "c77aa62c33063b2cb761f36763c2899b3cbf89452d6bec5c2385a74095eb1723"
+        },
+        {
+          "n": 9,
+          "fecha": "2026-10-12T21:00:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "hecho h1",
+          "huella_anterior": "c77aa62c33063b2cb761f36763c2899b3cbf89452d6bec5c2385a74095eb1723",
+          "huella_contenido": "493aa2ff77883277fc3e14a1ce336547d91dccf70ba79149c7cafade0cbb8014",
+          "huella": "9993774d20322425a22896940631a2cb0119321171584f13beefb8f1eb3b421b"
+        },
+        {
+          "n": 10,
+          "fecha": "2026-10-12T21:05:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "hecho h2",
+          "huella_anterior": "9993774d20322425a22896940631a2cb0119321171584f13beefb8f1eb3b421b",
+          "huella_contenido": "ee547cedbe7694b7ead64846ca53ba7ce511b276ea0b3ce5d4dddf5ecff0a3ba",
+          "huella": "6740699b1fae15ad646e2b7f296c4cd7f1fc9d3831dfb460b6e63e95b60c12e3"
+        },
+        {
+          "n": 11,
+          "fecha": "2026-10-12T21:10:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "hecho h5",
+          "huella_anterior": "6740699b1fae15ad646e2b7f296c4cd7f1fc9d3831dfb460b6e63e95b60c12e3",
+          "huella_contenido": "fe6f628da8b8bd5ec45fcc877e4caec5420de5588833e88814a3628e4e904fa7",
+          "huella": "7985e6912d1412f554336026224fc4b625d9810e31929ac86477e5eb8d8217a1"
+        },
+        {
+          "n": 12,
+          "fecha": "2026-10-12T21:15:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "hecho h4",
+          "huella_anterior": "7985e6912d1412f554336026224fc4b625d9810e31929ac86477e5eb8d8217a1",
+          "huella_contenido": "a12de966ede09abb7ec9432f999d0555e04d11ff69b7c94667a4919587c9a705",
+          "huella": "e12bc61762174a9576a49831bbe8bc65fdbb6c5f1370507bdb96cd1c78756e25"
+        },
+        {
+          "n": 13,
+          "fecha": "2026-10-12T21:20:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "hecho h6",
+          "huella_anterior": "e12bc61762174a9576a49831bbe8bc65fdbb6c5f1370507bdb96cd1c78756e25",
+          "huella_contenido": "916c41c6a8e5638506116c462d58784bd60daebd9e22882bf0521395542f60ef",
+          "huella": "321e4cda0ff991880c48699691434c47481fe675a214178ceecad4f6663b65b4"
+        },
+        {
+          "n": 14,
+          "fecha": "2026-10-12T21:25:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "declaracion d1",
+          "huella_anterior": "321e4cda0ff991880c48699691434c47481fe675a214178ceecad4f6663b65b4",
+          "huella_contenido": "09ad35a269ab28567e368b7d906776050152724f1af384d0b4389371bcdbbb1b",
+          "huella": "211566a9967c0092f8bd3fd25dfec15e734fa2feaf65319ddac5902c0c9063f3"
+        },
+        {
+          "n": 15,
+          "fecha": "2026-10-12T21:30:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "declaracion d2",
+          "huella_anterior": "211566a9967c0092f8bd3fd25dfec15e734fa2feaf65319ddac5902c0c9063f3",
+          "huella_contenido": "da1b5d5c1c9976a0a873b160ee381500d45f1415aaa23b03f7bf73e12916c458",
+          "huella": "a26288e80e4ac7ce9928493cd7bc6344c39ba7274d0b2f3e6a031e2cecfb64ac"
+        },
+        {
+          "n": 16,
+          "fecha": "2026-10-12T21:35:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "hecho p8",
+          "huella_anterior": "a26288e80e4ac7ce9928493cd7bc6344c39ba7274d0b2f3e6a031e2cecfb64ac",
+          "huella_contenido": "c59fbec93d3466012e9013b3b238d4c8c72f264a03d322c7d3eeaae5e773c326",
+          "huella": "a3af101e9b03da1e41f37240b44bc973ff211991568aa3587480fb3e44b50cfb"
+        },
+        {
+          "n": 17,
+          "fecha": "2026-10-12T21:40:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "inferencia i1",
+          "huella_anterior": "a3af101e9b03da1e41f37240b44bc973ff211991568aa3587480fb3e44b50cfb",
+          "huella_contenido": "eb38ff5d21fddbe0e539593103c44cc853d357fea3482f4e3a60e4abbd38b938",
+          "huella": "e4904b5e73804a3ba473d1823e7c41986311823402776afff3a601cc632c6bb4"
+        },
+        {
+          "n": 18,
+          "fecha": "2026-10-12T21:45:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "inferencia i2",
+          "huella_anterior": "e4904b5e73804a3ba473d1823e7c41986311823402776afff3a601cc632c6bb4",
+          "huella_contenido": "6d1f3f62717a770512ecc6ea2ff600532302662b8bfc1104a587a37f23db5052",
+          "huella": "cf6eb59e63edcbbd16fdbebee870522d7673de1140b446375ee9096053f14825"
+        },
+        {
+          "n": 19,
+          "fecha": "2026-10-12T21:50:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_incentivo",
+          "detalle": "inc-bc",
+          "huella_anterior": "cf6eb59e63edcbbd16fdbebee870522d7673de1140b446375ee9096053f14825",
+          "huella_contenido": "3a090aeb58f23d9469e9b94080b085195512a704ee03aa979a7f6b290f849277",
+          "huella": "982b26c33af3161c74f7c20fa6b00c7f41a764209c994f2b2b1b97eaee329cfd"
+        },
+        {
+          "n": 20,
+          "fecha": "2026-10-12T21:55:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_incentivo",
+          "detalle": "inc-arce",
+          "huella_anterior": "982b26c33af3161c74f7c20fa6b00c7f41a764209c994f2b2b1b97eaee329cfd",
+          "huella_contenido": "cbbc376e5a828731e813c1d48cbc73f61a39a442bcb1d7b8dc5c8dd46d02ee1a",
+          "huella": "b65ac8d13189838e248459ff92f39db06eeaf81a891229a3e9b0e74ee670621b"
+        },
+        {
+          "n": 21,
+          "fecha": "2026-10-13T08:00:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_hipotesis",
+          "detalle": "H-A",
+          "huella_anterior": "b65ac8d13189838e248459ff92f39db06eeaf81a891229a3e9b0e74ee670621b",
+          "huella_contenido": "695db958fcd48b54e0997091e1ebbdda9f6aa121c56d94af4078a01c45089417",
+          "huella": "2f54c273b641f86e1176e70ca9af12a57895c55c2f2ff316723db5d0811c9a2c"
+        },
+        {
+          "n": 22,
+          "fecha": "2026-10-13T08:05:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_hipotesis",
+          "detalle": "H-B",
+          "huella_anterior": "2f54c273b641f86e1176e70ca9af12a57895c55c2f2ff316723db5d0811c9a2c",
+          "huella_contenido": "2da65e376c90c303ad319a338c9e0a972a52b48f72e985ae2c28f1f7c340fade",
+          "huella": "7abb59cdb15f00c876b03fae7da6c859aaf03dbc05546b6766f7e0b891228e98"
+        },
+        {
+          "n": 23,
+          "fecha": "2026-10-13T08:10:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_hipotesis",
+          "detalle": "H-C",
+          "huella_anterior": "7abb59cdb15f00c876b03fae7da6c859aaf03dbc05546b6766f7e0b891228e98",
+          "huella_contenido": "cb98be7c60f305fb2b9641f8fe9d5b019492837704c956143808281ac2a4e746",
+          "huella": "52a2fa436fae40436b19d2fe79f82f3310b2e66f0738f3af547db58358123996"
+        },
+        {
+          "n": 24,
+          "fecha": "2026-10-13T08:15:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_hipotesis",
+          "detalle": "H-D",
+          "huella_anterior": "52a2fa436fae40436b19d2fe79f82f3310b2e66f0738f3af547db58358123996",
+          "huella_contenido": "5acfcad06962fcf7922416168b6f96a635ffbfbcbeec645fa5ff579a36e203e8",
+          "huella": "9233894fc7fe9abb523245e3f42f0285ef1538d96cef4c16f7c57a69448e4b03"
+        },
+        {
+          "n": 25,
+          "fecha": "2026-10-13T08:20:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "editar",
+          "detalle": "supuestos",
+          "huella_anterior": "9233894fc7fe9abb523245e3f42f0285ef1538d96cef4c16f7c57a69448e4b03",
+          "huella_contenido": "ab85efeee375170334ebf30f89e98852afd6cbbfc92a108f50bee0ee33c04bbc",
+          "huella": "23dd721f2defa7f8bfac802001cefb0cc55b0ca95840d20bdf18c73165d50ddd"
+        },
+        {
+          "n": 26,
+          "fecha": "2026-10-13T08:25:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "editar",
+          "detalle": "incertidumbre",
+          "huella_anterior": "23dd721f2defa7f8bfac802001cefb0cc55b0ca95840d20bdf18c73165d50ddd",
+          "huella_contenido": "a81509266714fe6c4e57be97d8aa7195862c75b9f1159884cfa26296ba4bc1a4",
+          "huella": "3ca4492d265354e0a35c4d15f1426a2e8f243ca16535be20c907033a20547682"
+        },
+        {
+          "n": 27,
+          "fecha": "2026-10-13T08:30:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_escenario",
+          "detalle": "esc-caida-lumen",
+          "huella_anterior": "3ca4492d265354e0a35c4d15f1426a2e8f243ca16535be20c907033a20547682",
+          "huella_contenido": "ae96ce5a7d0ffb3fcd6496d75305e703a15914bd714be554000eb1b8b066ed2a",
+          "huella": "9a386d655ec6f3e7521377df78962c7a9d66640a69795cb788fa3ca6b630a51d"
+        },
+        {
+          "n": 28,
+          "fecha": "2026-10-13T08:35:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "simulacion s1",
+          "huella_anterior": "9a386d655ec6f3e7521377df78962c7a9d66640a69795cb788fa3ca6b630a51d",
+          "huella_contenido": "54ea1177aadae86768ef81ee65bdf2b24105eff8844306044b6fd3b1b886ae02",
+          "huella": "58c55feb7beb43923f3109e14b9917a3542b821de36e2b10fd722ad2e2d28f38"
+        },
+        {
+          "n": 29,
+          "fecha": "2026-10-13T08:40:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "prediccion pr1",
+          "huella_anterior": "58c55feb7beb43923f3109e14b9917a3542b821de36e2b10fd722ad2e2d28f38",
+          "huella_contenido": "c8c81ccf6dccc0d22674aac79cdf9f6db2cf98af829b13418b61df37b2bd56f8",
+          "huella": "f5d29aa58cc47ff8d7d2c5bdf6c87680a5bdf21a57c7cac9756567612c6f0442"
+        },
+        {
+          "n": 30,
+          "fecha": "2026-10-13T09:30:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_objecion",
+          "detalle": "o1",
+          "huella_anterior": "f5d29aa58cc47ff8d7d2c5bdf6c87680a5bdf21a57c7cac9756567612c6f0442",
+          "huella_contenido": "6a459b41848769f86c3a937a7b4605f7642f3808dc84beafa167479cdc0dc507",
+          "huella": "36dff0b812aa6bf74fc8183ae93a950b49ebf2d411e64bd0c26949f5b74dae39"
+        },
+        {
+          "n": 31,
+          "fecha": "2026-10-13T09:35:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_objecion",
+          "detalle": "o2",
+          "huella_anterior": "36dff0b812aa6bf74fc8183ae93a950b49ebf2d411e64bd0c26949f5b74dae39",
+          "huella_contenido": "e5b60a9356ec9cbbb3686d57e2cbfae1784d29bf9c6aa1febb893a998c4cdeb0",
+          "huella": "8af7b41486eb0045cc6c64465204e3de24ee3cb26c4f80401cd6a50e535212a9"
+        },
+        {
+          "n": 32,
+          "fecha": "2026-10-13T09:40:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_objecion",
+          "detalle": "o3",
+          "huella_anterior": "8af7b41486eb0045cc6c64465204e3de24ee3cb26c4f80401cd6a50e535212a9",
+          "huella_contenido": "e27367e039f1bba10dc45e6f3676c8f17509c7aaa8c8ab8fdfaf91147fc0a049",
+          "huella": "4de6575bb48aa4249885a048bc3445d7fd3b4a3e6476cfd6332f72ae0376cb4c"
+        },
+        {
+          "n": 33,
+          "fecha": "2026-10-16T12:00:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_enunciado",
+          "detalle": "hecho h7",
+          "huella_anterior": "4de6575bb48aa4249885a048bc3445d7fd3b4a3e6476cfd6332f72ae0376cb4c",
+          "huella_contenido": "70e0c8b1e3e351a07d1b206efef8f2e64ce8b65a2afce27fa457a7d4b19c3b0e",
+          "huella": "677f1669f5a5c301ea62103399022538e834101f88b38e5d928dc923118f9b32"
+        },
+        {
+          "n": 34,
+          "fecha": "2026-10-16T12:05:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "vincular_evidencia",
+          "detalle": "h7 a_favor H-B",
+          "huella_anterior": "677f1669f5a5c301ea62103399022538e834101f88b38e5d928dc923118f9b32",
+          "huella_contenido": "fdba42e42cc4d52a6334688bb7da51bbd854cf0d6b9f46073db8c531134751a5",
+          "huella": "3da87eecae03c25fd3661af410c7290dd953873bc616730922f147ff7c3eae00"
+        },
+        {
+          "n": 35,
+          "fecha": "2026-10-16T12:10:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "vincular_evidencia",
+          "detalle": "h7 en_contra H-C",
+          "huella_anterior": "3da87eecae03c25fd3661af410c7290dd953873bc616730922f147ff7c3eae00",
+          "huella_contenido": "ccce5dc4b19e783d7d24a74778fc88075e7c1c99c0a9210fcbb7ceade0d8634d",
+          "huella": "c0581d1351e701520629c9bb7b874b0cc7ff997b45ce08a36af9a7be9962ba0a"
+        },
+        {
+          "n": 36,
+          "fecha": "2026-10-16T12:15:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "analista-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "responder_objecion",
+          "detalle": "o2",
+          "huella_anterior": "c0581d1351e701520629c9bb7b874b0cc7ff997b45ce08a36af9a7be9962ba0a",
+          "huella_contenido": "cb2a276db9b649beabf2361989cc1efe9c5508ac6912aa2014614776a4477af4",
+          "huella": "0d85f4e8355e4ac0cb97799777170a9ec206f7405e0379221fdc50c33da3a60c"
+        },
+        {
+          "n": 37,
+          "fecha": "2026-10-18T10:00:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "revision",
+          "detalle": "revisada",
+          "huella_anterior": "0d85f4e8355e4ac0cb97799777170a9ec206f7405e0379221fdc50c33da3a60c",
+          "huella_contenido": "31e50220ba8f5b430081b4a12c6b9345f4cbbf6ce2d28918483a138f44c3df36",
+          "huella": "230549e730923648ea8574e28a731ce19afc4217155dc2c0ccece04a929e6d3e"
+        },
+        {
+          "n": 38,
+          "fecha": "2026-10-22T09:00:00-06:00",
+          "autor": {
+            "tipo": "humano",
+            "identificador": "revisora-demo",
+            "autenticacion": "declarada"
+          },
+          "accion": "agregar_objecion",
+          "detalle": "o4",
+          "huella_anterior": "230549e730923648ea8574e28a731ce19afc4217155dc2c0ccece04a929e6d3e",
+          "huella_contenido": "e256aa92ab392f107aa2430c24f664f914baf9fe744e93a27766e75be7a9dd45",
+          "huella": "0c136357a94d2cd81abe359e944fe4efd7e85a301cb4ddcf9e574f24cc725065"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cauce · Prototipo de naturalezas</title>
+<style>
+  :root { --fondo:#0d1220; --cuarto:#18213a; --borde:#2b3760; --texto:#e8ecf5; --tenue:#9aa6c4;
+    --trabajando:#4f9dff; --esperando:#8a94ad; --finalizado:#43c47a; --error:#ff5d5d; --requiere_revision:#ffb547; --apagada:#3a4258; --registro:#b78cff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Segoe UI", sans-serif; background: var(--fondo); color: var(--texto); }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--borde); }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .demo { background: #5a3d00; color: #ffd89a; padding: 6px 16px; font-weight: 600; font-size: 14px; }
+  .barra { display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding: 10px 16px; }
+  button { background:#24305a; color:var(--texto); border:1px solid var(--borde); border-radius:6px; padding:8px 12px; font-size:14px; cursor:pointer; }
+  #edificio { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; padding: 0 16px 16px; }
+  .cuarto { background: var(--cuarto); border:1px solid var(--borde); border-radius:8px; padding:10px; min-height: 170px; position: relative; }
+  .cuarto h2 { font-size: 15px; margin: 0 0 2px; }
+  .nat { font-size: 12px; color: var(--tenue); margin-bottom: 8px; }
+  .puesto { display:flex; gap:10px; align-items:center; }
+  .figura { width: 64px; height: 64px; flex: none; }
+  .txt { font-size: 13px; line-height: 1.35; }
+  .txt b { display:block; }
+  .act { color: var(--tenue); font-size: 12px; margin-top: 6px; }
+  .cinta { position:absolute; inset:auto 0 0 0; background: repeating-linear-gradient(45deg,#3a4258 0 8px,#2b3148 8px 16px); color:#cfd6ea; font-size:12px; text-align:center; padding:3px; border-radius:0 0 8px 8px; }
+  .breve { animation: aparecer 0.4s ease-out; }
+  @keyframes aparecer { from { transform: translateY(6px); opacity: 0; } }
+  .leyenda { padding: 0 16px 16px; font-size: 13px; color: var(--tenue); }
+  .leyenda li { margin: 3px 0; }
+  #avisos { color: var(--requiere_revision); font-size: 13px; padding: 0 16px; }
+</style>
+</head>
+<body>
+<div class="demo">DEMO · Prototipo aislado: no es la aplicación principal ni usa datos reales.</div>
+<header>
+  <h1>Compago: qué es cada puesto</h1>
+  <div class="nat" id="estado-lectura">Cargando…</div>
+</header>
+<div class="barra">
+  <button id="siguiente">Ver lectura siguiente (DEMO)</button>
+  <button id="reiniciar">Volver a la primera lectura</button>
+</div>
+<div id="avisos"></div>
+<main id="edificio"></main>
+<ul class="leyenda">
+  <li><b>Proceso automático</b>: personaje en su silla solo si un registro lo respalda.</li>
+  <li><b>Proceso reactivo</b>: terminal con su último registro; alguien aparece unos segundos solo si esta página vio llegar un registro nuevo.</li>
+  <li><b>Puesto humano</b>: placa y silla vacía; Cauce no sabe si la persona está, solo muestra lo último que registró.</li>
+  <li><b>Módulo de software</b>: equipo o pantalla, nunca un personaje.</li>
+  <li><b>Función futura</b>: cuarto con cinta «inactivo». Hoy ninguno de los 8 departamentos lo es.</li>
+</ul>
+<script type="module">
+import { validarDocumento } from "../../app/nucleo/contrato.js";
+import { construirModeloVista } from "../../app/nucleo/modelo.js";
+import { validarNaturalezas, presentar, latidoDe, huellaEvidencia, cambioDeEvidencia, NATURALEZAS, DURACION_BREVE_SEGUNDOS } from "../../app/nucleo/naturaleza.js";
+
+const leer = async (r) => (await fetch(r, { cache: "no-store" })).json();
+const clasif = validarNaturalezas(await leer("../../escena/compago-naturaleza.json"));
+const lecturas = [await leer("lectura-1.json"), await leer("lectura-2.json")];
+const proyecto = { id: "compago", nombre: "Compago" };
+let huellaAnterior = null, indice = 0, temporizador = null;
+
+const COLOR = (k) => `var(--${k})`;
+function svg(puesto, personaje, pantalla, animacion) {
+  const pc = COLOR(pantalla === "apagada" ? "apagada" : pantalla);
+  const escritorio = `<rect x="6" y="40" width="52" height="6" rx="1" fill="#55607f"/><rect x="18" y="22" width="22" height="15" rx="2" fill="${pc}"/><rect x="27" y="37" width="4" height="3" fill="#55607f"/>`;
+  const silla = `<rect x="40" y="48" width="14" height="4" rx="1" fill="#3d4766"/><rect x="51" y="34" width="3" height="16" fill="#3d4766"/>`;
+  const persona = `<circle cx="47" cy="27" r="5" fill="#f2c9a0"/><rect x="42" y="32" width="10" height="14" rx="3" fill="#4a7bd1"/>`;
+  if (puesto === "inactivo") return `<svg class="figura" viewBox="0 0 64 64"><rect x="6" y="40" width="52" height="6" fill="#2f3650"/></svg>`;
+  if ((puesto === "terminal" || puesto === "equipo") && personaje === "ausente")
+    return `<svg class="figura" viewBox="0 0 64 64"><rect x="14" y="10" width="36" height="46" rx="3" fill="#2a3352" stroke="#55607f"/><rect x="19" y="15" width="26" height="16" rx="2" fill="${pc}"/><circle cx="24" cy="42" r="2" fill="${pc}"/><rect x="29" y="41" width="14" height="2" fill="#55607f"/><rect x="19" y="48" width="26" height="2" fill="#55607f"/></svg>`;
+  const placa = puesto === "humano" ? `<rect x="2" y="50" width="30" height="10" rx="2" fill="#e8ecf5"/><text x="17" y="58" font-size="7" text-anchor="middle" fill="#0d1220">HUMANO</text>` : "";
+  return `<svg class="figura ${personaje === "breve" ? "breve" : ""}" viewBox="0 0 64 64">${escritorio}${silla}${personaje !== "ausente" ? persona : ""}${placa}</svg>`;
+}
+
+function dibujar(cambios = true) {
+  clearTimeout(temporizador);
+  const datos = lecturas[indice];
+  const m = construirModeloVista({ proyecto, carga: { tipo: "ok", datos }, ahora: new Date(datos.demo.ahora_simulado) });
+  const h = huellaEvidencia(m);
+  document.getElementById("estado-lectura").textContent =
+    `Lectura ${indice + 1} de ${lecturas.length} · ${m.conexion_etiqueta} · ${validarDocumento(datos).valido ? "cumple el contrato v1" : "NO cumple el contrato"}`;
+  const avisos = [];
+  let hayBreves = false;
+  document.getElementById("edificio").innerHTML = m.departamentos.map((d) => d.agentes.map((a) => {
+    const c = clasif.mapa.get(a.id);
+    const p = presentar(a, c?.naturaleza, { cambioObservado: cambios && cambioDeEvidencia(huellaAnterior, h, a.id), vivo: latidoDe(d, c?.latido) });
+    avisos.push(...p.avisos);
+    if (p.personaje === "breve") hayBreves = true;
+    const act = a.actividad?.descripcion ? `<div class="act">${esc(a.actividad.descripcion)}</div>` : "";
+    return `<section class="cuarto" data-agente="${a.id}" data-personaje="${p.personaje}" data-puesto="${p.puesto}">
+      <h2>${esc(d.nombre)}</h2><div class="nat">${NATURALEZAS[p.naturaleza].etiqueta} · ${esc(a.nombre)}</div>
+      <div class="puesto">${svg(p.puesto, p.personaje, p.pantalla, p.animacion)}
+        <div class="txt"><b>${a.apariencia.etiqueta}</b>${esc(p.texto)}${p.personaje === "breve" ? " Se vio llegar un registro nuevo." : ""}</div></div>
+      ${act}${p.puesto === "inactivo" ? '<div class="cinta">Inactivo · función futura</div>' : ""}</section>`;
+  }).join("")).join("");
+  document.getElementById("avisos").textContent = [...clasif.errores, ...avisos].join(" ");
+  huellaAnterior = h;
+  // La aparición breve se retira sola: no se aparenta trabajo continuo.
+  if (hayBreves) temporizador = setTimeout(() => dibujarSinCambios(), DURACION_BREVE_SEGUNDOS * 1000);
+}
+function dibujarSinCambios() { dibujar(false); }
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+document.getElementById("siguiente").onclick = () => { if (indice < lecturas.length - 1) { indice++; dibujar(); } };
+document.getElementById("reiniciar").onclick = () => { indice = 0; huellaAnterior = null; dibujar(); };
+dibujar();
+window.__prototipoListo = true;
+</script>
+</body>
+</html>

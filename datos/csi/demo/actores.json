@@ -1,0 +1,399 @@
+{
+  "contrato": "cauce.csi.actores",
+  "version_contrato": "0.1",
+  "es_demo": true,
+  "actualizado_en": "2026-10-12T20:00:00-06:00",
+  "demo": {
+    "ahora_simulado": "2026-11-06T12:00:00-06:00"
+  },
+  "fuentes": [
+    {
+      "id": "ley-bc",
+      "titulo": "[DEMO] Ley orgánica del Banco Central de Lumen",
+      "editor": "Diario Oficial de Lumen (ficticio)",
+      "tipo": "documento_oficial",
+      "publicada_en": "2019-03-01",
+      "ficticia": true
+    },
+    {
+      "id": "ine-inflacion",
+      "titulo": "[DEMO] Inflación anual septiembre: 5.1 % (meta 3 %)",
+      "editor": "Instituto de Estadística de Lumen (ficticio)",
+      "tipo": "dato_estadistico",
+      "publicada_en": "2026-10-09",
+      "ficticia": true
+    },
+    {
+      "id": "cnv-registro",
+      "titulo": "[DEMO] Registro de fondos supervisados",
+      "editor": "Comisión de Valores de Lumen (ficticio)",
+      "tipo": "documento_regulatorio",
+      "publicada_en": "2026-01-15",
+      "ficticia": true
+    },
+    {
+      "id": "torre-informe",
+      "titulo": "[DEMO] Informe anual: líneas de crédito a fondos",
+      "editor": "Banco Torre (ficticio)",
+      "tipo": "documento_oficial",
+      "publicada_en": "2026-03-30",
+      "ficticia": true
+    },
+    {
+      "id": "comite-estabilidad",
+      "titulo": "[DEMO] Acta de creación del Comité de Estabilidad",
+      "editor": "Ministerio de Hacienda de Lumen (ficticio)",
+      "tipo": "documento_oficial",
+      "publicada_en": "2021-06-10",
+      "ficticia": true
+    },
+    {
+      "id": "omr-miembros",
+      "titulo": "[DEMO] Lista de miembros",
+      "editor": "Organismo Monetario Regional (ficticio)",
+      "tipo": "documento_oficial",
+      "publicada_en": "2025-01-01",
+      "ficticia": true
+    },
+    {
+      "id": "arce-prospecto",
+      "titulo": "[DEMO] Prospecto del fondo: rescates diarios",
+      "editor": "Arce Capital (ficticio)",
+      "tipo": "documento_oficial",
+      "publicada_en": "2025-08-01",
+      "ficticia": true,
+      "autor_actor_id": "fondo-arce"
+    }
+  ],
+  "actores": [
+    {
+      "id": "bc-lumen",
+      "nombre": "Banco Central de Lumen",
+      "tipo": "banco_central",
+      "ficticio": true,
+      "objetivos_documentados": [
+        {
+          "texto": "Estabilidad de precios y del sistema de pagos",
+          "fuentes": [
+            "ley-bc"
+          ]
+        }
+      ],
+      "incentivos_hipoteticos": [
+        {
+          "texto": "Evitar contagio al sistema de pagos sin comprometer la meta de inflación",
+          "basado_en": [
+            "mandato",
+            "inflación sobre meta"
+          ]
+        }
+      ],
+      "recursos_conocidos": [
+        {
+          "texto": "Facilidades de liquidez para bancos",
+          "fuentes": [
+            "ley-bc"
+          ]
+        }
+      ],
+      "restricciones": [
+        {
+          "texto": "Inflación 5.1 % sobre meta 3 %: un recorte de tasa contradice el mandato",
+          "fuentes": [
+            "ine-inflacion"
+          ],
+          "impide": [
+            "recorte_tasa"
+          ]
+        }
+      ],
+      "decisiones_posibles": [
+        {
+          "id": "facilidad_liquidez",
+          "texto": "Abrir una facilidad de liquidez temporal"
+        },
+        {
+          "id": "recorte_tasa",
+          "texto": "Recortar la tasa de referencia"
+        },
+        {
+          "id": "comunicado",
+          "texto": "Emitir solo un comunicado"
+        }
+      ],
+      "incertidumbres": [
+        "No se conoce su evaluación interna del riesgo sistémico."
+      ]
+    },
+    {
+      "id": "hacienda-lumen",
+      "nombre": "Ministerio de Hacienda de Lumen",
+      "tipo": "gobierno",
+      "ficticio": true,
+      "objetivos_documentados": [
+        {
+          "texto": "Coordinar el Comité de Estabilidad Financiera",
+          "fuentes": [
+            "comite-estabilidad"
+          ]
+        }
+      ],
+      "incentivos_hipoteticos": [
+        {
+          "texto": "Evitar costo fiscal de un rescate"
+        }
+      ],
+      "recursos_conocidos": [],
+      "restricciones": [
+        {
+          "texto": "Un rescate requiere aprobación legislativa (supuesto no verificado)"
+        }
+      ],
+      "decisiones_posibles": [
+        {
+          "id": "garantia",
+          "texto": "Anunciar garantías"
+        },
+        {
+          "id": "nada",
+          "texto": "No intervenir"
+        }
+      ],
+      "incertidumbres": [
+        "Margen fiscal real desconocido."
+      ]
+    },
+    {
+      "id": "cnv-lumen",
+      "nombre": "Comisión de Valores de Lumen",
+      "tipo": "gobierno",
+      "ficticio": true,
+      "objetivos_documentados": [
+        {
+          "texto": "Supervisar a los fondos registrados",
+          "fuentes": [
+            "cnv-registro"
+          ]
+        }
+      ],
+      "incentivos_hipoteticos": [
+        {
+          "texto": "Mostrar vigilancia tras una caída pública"
+        }
+      ],
+      "recursos_conocidos": [
+        {
+          "texto": "Acceso a registros de órdenes",
+          "fuentes": [
+            "cnv-registro"
+          ]
+        }
+      ],
+      "restricciones": [],
+      "decisiones_posibles": [
+        {
+          "id": "abrir_investigacion",
+          "texto": "Abrir una investigación"
+        },
+        {
+          "id": "revisar",
+          "texto": "Revisión rutinaria sin anuncio"
+        }
+      ],
+      "incertidumbres": []
+    },
+    {
+      "id": "fondo-arce",
+      "nombre": "Arce Capital (fondo)",
+      "tipo": "fondo_inversion",
+      "ficticio": true,
+      "objetivos_documentados": [
+        {
+          "texto": "Ofrecer rescates diarios a sus clientes",
+          "fuentes": [
+            "arce-prospecto"
+          ]
+        }
+      ],
+      "incentivos_hipoteticos": [
+        {
+          "texto": "Cubrir rescates vendiendo lo más líquido"
+        },
+        {
+          "texto": "Comprar barato si tiene liquidez (oportunismo)"
+        }
+      ],
+      "recursos_conocidos": [
+        {
+          "texto": "Línea de crédito con Banco Torre",
+          "fuentes": [
+            "torre-informe"
+          ]
+        }
+      ],
+      "restricciones": [
+        {
+          "texto": "Rescates diarios obligan a tener liquidez",
+          "fuentes": [
+            "arce-prospecto"
+          ]
+        }
+      ],
+      "decisiones_posibles": [
+        {
+          "id": "vender",
+          "texto": "Vender posiciones líquidas"
+        },
+        {
+          "id": "comprar_en_bloque",
+          "texto": "Comprar en bloque tras la caída"
+        },
+        {
+          "id": "mantener",
+          "texto": "Mantener posiciones"
+        }
+      ],
+      "incertidumbres": [
+        "Tamaño real de los rescates."
+      ]
+    },
+    {
+      "id": "banco-torre",
+      "nombre": "Banco Torre",
+      "tipo": "institucion_financiera",
+      "ficticio": true,
+      "objetivos_documentados": [],
+      "incentivos_hipoteticos": [
+        {
+          "texto": "Reducir exposición a fondos apalancados"
+        }
+      ],
+      "recursos_conocidos": [
+        {
+          "texto": "Líneas de crédito a fondos",
+          "fuentes": [
+            "torre-informe"
+          ]
+        }
+      ],
+      "restricciones": [],
+      "decisiones_posibles": [
+        {
+          "id": "ampliar_margen",
+          "texto": "Pedir más garantía"
+        },
+        {
+          "id": "mantener",
+          "texto": "Mantener condiciones"
+        }
+      ],
+      "incertidumbres": []
+    },
+    {
+      "id": "minoristas",
+      "nombre": "Inversionistas minoristas de Lumen",
+      "tipo": "participante_colectivo",
+      "ficticio": true,
+      "objetivos_documentados": [],
+      "incentivos_hipoteticos": [
+        {
+          "texto": "Evitar más pérdidas (aversión a la pérdida)"
+        }
+      ],
+      "recursos_conocidos": [],
+      "restricciones": [],
+      "decisiones_posibles": [
+        {
+          "id": "vender_panico",
+          "texto": "Vender por miedo"
+        },
+        {
+          "id": "mantener",
+          "texto": "Esperar"
+        },
+        {
+          "id": "comprar",
+          "texto": "Comprar en la baja"
+        }
+      ],
+      "incertidumbres": [
+        "No hay datos por tipo de inversionista del día."
+      ]
+    },
+    {
+      "id": "omr",
+      "nombre": "Organismo Monetario Regional",
+      "tipo": "organismo_internacional",
+      "ficticio": true,
+      "objetivos_documentados": [],
+      "incentivos_hipoteticos": [
+        {
+          "texto": "Evitar contagio regional"
+        }
+      ],
+      "recursos_conocidos": [],
+      "restricciones": [],
+      "decisiones_posibles": [
+        {
+          "id": "linea_swap",
+          "texto": "Ofrecer línea de intercambio"
+        },
+        {
+          "id": "declaracion",
+          "texto": "Declaración de apoyo"
+        }
+      ],
+      "incertidumbres": []
+    }
+  ],
+  "relaciones": [
+    {
+      "id": "r1",
+      "de": "cnv-lumen",
+      "a": "fondo-arce",
+      "tipo": "regula",
+      "descripcion": "Arce está registrado ante la Comisión",
+      "fuentes": [
+        "cnv-registro"
+      ]
+    },
+    {
+      "id": "r2",
+      "de": "banco-torre",
+      "a": "fondo-arce",
+      "tipo": "financia",
+      "descripcion": "Línea de crédito",
+      "fuentes": [
+        "torre-informe"
+      ]
+    },
+    {
+      "id": "r3",
+      "de": "hacienda-lumen",
+      "a": "bc-lumen",
+      "tipo": "coopera",
+      "descripcion": "Comité de Estabilidad Financiera",
+      "fuentes": [
+        "comite-estabilidad"
+      ]
+    },
+    {
+      "id": "r4",
+      "de": "bc-lumen",
+      "a": "omr",
+      "tipo": "miembro_de",
+      "descripcion": "Miembro del organismo regional",
+      "fuentes": [
+        "omr-miembros"
+      ]
+    },
+    {
+      "id": "r5",
+      "de": "fondo-arce",
+      "a": "banco-torre",
+      "tipo": "compite",
+      "descripcion": "[DEMO] Se dice que compiten en gestión de activos (rumor sin fuente)",
+      "fuentes": []
+    }
+  ]
+}

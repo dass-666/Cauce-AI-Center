@@ -1,0 +1,26 @@
+# Datos reales generados por los adaptadores: nunca van a git.
+datos/reales/*
+datos/proyectos.local.json
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+!datos/reales/.gitkeep
+r/
+
+# Rendimiento UHD: copia local de la versión anterior para comparar FPS (git worktree).
+comparar/
+
+# Nexus: el registro real de lecciones y recomendaciones es local (los datos de prueba están en datos/nexus/demo/).
+datos/nexus/registro/*
+!datos/nexus/registro/LEEME.md
+# Nexus fase 1.5: respaldos y restauraciones del almacén real (locales, como el registro).
+datos/nexus/respaldos/
+datos/nexus/respaldos-demo/
+datos/nexus/restauraciones/
+# CSI: el almacén real de investigaciones y predicciones es local (el caso ficticio está en datos/csi/demo/).
+datos/csi/registro/*
+!datos/csi/registro/LEEME.md
+# CSI fase 2: el caso histórico real es local hasta que Diego autorice publicarlo (el repositorio es público).
+datos/csi/historico/*
+!datos/csi/historico/LEEME.md

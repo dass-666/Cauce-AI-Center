@@ -1,0 +1,16 @@
+{
+  "contrato": "cauce.csi.casos-publicados",
+  "version_contrato": "0.1",
+  "nota": "Casos históricos REALES (retrospectivos) cuya publicación autorizó el responsable del proyecto. Sin copias de terceros: solo huellas. La oficina los construye en el navegador con el mismo motor que una investigación hecha a mano cuando datos/csi/historico/ está vacío.",
+  "casos": [
+    {
+      "id": "hist-bns-minimo-2015",
+      "titulo": "Fin del tipo mínimo del franco suizo (15 de enero de 2015)",
+      "expediente": "expediente-bns-2015.json",
+      "informe": "docs/CSI-CASO-BNS-2015.md",
+      "naturaleza_estudio": "historico",
+      "autorizado_por": "diego",
+      "autorizado_en": "2026-11-07"
+    }
+  ]
+}
