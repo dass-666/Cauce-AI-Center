@@ -7,6 +7,8 @@ import { validarEncargo, validarEjecucion, validarVerificacion } from "../app/la
 import { verificar, verificarYValidar, huellaDoc, catalogoDesdeInvestigacion, fechasMencionadas } from "../app/laboratorio/verificador.js";
 import { nuevaEntrada, serializar, verificarRegistro, indicesDesdeEntradas } from "../app/laboratorio/registro.js";
 import { construirBanco, comprobarBanco } from "../app/laboratorio/banco.js";
+import { construirPaquete, comprobarPaquete, entradasDesdeArchivos } from "../app/laboratorio/paquete.js";
+import { puntuar, entidadDeUbicacion } from "../app/laboratorio/puntuacion.js";
 import { sha256Bytes, normalizarEspacios, jsonCanonico, sha256 } from "../app/laboratorio/base.js";
 import { construirDesdeExpediente } from "../app/csi/expediente.js";
 
@@ -445,6 +447,11 @@ export function registrarCasosLaboratorio(leerTexto) {
     v = validarEjecucion(m.ejecucion); verdadero(!v.ok && tiene(v.errores, /alternativa_a «h9»/), v.errores.join(" | "));
     m.ejecucion.hipotesis = [{ id: "h1", enunciado: "e", se_refuta_si: "r", experimento: "x", alternativa_a: null }, { id: "h2", enunciado: "e", se_refuta_si: "r", experimento: "x", alternativa_a: "h1" }];
     v = validarEjecucion(m.ejecucion); igual(v.errores, [], "objeción a otra ejecución y alternativa a otra hipótesis son válidas");
+    const rv = await verificar({ ...m, ahora: AHORA });
+    verdadero(tiene(rv.verificacion.errores, /objecion_a_insumo_desconocido.*demo-lab-run-000/), "lab-V exige que el insumo objetado exista en el encargo");
+    m.encargo.insumos = [{ tipo: "banco_evaluacion", ref: "demo-banco", sha256: "b".repeat(64) }]; await firmar(m);
+    m.ejecucion.objeciones[1].a = "demo-banco#e01";
+    verdadero(!tiene((await verificar({ ...m, ahora: AHORA })).verificacion.errores, /objecion_a_insumo/), "objeción a una entidad del banco declarado: válida");
     m.ejecucion.contradicciones = [{ fuentes: ["demo-f-a", "demo-f-a"], texto: "t" }, { fuentes: [1, {}], texto: "t" }];
     v = validarEjecucion(m.ejecucion); verdadero(tiene(v.errores, /contradicciones\[0\]\.fuentes: «demo-f-a» está repetido/) && tiene(v.errores, /contradicciones\[1\]\.fuentes\[0\] debe ser un id/), v.errores.join(" | "));
   });
@@ -611,8 +618,52 @@ export function registrarCasosLaboratorio(leerTexto) {
     igual(v.citas.map((c) => c.cita_utilizable), [false, false]);
   });
 
+  // ================================================================ piloto aislado (paquete y puntuación, código puro)
+  async function paqueteDePrueba(leerTexto) {
+    const original = JSON.parse(await leerTexto(ORIGINAL));
+    const espec = JSON.parse(await leerTexto("datos/laboratorio/banco-prueba/especificacion-prueba.json"));
+    const b = await construirBanco(original, espec);
+    verdadero(b.ok, b.errores?.join(" | "));
+    const r = await construirPaquete({ rol: "critico", corrida_id: "prueba-1", es_demo: true, pregunta: "¿Qué está mal?", corte: "2015-01-15T00:00:00Z", creado_por: "diego", creado_en: AHORA, evaluacion: { texto: b.textos.evaluacion }, banco_id: "banco-prueba-v1" });
+    verdadero(r.ok, r.errores?.join(" | "));
+    return { r, b, original };
+  }
+  prueba("Laboratorio 1.1 · paquete: el crítico recibe exactamente 5 archivos con huellas; el comprobador aprueba lo construido y rechaza clave, original, archivo extra y huella cambiada", async () => {
+    const { r, b, original } = await paqueteDePrueba(leerTexto);
+    igual([...r.archivos.keys()].sort(), ["INSTRUCCIONES.md", "catalogo-fuentes.json", "expediente-evaluacion.json", "formato-respuesta.json", "paquete.json"]);
+    igual(r.paquete.encargo.insumos[0].sha256, await sha256(b.textos.evaluacion));
+    igual((await comprobarPaquete(await entradasDesdeArchivos(r.archivos), { rol: "critico" })).ok, true);
+    const con = async (ruta, texto) => { const m = new Map(r.archivos); m.set(ruta, { texto }); return comprobarPaquete(await entradasDesdeArchivos(m), { rol: "critico" }); };
+    const c1 = await con("notas.json", b.textos.clave); verdadero(!c1.ok && c1.problemas.some((p) => p.codigo === "contrato_prohibido"), JSON.stringify(c1.problemas));
+    const c2 = await con("expediente-evaluacion.json", `${JSON.stringify(original, null, 2)}\n`); verdadero(c2.problemas.some((p) => p.codigo === "expediente_original") && c2.problemas.some((p) => p.codigo === "huella_distinta"), JSON.stringify(c2.problemas));
+    const c3 = await con("extra.txt", "hola"); verdadero(c3.problemas.some((p) => p.codigo === "no_declarado") && c3.problemas.some((p) => p.codigo === "archivo_no_permitido"), JSON.stringify(c3.problemas));
+    const c4 = await con("INSTRUCCIONES.md", "lee ../clave"); verdadero(c4.problemas.some((p) => p.codigo === "contenido_prohibido"), JSON.stringify(c4.problemas));
+    const sinMan = new Map(r.archivos); sinMan.delete("paquete.json");
+    verdadero((await comprobarPaquete(await entradasDesdeArchivos(sinMan))).problemas.some((p) => p.codigo === "falta_manifiesto"), "sin manifiesto");
+    const enlace = await comprobarPaquete([...(await entradasDesdeArchivos(r.archivos)), { ruta: "catalogo-fuentes.json", bytes: new Uint8Array(), texto: null, enlace: true, fuera: true }], { rol: "critico" });
+    verdadero(enlace.problemas.some((p) => p.codigo === "enlace_simbolico") && enlace.problemas.some((p) => p.codigo === "fuera_del_paquete"), "enlace");
+    const otroRol = await comprobarPaquete(await entradasDesdeArchivos(r.archivos), { rol: "investigador" });
+    verdadero(otroRol.problemas.some((p) => p.codigo === "rol_distinto") && otroRol.problemas.some((p) => p.codigo === "expediente_en_rol_indebido"), "rol");
+    const c5 = await construirPaquete({ rol: "critico", corrida_id: "prueba-2", es_demo: true, pregunta: "¿?", corte: null, creado_por: "diego", creado_en: AHORA, evaluacion: { texto: JSON.stringify(original) } });
+    verdadero(!c5.ok && tiene(c5.errores, /parece el original/), "no empaqueta el original");
+  });
+
+  prueba("Laboratorio 1.1 · puntuación: entidad desde la clave, correcto/parcial/no_detectado, falsos positivos aparte, control y criterios explícitos; la salida es determinista", async () => {
+    const { b } = await paqueteDePrueba(leerTexto);
+    igual(entidadDeUbicacion("pasos[3] agregar_enunciado e02 (texto)"), "e02"); igual(entidadDeUbicacion("pasos_finales[1] agregar_observacion H-A#2 (texto)"), "H-A"); igual(entidadDeUbicacion("x"), null);
+    const ej = (objeciones) => ({ contrato: "cauce.lab.ejecucion", id: "demo-lab-run-p", rol: "critico", objeciones });
+    const r = puntuar({ ejecucion: ej([{ id: "o1", a: "banco-prueba-v1#e02", tipo: "evidencia", texto: "e02 dice 1.0820 francos y la fuente dice otra cosa" }, { id: "o2", a: "banco-prueba-v1#e09", tipo: "otra", texto: "x" }]), clave: b.clave, insumo: "banco-prueba-v1" });
+    verdadero(r.ok, r.errores?.join(" | "));
+    igual(r.puntuacion.resultados.map((x) => x.estado), ["correcto", "no_detectado"]); igual(r.puntuacion.falsos_positivos.length, 1); igual(r.puntuacion.resumen.puntaje, 0.5);
+    const r2 = puntuar({ ejecucion: ej([{ id: "o1", a: "banco-prueba-v1#H-D", tipo: "supuesto", texto: "no es falsable" }]), clave: b.clave, criterios: { control: ["D02"], defectos: { D02: { exige_palabras: ["refut"] } } } });
+    igual(r2.puntuacion.resumen.n_retos, 1); igual(r2.puntuacion.resumen.controles, [{ defecto_id: "D02", estado: "parcial" }]); igual(r2.puntuacion.resumen.puntaje, 0);
+    igual(JSON.stringify(puntuar({ ejecucion: ej([]), clave: b.clave })), JSON.stringify(puntuar({ ejecucion: ej([]), clave: b.clave })), "determinista");
+    igual(puntuar({ ejecucion: { ...ej([]), rol: "analista" }, clave: b.clave }).ok, false, "solo crítico");
+    igual(puntuar({ ejecucion: ej([]), clave: b.manifiesto }).ok, false, "el manifiesto no es la clave");
+  });
+
   prueba("Laboratorio · aislamiento: el código del Laboratorio no escribe, no usa red, no ejecuta y no llama a los motores para escribir", async () => {
-    for (const f of ["base.js", "contratos.js", "verificador.js", "registro.js", "banco.js"]) {
+    for (const f of ["base.js", "contratos.js", "verificador.js", "registro.js", "banco.js", "paquete.js", "puntuacion.js"]) {
       const t = await leerTexto(`app/laboratorio/${f}`);
       for (const re of [/\bfetch\s*\(/, /XMLHttpRequest/, /WebSocket/, /localStorage/, /child_process/, /writeFile/, /\beval\s*\(/, /new Function/, /aplicarCambio/, /registrarLeccion|guardarAlmacen|escribirAlmacen/, /from ["']node:/])
         verdadero(!re.test(t), `${f} contiene ${re}`);

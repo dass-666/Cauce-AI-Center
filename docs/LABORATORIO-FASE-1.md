@@ -14,8 +14,9 @@
 | Ejemplos DEMO | `datos/laboratorio/demo/` | usados por las pruebas de Node |
 
 ```
-node pruebas/ejecutar.mjs          # 439: las 395 anteriores + 35 del Laboratorio + 9 de la auditoría 1.1 (también en pruebas.html)
+node pruebas/ejecutar.mjs          # 441: las 395 anteriores + 35 del Laboratorio + 11 de la fase 1.1 (también en pruebas.html)
 node pruebas/laboratorio-node.mjs  # 8: disco, atomicidad, enlaces simbólicos, tamaños y la herramienta de punta a punta
+node pruebas/piloto-node.mjs       # 6: paquete del piloto, comprobador de fallo seguro y puntuación (banco de prueba)
 ```
 
 ## Qué verifica lab-V (y qué NO)
@@ -85,6 +86,10 @@ CSI / Nexus por sus contratos actuales:
 Catorce defectos reproducidos con sondas antes de corregirlos (cada uno tiene ahora una prueba que falla en el código anterior y pasa en este): sin límites de tamaño (una respuesta de 1.5 MB tardaba 21 s y una de 60 MB no terminaba, por la búsqueda cuadrática de datos privados de `app/nexus/comun.js`, que no se tocó), ids con `..`, referencias rotas en objeciones e hipótesis, ids de objeción repetidos, contradicciones con fuentes repetidas o no textuales, encargo DEMO con insumos REALES, ejecución anterior al encargo, verificación anterior a la ejecución, latido fuera de rango, límites del encargo sin comprobar, caracteres invisibles/bidireccionales, verificaciones con estados imposibles (apta con alertas, resumen que no cuadra), registro sin orden temporal ni ids únicos, verificaciones repetidas con el mismo id, contradicciones declaradas sin constancia. Detalle de reglas en `contrato/LABORATORIO-CONTRATOS.md` («Fase 1.1»).
 
 Pendiente que NO se corrigió aquí (fuera del Laboratorio): el patrón de correo de `buscarDatosPrivados` en `app/nexus/comun.js` es cuadrático en textos largos sin `@`; afecta a cualquier contrato de Nexus que reciba textos de cientos de KB. El Laboratorio lo esquiva con sus límites.
+
+## Piloto aislado (fase 1.1, preparado, NO ejecutado)
+
+`app/laboratorio/paquete.js` (paquete mínimo por rol y comprobador de fallo seguro), `app/laboratorio/puntuacion.js` (puntuación del crítico contra la clave, solo en el entorno privado) y `herramientas/piloto.mjs` (`empaquetar · comprobar · puntuar`). Procedimiento por roles, criterios y exposición residual en `docs/PILOTO-AISLADO.md`.
 
 ## Límites conocidos
 

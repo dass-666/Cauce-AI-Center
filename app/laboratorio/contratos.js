@@ -166,8 +166,9 @@ export function validarEjecucion(doc) {
     else cuenta(doc[k], LIMITES[k], k, e);
   }
   const idsAf = new Set(L(doc.afirmaciones).map((a) => a?.id)), idsHip = new Set(L(doc.hipotesis).map((h) => h?.id));
-  /** Una objeción apunta a algo de esta misma salida (afirmación o hipótesis) o a «<ejecución del Laboratorio>#<id>» de una salida anterior. */
-  const referenciaObjecion = (a) => typeof a === "string" && (idsAf.has(a) || idsHip.has(a) || (/^(demo-)?lab-run-[a-z0-9._-]+#[a-z0-9._-]{1,41}$/i.test(a) && !a.includes("..")));
+  /** Una objeción apunta a algo de esta misma salida (afirmación o hipótesis) o a «<insumo>#<id>»: una entidad de un
+   *  insumo del encargo (p. ej. `banco-bns-2015-v1#e01`, `lab-run-x#a3`). lab-V comprueba que el insumo exista en el encargo. */
+  const referenciaObjecion = (a) => typeof a === "string" && (idsAf.has(a) || idsHip.has(a) || (/^[a-z0-9][a-z0-9._-]{1,80}#[a-z0-9._-]{1,41}$/i.test(a) && !a.includes("..")));
 
   L(doc.afirmaciones).forEach((a, i) => {
     const r = `afirmaciones[${i}].`;
@@ -201,7 +202,7 @@ export function validarEjecucion(doc) {
     const r = `objeciones[${i}].`;
     if (!clavesExactas(o, C_OBJ, r, e)) return;
     if (!texto(o.id) || !texto(o.a) || !texto(o.texto)) e(`${r}id, a y texto son obligatorios.`);
-    else { if (typeof o.id !== "string" || !ID_LOCAL.test(o.id)) e(`${r}id inválido.`); textoLimpio(o.texto, `${r}texto`, e); if (!referenciaObjecion(o.a)) e(`${r}a «${o.a}» no apunta a una afirmación o hipótesis de esta salida ni a «<ejecución>#<id>» (referencia rota).`); }
+    else { if (typeof o.id !== "string" || !ID_LOCAL.test(o.id)) e(`${r}id inválido.`); textoLimpio(o.texto, `${r}texto`, e); if (!referenciaObjecion(o.a)) e(`${r}a «${o.a}» no apunta a una afirmación o hipótesis de esta salida ni a «<insumo>#<id>» (referencia rota).`); }
     if (!TIPOS_OBJECION.includes(o.tipo)) e(`${r}tipo debe ser ${TIPOS_OBJECION.join(" | ")}.`);
   });
   unicos(L(doc.objeciones).map((o) => o?.id), e, "objeciones");

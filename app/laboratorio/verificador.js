@@ -250,6 +250,12 @@ export async function verificar({ encargo, ejecucion, copias = new Map(), regist
       afirmaciones.push({ afirmacion_id: a.id, clase: a.clase, estado_cita: estadoCita, respaldo_semantico: "pendiente_revision_humana", alertas: alertasAf });
     }
     for (const [i, h] of L(ejecucion.hipotesis).entries()) if (INSTRUCCIONES.test(`${h.enunciado} ${h.experimento}`)) alerta("contiene_instrucciones_no_ejecutadas", `hipotesis[${i}]`, "La hipótesis o su experimento contiene algo parecido a un comando: no se ejecuta.");
+    // Una objeción a «<insumo>#<id>» debe apuntar a un insumo que el encargo declare (o a una ejecución registrada).
+    const refsInsumos = new Set(L(encargo.insumos).map((x) => x?.ref));
+    for (const [i, o] of L(ejecucion.objeciones).entries()) {
+      const m = /^([^#]+)#/.exec(String(o?.a ?? ""));
+      if (m && !refsInsumos.has(m[1]) && !registro?.ejecuciones?.has?.(m[1])) err("objecion_a_insumo_desconocido", `objeciones[${i}]: «${m[1]}» no es un insumo del encargo ni una ejecución registrada.`);
+    }
     for (const [i, c] of L(ejecucion.contradicciones).entries()) {
       for (const id of c.fuentes) if (!fuentes.has(id)) alerta("fuente_inexistente", `contradicciones[${i}]`, `${id} no está en el catálogo del encargo.`);
       // Una contradicción la DECLARA la IA; lab-V solo deja constancia de que existe y de en qué estado están sus fuentes.
