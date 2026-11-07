@@ -3,12 +3,12 @@
 // nunca toca datos/ salvo para leer los ejemplos DEMO y el expediente publicado (que comprueba intactos).
 //   node pruebas/laboratorio-node.mjs
 
-import { mkdtemp, readFile, writeFile, rename, rm, readdir, cp, stat } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, rename, rm, readdir, cp, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prueba, igual, verdadero, ejecutar } from "./mini.js";
-import { escribirAtomico, principal } from "../herramientas/laboratorio.mjs";
+import { escribirAtomico, principal, MAX_BYTES_JSON } from "../herramientas/laboratorio.mjs";
 import { sha256 } from "../app/laboratorio/base.js";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -104,6 +104,36 @@ prueba("Lab Node · CLI banco: genera evaluación, clave y manifiesto separados;
   const rc = await correr("verificar-banco", copia);
   igual(rc.codigo, 1); verdadero(/clave no coincide/.test(rc.salida), rc.salida);
   igual(await sha256(await readFile(ORIGINAL, "utf8")), antes, "el expediente publicado no cambió");
+  await rm(d, { recursive: true });
+});
+
+prueba("Lab Node 1.1 · CLI: copias por enlace simbólico, copias duplicadas y archivos enormes se niegan (fallo seguro)", async () => {
+  const d = await temporal(), copias = join(d, "copias"), fuera = join(d, "fuera.txt");
+  await cp(join(DEMO, "copias"), copias, { recursive: true });
+  await writeFile(fuera, await readFile(join(DEMO, "copias/demo-f-a.txt"), "utf8"));
+  await rm(join(copias, "demo-f-a.txt"));
+  await symlink(fuera, join(copias, "demo-f-a.txt"));
+  const r1 = await correr("verificar", "--encargo", join(DEMO, "encargo.json"), "--ejecucion", join(DEMO, "ejecucion-respaldada.json"), "--copias", copias, ...AHORA);
+  igual(r1.codigo, 2, r1.salida); verdadero(/enlace simbólico/.test(r1.salida), r1.salida);
+  await rm(join(copias, "demo-f-a.txt")); await cp(join(DEMO, "copias/demo-f-a.txt"), join(copias, "demo-f-a.txt"));
+  await writeFile(join(copias, "demo-f-a.pdf"), "x"); await writeFile(join(copias, "demo-f-a.html"), "y");
+  const r2 = await correr("verificar", "--encargo", join(DEMO, "encargo.json"), "--ejecucion", join(DEMO, "ejecucion-respaldada.json"), "--copias", copias, ...AHORA);
+  igual(r2.codigo, 2, r2.salida); verdadero(/2 copias originales/.test(r2.salida), r2.salida);
+  const grande = join(d, "grande.json"); await writeFile(grande, `{"contrato":"cauce.lab.encargo","x":"${"a".repeat(MAX_BYTES_JSON + 10)}"}`);
+  const r3 = await correr("validar", grande);
+  igual(r3.codigo, 2, r3.salida); verdadero(/límite para documentos JSON/.test(r3.salida), r3.salida);
+  await rm(d, { recursive: true });
+});
+
+prueba("Lab Node 1.1 · CLI registrar: un id válido ya registrado no se anexa otra vez; una hora anterior a la última entrada tampoco", async () => {
+  const d = await temporal(), reg = join(d, "demo-registro.jsonl");
+  igual((await correr("registrar", "--registro", reg, "--tipo", "encargo", "--documento", join(DEMO, "encargo.json"), "--demo", ...AHORA)).codigo, 0);
+  const dup = await correr("registrar", "--registro", reg, "--tipo", "encargo", "--documento", join(DEMO, "encargo.json"), "--demo", "--ahora", "2030-04-01T12:30:00Z");
+  igual(dup.codigo, 1, dup.salida); verdadero(/id duplicado/.test(dup.salida), dup.salida);
+  const atras = await correr("registrar", "--registro", reg, "--tipo", "ejecucion", "--documento", join(DEMO, "ejecucion-respaldada.json"), "--demo", "--ahora", "2030-04-01T11:00:00Z");
+  igual(atras.codigo, 1, atras.salida); verdadero(/orden temporal/.test(atras.salida), atras.salida);
+  igual((await readFile(reg, "utf8")).trimEnd().split("\n").length, 1, "sigue con una sola entrada");
+  igual((await correr("verificar-registro", reg, "--demo")).codigo, 0);
   await rm(d, { recursive: true });
 });
 

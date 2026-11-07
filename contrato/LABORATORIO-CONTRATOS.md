@@ -87,6 +87,31 @@ Estados:
 - `revision_humana` siempre es `{estado:"pendiente"}` en la fase 1.
 - «Apta para revisión humana» **no** significa «verdadera». Significa que nada mecánico la descalifica.
 
+Las seis cosas que lab-V deja **separadas** (y dónde quedan en el documento):
+
+| # | Qué | Dónde | Quién decide |
+|---|---|---|---|
+| 1 | Integridad del documento (copia y texto con su huella) | `fuentes[].integridad`, `fuentes[].texto`, `citas[].integridad` | código |
+| 2 | Coincidencia literal de la cita | `citas[].coincidencia`, `citas[].apariciones` | código |
+| 3 | Validez temporal | `citas[].temporal`, alerta `menciona_fecha_posterior_al_corte` | código |
+| 4 | Posible contradicción | alerta `posible_contradiccion_declarada` (la declara la IA; lab-V solo deja constancia y el estado de sus fuentes) | persona |
+| 5 | Respaldo semántico | `afirmaciones[].respaldo_semantico` = siempre `pendiente_revision_humana` | persona |
+| 6 | Aprobación humana | `revision_humana` = siempre `{estado:"pendiente"}` | persona |
+
+### Fase 1.1 (auditoría): reglas añadidas sin cambiar la forma de los contratos
+
+- **Tamaño**: un documento de más de 2 000 000 caracteres (JSON) se rechaza entero con un solo error, sin recorrerlo. Textos (pregunta, afirmación, hipótesis, objeción, duda, contradicción, error, ubicación) hasta 8 000 caracteres; extracto hasta 2 000; listas con tope (500 afirmaciones, 100 hipótesis, 500 objeciones, 200 dudas, 200 contradicciones, 20 citas por afirmación, 50 consultas, 200 insumos, 500 fuentes). Si un texto supera su límite, la búsqueda de datos privados no se ejecuta (ya está rechazado): antes una respuesta enorme bloqueaba la validación durante minutos.
+- **Caracteres invisibles**: anchura cero (U+200B…U+200F, U+2060…U+2064), control bidireccional (U+202A…U+202E, U+2066…U+2069), BOM (U+FEFF) y guion suave (U+00AD) se rechazan en cualquier texto o extracto.
+- **Ids**: ningún id (fuente, insumo, documento) contiene `..`; los ids nombran archivos de copias.
+- **Referencias**: `objeciones[].a` apunta a una afirmación o hipótesis de la misma salida o a `<ejecución>#<id>`; `hipotesis[].alternativa_a` apunta a otra hipótesis de la misma salida; ids de objeciones únicos; fuentes de una contradicción son ids válidos y distintos.
+- **Mundos**: un encargo DEMO no usa ejecuciones REALES como insumo (ni al revés).
+- **Orden de los hechos** (lab-V): `ejecucion_antes_del_encargo` y `verificacion_antes_de_la_ejecucion` son errores; `latido` debe estar entre `inicio` y `fin`.
+- **Límites del encargo** (lab-V): superar `max_minutos` o `max_tokens_salida` se avisa (`excede_max_minutos`, `excede_max_tokens`); la salida se verifica tal cual.
+- **Verificación coherente**: `resumen` debe cuadrar con las listas; «apta» exige cero errores, cero alertas, `incompleta:false` y todas las citas utilizables; «sin_salida» no trae citas ni afirmaciones; `apariciones` entero ≥ 0; cada alerta es `{codigo, ruta, detalle}`.
+- **Id de verificación**: `lab-ver-<ejecución>-<instante>`: una ejecución puede verificarse más de una vez y cada verificación se distingue.
+- **Registro**: una entrada fechada antes que la anterior se niega (`orden_temporal`); un id ya registrado como válido no se anexa otra vez (`id_duplicado`); un documento inválido sí puede volver a registrarse corregido con el mismo id.
+- **Herramienta**: no lee copias ni documentos a través de enlaces simbólicos; JSON hasta 4 MB y copias hasta 50 MB; una fuente con más de una copia original es error.
+
 ## Registro auditable `cauce.lab.registro` (JSONL)
 
 - Cada línea es una entrada encadenada: `n`, `sha256_documento`, `sha256_anterior`, `sha256_entrada`.
