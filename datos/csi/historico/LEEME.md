@@ -6,7 +6,7 @@ publica si Diego lo autoriza.
 
 Para ver un caso en el laboratorio (tecla I, botón «HISTÓRICO», o `?csi=historico`):
 
-1. Copia aquí el expediente (por ejemplo `expediente-bns-2015.json`).
+1. Copia aquí el expediente. El caso publicado está en `datos/csi/casos-publicados/expediente-bns-2015.json` (informe: `docs/CSI-CASO-BNS-2015.md`).
 2. Ejecuta `node herramientas/csi.mjs expediente datos/csi/historico/expediente-bns-2015.json`. Escribe
    `actores.json`, `investigaciones.json` y `escenarios.json` con el mismo motor que usa una persona, así el
    historial y las huellas son reales.
