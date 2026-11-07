@@ -1,0 +1,2138 @@
+{
+ "contrato": "cauce.csi.expediente",
+ "version_contrato": "0.1",
+ "nota": "Caso histórico REAL analizado en retrospectiva. No es una predicción. Versión propuesta para publicar: sin las copias de terceros (solo sus huellas SHA-256) y sin rutas privadas. Cotejos 2, 3 y 4 (7-nov-2026) en el historial.",
+ "investigacion": {
+  "id": "hist-bns-minimo-2015",
+  "titulo": "Fin del tipo mínimo del franco suizo (15 de enero de 2015)",
+  "pregunta": "¿Por qué el Banco Nacional Suizo abandonó el 15 de enero de 2015 el tipo mínimo de 1.20 francos por euro que había reafirmado cuatro semanas antes, qué se podía saber entonces y cómo respondieron otros actores?",
+  "acontecimiento": {
+   "descripcion": "El BNS abandona el tipo mínimo de 1.20 francos por euro y baja su tasa de depósitos a −0.75 %",
+   "fecha": "2015-01-15",
+   "mercado": "EUR/CHF"
+  },
+  "autor": {
+   "tipo": "ia",
+   "identificador": "claude-sesion-csi"
+  },
+  "fecha": "2026-11-07T03:05:00Z",
+  "actores": [
+   "bns",
+   "bce",
+   "fxcm",
+   "leucadia",
+   "mercado-chf"
+  ],
+  "naturaleza_estudio": "historico"
+ },
+ "alcance": {
+  "fecha": "2026-11-07T03:06:00Z",
+  "datos": {
+   "descripcion": "Decisión del BNS del 15-ene-2015 y respuestas documentadas en los días siguientes; contexto desde la introducción del mínimo (6-sep-2011) y efecto contable reportado en enero de 2016.",
+   "periodo": {
+    "desde": "2011-09-06",
+    "hasta": "2016-01-08"
+   },
+   "incluye": [
+    "Comunicados y discursos del BNS y del BCE",
+    "Tipos de referencia diarios EUR/CHF del SEBC",
+    "Comunicados corporativos de afectados identificables",
+    "Medios identificables solo para cifras atribuidas a una institución"
+   ],
+   "excluye": [
+    "Política interna suiza y debates parlamentarios",
+    "Opiniones de analistas sobre si la decisión fue correcta",
+    "Rumores o filtraciones sin fuente identificable",
+    "Datos intradía (no hay fuente pública oficial consultada)"
+   ],
+   "criterios_fuentes": [
+    "Primero documentos de las propias instituciones (BNS, BCE) en sus sitios o en el BIS.",
+    "Datos de mercado de una fuente oficial del SEBC (tipos de referencia), no de corredores.",
+    "Copias secundarias solo si el original no fue accesible, marcadas como secundarias.",
+    "Medios identificables solo para cifras que reportan de una institución, nunca para intenciones.",
+    "Entre 5 y 10 fuentes consultadas; se registran también las que no se pudieron verificar (pendientes)."
+   ]
+  }
+ },
+ "pasos": [
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bce-2011",
+     "titulo": "Statement of the Governing Council of the ECB on the decision of the Swiss National Bank",
+     "editor": "Banco Central Europeo (BCE)",
+     "tipo": "documento_oficial",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2011-09-06",
+     "consultada_en": "2026-11-07T02:58:00Z",
+     "enlace": "https://www.ecb.europa.eu/press/pr/date/2011/html/pr110906.en.html",
+     "extracto": "El BCE reproduce la decisión del BNS: \"no longer tolerate a EUR/CHF exchange rate below the minimum rate of CHF 1.20\". Sobre la decisión: \"which has been taken by the Swiss National Bank under its responsibility\".",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Es el BCE quien registra la decisión del BNS: para la decisión suiza es una fuente indirecta.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "autor_actor_id": "bce",
+     "origen": "bce"
+    }
+   },
+   "fecha": "2026-11-07T03:10:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bns-2011",
+     "titulo": "Introduction of a minimum Swiss franc exchange rate against the euro (declaración breve, Zúrich)",
+     "editor": "Banco Nacional Suizo (BNS)",
+     "tipo": "documento_oficial",
+     "clase": "primaria",
+     "estado": "pendiente",
+     "publicada_en": "2011-09-06",
+     "consultada_en": "2026-11-07T02:59:00Z",
+     "enlace": "https://www.snb.ch/en/mmr/speeches/id/ref_20110906_pmh/source/ref_20110906_pmh.en.pdf",
+     "autor_actor_id": "bns",
+     "origen": "bns",
+     "pendiente_motivo": "Solo se verificaron título, emisor y fecha: la herramienta de lectura no devolvió el cuerpo del PDF. Falta cotejar el texto antes de usarla como evidencia.",
+     "limitaciones": [
+      "Contenido no verificado."
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:10:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bns-2014-12",
+     "titulo": "Swiss National Bank Introduces Negative Interest Rates, Minimum Exchange Rate Reaffirmed (título truncado)",
+     "editor": "Mondo Visione (reproduce un comunicado del Banco Nacional Suizo)",
+     "tipo": "documento_oficial",
+     "clase": "secundaria",
+     "estado": "consultada",
+     "publicada_en": "2014-12-18",
+     "consultada_en": "2026-11-07T02:57:00Z",
+     "enlace": "https://mondovisione.com/media-and-resources/news/swiss-national-bank-introduces-negative-interest-rates-minimum-exchange-rate-rea-20141218/",
+     "extracto": "\"The Swiss National Bank (SNB) is imposing an interest rate of –0.25% on sight deposit account balances at the SNB\" · \"The SNB reaffirms its commitment to the minimum exchange rate of CHF 1.20 per euro\" · \"The SNB is prepared to purchase foreign currency in unlimited quantities\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Copia en un sitio de noticias financieras, no en snb.ch; el título está truncado en la página.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "autor_actor_id": "bns",
+     "origen": "bns"
+    }
+   },
+   "fecha": "2026-11-07T03:10:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bns-2015-01",
+     "titulo": "Swiss National Bank Discontinues Minimum Exchange Rate And Lowers Interest Rate To –0.75%",
+     "editor": "Mondo Visione (reproduce un comunicado del Banco Nacional Suizo)",
+     "tipo": "documento_oficial",
+     "clase": "secundaria",
+     "estado": "consultada",
+     "publicada_en": "2015-01-15",
+     "consultada_en": "2026-11-07T02:56:00Z",
+     "enlace": "https://mondovisione.com/media-and-resources/news/swiss-national-bank-discontinues-minimum-exchange-rate-and-lowers-interest-rate-2015115/",
+     "extracto": "\"The Swiss National Bank (SNB) is discontinuing the minimum exchange rate of CHF 1.20 per euro.\" · \"by 0.5 percentage points, to −0.75%.\" · \"It is moving the target range for the three-month Libor further into negative territory, to between –1.25% and −0.25%\" · \"the overvaluation has decreased as a whole since the introduction of the minimum exchange rate.\" · \"divergences between the monetary policies of the major currency areas have increased significantly.\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "La página no dice que reproduce el comunicado ni enlaza al original de snb.ch (no se encontró el original en la búsqueda).",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "autor_actor_id": "bns",
+     "origen": "bns"
+    }
+   },
+   "fecha": "2026-11-07T03:10:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-jordan-2015-01",
+     "titulo": "Thomas Jordan: The rationale for discontinuing the minimum exchange rate and lowering interest rates",
+     "editor": "Banco de Pagos Internacionales (BIS), discursos de banqueros centrales",
+     "tipo": "declaracion_publica",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2015-01-16",
+     "consultada_en": "2026-11-07T02:55:00Z",
+     "enlace": "https://www.bis.org/review/r150116a.htm",
+     "extracto": "\"The minimum exchange rate was introduced during a period of exceptional overvaluation of the Swiss franc\" · \"Recently, divergences between the monetary policies of the major currency areas have increased significantly\" · \"The euro has depreciated substantially against the US dollar\" · \"the SNB will be lowering the interest rate for balances held on sight deposit accounts to -0.75% from 22 January.\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Es la explicación del propio BNS (presidente de su Dirección General): dice qué razones declaró, no verifica que fueran las únicas.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "autor_actor_id": "bns",
+     "origen": "bns",
+     "disponible_en": "2015-01-15",
+     "disponible_segun": "La página del BIS la identifica como la declaración de la conferencia de prensa del BNS del 15 de enero de 2015 en Zúrich; el BIS la publicó el 16."
+    }
+   },
+   "fecha": "2026-11-07T03:10:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bce-2015-01",
+     "titulo": "ECB announces expanded asset purchase programme",
+     "editor": "Banco Central Europeo (BCE)",
+     "tipo": "documento_oficial",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2015-01-22",
+     "consultada_en": "2026-11-07T02:57:30Z",
+     "enlace": "https://www.ecb.europa.eu/press/pr/date/2015/html/pr150122_1.en.html",
+     "extracto": "\"Combined monthly purchases will amount to €60 billion.\" · \"They are intended to be carried out until at least September 2016\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "El extracto obtenido no indica la fecha de inicio de las compras.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "autor_actor_id": "bce",
+     "origen": "bce"
+    }
+   },
+   "fecha": "2026-11-07T03:10:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-leucadia-2015-01",
+     "titulo": "Leucadia National Corporation And FXCM Announce $300 Million Financing To Permit FXCM To Continue Normal Operations",
+     "editor": "Mondo Visione (reproduce un comunicado conjunto de Leucadia y FXCM)",
+     "tipo": "informe_corporativo",
+     "clase": "secundaria",
+     "estado": "consultada",
+     "publicada_en": "2015-01-16",
+     "consultada_en": "2026-11-07T02:59:30Z",
+     "enlace": "https://mondovisione.com/media-and-resources/news/leucadia-national-corporation-and-fxcm-announce-300-million-financing-to-permit-2015116/",
+     "extracto": "\"Leucadia would be providing $300 million in cash to FXCM\" · \"yesterday's loss of $225 million due to the unprecedented actions of the Swiss National Bank\" · \"permit FXCM to meet its regulatory-capital requirements and continue normal operations.\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Cifras declaradas por las propias empresas al día siguiente; no son estados financieros auditados.",
+      "No menciona cómo se repartió la pérdida entre clientes y empresa.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "autor_actor_id": "fxcm",
+     "origen": "fxcm-leucadia"
+    }
+   },
+   "fecha": "2026-11-07T03:11:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-jordan-2015-04",
+     "titulo": "SNB monetary policy after the discontinuation of the minimum exchange rate (107ª Asamblea General de Accionistas, Berna)",
+     "editor": "Banco Nacional Suizo (BNS)",
+     "tipo": "declaracion_publica",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2015-04-24",
+     "consultada_en": "2026-11-07T03:00:00Z",
+     "enlace": "https://www.snb.ch/en/mmr/speeches/id/ref_20150424_tjn",
+     "extracto": "\"could only be enforced through permanent currency interventions of rapidly increasing magnitude.\" · \"This meant that the minimum exchange rate was no longer sustainable.\" · \"will remain active in the foreign exchange market as necessary in order to influence monetary conditions.\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Explicación posterior (tres meses después) del propio BNS: es su razonamiento declarado ex post.",
+      "El extracto no da el tamaño del balance ni de las intervenciones.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "autor_actor_id": "bns",
+     "origen": "bns"
+    }
+   },
+   "fecha": "2026-11-07T03:11:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-swissinfo-2016-01",
+     "titulo": "SNB reports CHF23 billion loss",
+     "editor": "SWI swissinfo.ch",
+     "tipo": "prensa",
+     "clase": "secundaria",
+     "estado": "consultada",
+     "publicada_en": "2016-01-08",
+     "consultada_en": "2026-11-07T03:00:30Z",
+     "enlace": "https://www.swissinfo.ch/eng/balance-sheet_snb-reports-chf23-billion-loss/41881084",
+     "extracto": "\"expects to report a loss of CHF23 billion ($23.06 billion) for the 2015 financial year.\" · \"foreign currency positions amounting to CHF20 billion\" · \"The Swiss franc surged last year after the SNB unexpectedly dropped a CHF1.20 cap.\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Medio que informa una cifra provisional del BNS; no se consultó el informe anual definitivo de 2015.",
+      "«unexpectedly» es una valoración del medio, no un dato.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "origen": "swissinfo"
+    }
+   },
+   "fecha": "2026-11-07T03:11:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bdi-2015-01-14",
+     "titulo": "Cambi di riferimento del 14 gennaio 2015",
+     "editor": "Banca d'Italia (tipos de referencia del euro del SEBC)",
+     "tipo": "dato_estadistico",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2015-01-14T14:15:00+01:00",
+     "consultada_en": "2026-11-07T03:01:00Z",
+     "enlace": "https://www.bancaditalia.it/compiti/operazioni-cambi/cambio/cambi_rif_20150114",
+     "extracto": "Franco svizzero 1,2010 (tipo de referencia, ore 14,15 del giorno 14/01/2015).",
+     "extracto_tipo": "dato",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Tipo de referencia diario a las 14:15 CET: no es el mínimo ni el máximo intradía.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "origen": "sebc"
+    }
+   },
+   "fecha": "2026-11-07T03:11:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bdi-2015-01-15",
+     "titulo": "Cambi di riferimento del 15 gennaio 2015",
+     "editor": "Banca d'Italia (tipos de referencia del euro del SEBC)",
+     "tipo": "dato_estadistico",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2015-01-15T14:15:00+01:00",
+     "consultada_en": "2026-11-07T03:01:00Z",
+     "enlace": "https://www.bancaditalia.it/compiti/operazioni-cambi/cambio/cambi_rif_20150115",
+     "extracto": "Franco svizzero 1,0280 (tipo de referencia, ore 14,15 del 15/01/2015).",
+     "extracto_tipo": "dato",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Tipo de referencia diario a las 14:15 CET: no muestra el movimiento intradía tras el anuncio.",
+      "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+      "Sin copia local: no hay huella de contenido verificable."
+     ],
+     "origen": "sebc"
+    }
+   },
+   "fecha": "2026-11-07T03:11:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e01",
+     "tipo": "hecho",
+     "texto": "Tipo de referencia EUR/CHF del 14-ene-2015 (14:15 CET): 1.2010 francos por euro.",
+     "fuentes": [
+      "f-bdi-2015-01-14"
+     ],
+     "sobre": "dato"
+    }
+   },
+   "fecha": "2026-11-07T03:13:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e02",
+     "tipo": "hecho",
+     "texto": "Tipo de referencia EUR/CHF del 15-ene-2015 (14:15 CET): 1.0280 francos por euro.",
+     "fuentes": [
+      "f-bdi-2015-01-15"
+     ],
+     "sobre": "dato"
+    }
+   },
+   "fecha": "2026-11-07T03:13:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e03",
+     "tipo": "inferencia",
+     "texto": "Entre ambos tipos de referencia el euro pasó a valer cerca de 14 % menos francos ((1.2010 − 1.0280) / 1.2010 ≈ 14.4 %).",
+     "fuentes": [],
+     "inferido_de": [
+      "e01",
+      "e02"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:13:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e04",
+     "tipo": "hecho",
+     "texto": "El 6-sep-2011 el BNS fijó un tipo mínimo de 1.20 francos por euro (lo registra un comunicado del BCE del mismo día).",
+     "fuentes": [
+      "f-bce-2011"
+     ],
+     "sobre": "conducta",
+     "actor_id": "bns",
+     "cita": "no longer tolerate a EUR/CHF exchange rate below the minimum rate of CHF 1.20"
+    }
+   },
+   "fecha": "2026-11-07T03:13:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e05",
+     "tipo": "declaracion",
+     "texto": "El 18-dic-2014 el BNS reafirmó su compromiso con el tipo mínimo y se declaró dispuesto a comprar divisas en cantidades ilimitadas.",
+     "fuentes": [
+      "f-bns-2014-12"
+     ],
+     "sobre": "intencion",
+     "actor_id": "bns",
+     "cita": "The SNB reaffirms its commitment to the minimum exchange rate of CHF 1.20 per euro"
+    }
+   },
+   "fecha": "2026-11-07T03:13:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e06",
+     "tipo": "hecho",
+     "texto": "El 18-dic-2014 el BNS impuso una tasa de −0.25 % a los saldos de depósitos a la vista.",
+     "fuentes": [
+      "f-bns-2014-12"
+     ],
+     "sobre": "conducta",
+     "actor_id": "bns",
+     "cita": "is imposing an interest rate of –0.25% on sight deposit account balances"
+    }
+   },
+   "fecha": "2026-11-07T03:14:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e07",
+     "tipo": "hecho",
+     "texto": "El 15-ene-2015 el BNS dejó el tipo mínimo de 1.20 francos por euro.",
+     "fuentes": [
+      "f-bns-2015-01",
+      "f-jordan-2015-01"
+     ],
+     "sobre": "conducta",
+     "actor_id": "bns",
+     "cita": "is discontinuing the minimum exchange rate of CHF 1.20 per euro"
+    }
+   },
+   "fecha": "2026-11-07T03:14:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e08",
+     "tipo": "hecho",
+     "texto": "El mismo día bajó la tasa de depósitos a la vista a −0.75 % (desde el 22-ene) y movió el rango objetivo del Libor a tres meses a entre −1.25 % y −0.25 %.",
+     "fuentes": [
+      "f-bns-2015-01",
+      "f-jordan-2015-01"
+     ],
+     "sobre": "conducta",
+     "actor_id": "bns",
+     "cita": "to between –1.25% and −0.25%"
+    }
+   },
+   "fecha": "2026-11-07T03:14:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e09",
+     "tipo": "declaracion",
+     "texto": "El BNS explicó que las divergencias entre las políticas monetarias de las principales áreas monetarias habían aumentado mucho.",
+     "fuentes": [
+      "f-bns-2015-01",
+      "f-jordan-2015-01"
+     ],
+     "sobre": "contexto",
+     "actor_id": "bns",
+     "cita": "divergences between the monetary policies of the major currency areas have increased significantly"
+    }
+   },
+   "fecha": "2026-11-07T03:14:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e10",
+     "tipo": "declaracion",
+     "texto": "El BNS dijo que la sobrevaloración del franco había disminuido en conjunto desde que introdujo el mínimo.",
+     "fuentes": [
+      "f-bns-2015-01"
+     ],
+     "sobre": "contexto",
+     "actor_id": "bns",
+     "cita": "the overvaluation has decreased as a whole since the introduction of the minimum exchange rate"
+    }
+   },
+   "fecha": "2026-11-07T03:14:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e11",
+     "tipo": "declaracion",
+     "texto": "El BNS señaló que el euro se había depreciado sustancialmente frente al dólar.",
+     "fuentes": [
+      "f-jordan-2015-01"
+     ],
+     "sobre": "contexto",
+     "actor_id": "bns",
+     "cita": "The euro has depreciated substantially against the US dollar"
+    }
+   },
+   "fecha": "2026-11-07T03:15:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e12",
+     "tipo": "hecho",
+     "texto": "El 22-ene-2015, una semana después, el BCE anunció compras combinadas de activos por 60 mil millones de euros al mes, previstas hasta al menos septiembre de 2016.",
+     "fuentes": [
+      "f-bce-2015-01"
+     ],
+     "sobre": "conducta",
+     "actor_id": "bce",
+     "cita": "Combined monthly purchases will amount to €60 billion."
+    }
+   },
+   "fecha": "2026-11-07T03:15:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e13",
+     "tipo": "declaracion",
+     "texto": "El 16-ene-2015 FXCM y Leucadia declararon que FXCM perdió 225 millones de dólares por la acción del BNS.",
+     "fuentes": [
+      "f-leucadia-2015-01"
+     ],
+     "sobre": "dato",
+     "actor_id": "fxcm",
+     "cita": "loss of $225 million due to the unprecedented actions of the Swiss National Bank"
+    }
+   },
+   "fecha": "2026-11-07T03:15:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e14",
+     "tipo": "hecho",
+     "texto": "Leucadia acordó aportar 300 millones de dólares a FXCM para que siguiera cumpliendo sus requisitos regulatorios de capital.",
+     "fuentes": [
+      "f-leucadia-2015-01"
+     ],
+     "sobre": "conducta",
+     "actor_id": "leucadia",
+     "cita": "permit FXCM to meet its regulatory-capital requirements and continue normal operations."
+    }
+   },
+   "fecha": "2026-11-07T03:15:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e15",
+     "tipo": "declaracion",
+     "texto": "En abril de 2015 el BNS dijo que el mínimo solo se podía sostener con intervenciones permanentes de magnitud rápidamente creciente y que ya no era sostenible.",
+     "fuentes": [
+      "f-jordan-2015-04"
+     ],
+     "sobre": "intencion",
+     "actor_id": "bns",
+     "cita": "could only be enforced through permanent currency interventions of rapidly increasing magnitude"
+    }
+   },
+   "fecha": "2026-11-07T03:15:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e16",
+     "tipo": "declaracion",
+     "texto": "En enero de 2016 el BNS anticipó una pérdida de 23 mil millones de francos para 2015, unos 20 mil millones por posiciones en divisas (según swissinfo).",
+     "fuentes": [
+      "f-swissinfo-2016-01"
+     ],
+     "sobre": "dato",
+     "actor_id": "bns",
+     "cita": "expects to report a loss of CHF23 billion"
+    }
+   },
+   "fecha": "2026-11-07T03:16:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e17",
+     "tipo": "inferencia",
+     "texto": "La reafirmación del 18-dic-2014 y el abandono del 15-ene-2015 indican que la comunicación pública del BNS no anticipó el cambio: con lo publicado en diciembre no se podía conocer la fecha.",
+     "fuentes": [],
+     "inferido_de": [
+      "e05",
+      "e07"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:16:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e18",
+     "tipo": "inferencia",
+     "texto": "La explicación de abril de 2015 es posterior a la decisión: describe el razonamiento declarado ex post y no prueba qué cálculos tenía el BNS el 15 de enero.",
+     "fuentes": [],
+     "inferido_de": [
+      "e15"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:16:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e19",
+     "tipo": "inferencia",
+     "texto": "El anuncio del BCE del 22-ene es compatible con que el BNS esperara una relajación en la zona del euro, pero fue posterior a la decisión y no prueba lo que el BNS sabía ni que hubiera comunicación entre ambos.",
+     "fuentes": [],
+     "inferido_de": [
+      "e12",
+      "e09"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:16:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e20",
+     "tipo": "simulacion",
+     "texto": "Contrafactual: si el BNS hubiera mantenido el mínimo después del 22-ene-2015, la simulación solo indica que habría tenido que seguir comprando divisas; con estas fuentes no se puede estimar cuánto.",
+     "fuentes": [],
+     "escenario_id": "esc-bns-2015-contrafactual",
+     "contrafactual": true
+    }
+   },
+   "fecha": "2026-11-07T03:16:00Z"
+  },
+  {
+   "accion": "agregar_incentivo",
+   "datos": {
+    "incentivo": {
+     "id": "i1",
+     "actor_id": "bns",
+     "texto": "Reducir la necesidad de comprar divisas en cantidades crecientes.",
+     "basado_en": [
+      "e15"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:18:00Z"
+  },
+  {
+   "accion": "agregar_incentivo",
+   "datos": {
+    "incentivo": {
+     "id": "i2",
+     "actor_id": "fxcm",
+     "texto": "Seguir operando y cumplir sus requisitos de capital tras la pérdida.",
+     "basado_en": [
+      "e13",
+      "e14"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:18:00Z"
+  },
+  {
+   "accion": "agregar_incentivo",
+   "datos": {
+    "incentivo": {
+     "id": "i3",
+     "actor_id": "leucadia",
+     "texto": "Obtener rendimiento de un préstamo a una empresa en dificultades (hipotético: los términos no se consultaron).",
+     "basado_en": [
+      "e14"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:18:00Z"
+  },
+  {
+   "accion": "agregar_incentivo",
+   "datos": {
+    "incentivo": {
+     "id": "i4",
+     "actor_id": "bce",
+     "texto": "Aplicar su programa de compras con independencia de la decisión suiza (hipotético).",
+     "basado_en": [
+      "e12"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:18:00Z"
+  },
+  {
+   "accion": "agregar_incentivo",
+   "datos": {
+    "incentivo": {
+     "id": "i5",
+     "actor_id": "mercado-chf",
+     "texto": "Ajustar la exposición a euros y francos tras el cambio de régimen cambiario.",
+     "basado_en": [
+      "e07",
+      "e02"
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:18:00Z"
+  },
+  {
+   "accion": "agregar_hipotesis",
+   "datos": {
+    "hipotesis": {
+     "id": "H-A",
+     "categoria": "fundamentales",
+     "sobre_actor": "bns",
+     "momento_decision": "2015-01-15",
+     "enunciado": "El BNS abandonó el mínimo porque, con políticas monetarias divergentes y el euro depreciándose, defenderlo exigía intervenciones cada vez mayores que juzgó insostenibles.",
+     "a_favor": [
+      "e09",
+      "e11",
+      "e15"
+     ],
+     "en_contra": [
+      "e05"
+     ],
+     "supuestos": [
+      "Las razones declaradas por el BNS son sus razones reales (no se puede verificar)."
+     ],
+     "condiciones_refutacion": [
+      "Datos del BNS anteriores al 15-ene-2015 que muestren que las intervenciones no estaban creciendo en enero.",
+      "Un documento oficial del BNS que atribuya la decisión a otra causa principal."
+     ],
+     "datos_faltantes": [
+      "Volumen de intervenciones de diciembre de 2014 y enero de 2015 (reservas de divisas mensuales del BNS, no consultadas).",
+      "Deliberaciones internas (no públicas).",
+      "Copia BIS del discurso de abril que menciona la relajación esperada en la zona del euro (no registrada)."
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_hipotesis",
+   "datos": {
+    "hipotesis": {
+     "id": "H-B",
+     "categoria": "otra",
+     "sobre_actor": "bns",
+     "momento_decision": "2015-01-15",
+     "enunciado": "El motivo principal fue limitar el riesgo contable del balance del BNS (pérdidas por divisas), más que la política monetaria.",
+     "a_favor": [
+      "e16"
+     ],
+     "en_contra": [],
+     "supuestos": [
+      "El tamaño del balance pesó en la decisión."
+     ],
+     "condiciones_refutacion": [
+      "Que ninguna comunicación del BNS anterior o del día de la decisión mencione el balance o las pérdidas como razón."
+     ],
+     "datos_faltantes": [
+      "Tamaño del balance y de las reservas en enero de 2015 (no consultado).",
+      "Declaraciones del BNS sobre su balance anteriores a la decisión."
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_hipotesis",
+   "datos": {
+    "hipotesis": {
+     "id": "H-C",
+     "categoria": "otra",
+     "sobre_actor": "bns",
+     "momento_decision": "2015-01-15",
+     "enunciado": "El BNS actuó por un aviso o arreglo previo con el BCE sobre su programa de compras.",
+     "a_favor": [],
+     "en_contra": [],
+     "supuestos": [
+      "Hubo comunicación previa no publicada."
+     ],
+     "condiciones_refutacion": [
+      "Documentos oficiales que muestren que el BCE no fue informado antes, o que el BNS decidió sin conocer el programa."
+     ],
+     "datos_faltantes": [
+      "Cualquier documento oficial de comunicación BNS–BCE previa (nada en lo consultado)."
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_hipotesis",
+   "datos": {
+    "hipotesis": {
+     "id": "H-D",
+     "categoria": "manipulacion",
+     "momento_decision": "2015-01-15",
+     "enunciado": "Algún participante conoció la decisión antes del anuncio y operó con ventaja.",
+     "a_favor": [],
+     "en_contra": [],
+     "supuestos": [],
+     "condiciones_refutacion": [
+      "Que el supervisor competente no encuentre operaciones con información previa, o que los datos intradía no muestren movimientos anómalos antes del anuncio."
+     ],
+     "datos_faltantes": [
+      "Registros de órdenes anteriores al anuncio (solo los tiene el supervisor).",
+      "Investigaciones oficiales sobre filtración (no consultadas)."
+     ]
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_observacion",
+   "datos": {
+    "hipotesis_id": "H-A",
+    "observacion": {
+     "texto": "Si las reservas de divisas del BNS de diciembre-2014 y enero-2015 muestran un salto, apoyan H-A frente a H-B y H-C; si no, la debilitan.",
+     "distingue_de": [
+      "H-B",
+      "H-C"
+     ],
+     "disponible": "ya_observable"
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_observacion",
+   "datos": {
+    "hipotesis_id": "H-A",
+    "observacion": {
+     "texto": "Datos intradía oficiales sin movimientos anómalos antes del anuncio apoyarían que nadie operó con ventaja (H-D).",
+     "distingue_de": [
+      "H-D"
+     ],
+     "disponible": "no_accesible"
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_observacion",
+   "datos": {
+    "hipotesis_id": "H-B",
+    "observacion": {
+     "texto": "Menciones al balance o a pérdidas en las comunicaciones del BNS del 15-ene-2015: si no aparecen, H-B se debilita frente a H-A.",
+     "distingue_de": [
+      "H-A"
+     ],
+     "disponible": "ya_observable"
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_observacion",
+   "datos": {
+    "hipotesis_id": "H-B",
+    "observacion": {
+     "texto": "Un acuerdo previo documentado con el BCE favorecería H-C sobre H-B.",
+     "distingue_de": [
+      "H-C",
+      "H-D"
+     ],
+     "disponible": "no_accesible"
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_observacion",
+   "datos": {
+    "hipotesis_id": "H-C",
+    "observacion": {
+     "texto": "Publicación oficial de contactos previos BNS–BCE: su existencia favorecería H-C; su ausencia no la refuta.",
+     "distingue_de": [
+      "H-A",
+      "H-B",
+      "H-D"
+     ],
+     "disponible": "no_accesible"
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_observacion",
+   "datos": {
+    "hipotesis_id": "H-D",
+    "observacion": {
+     "texto": "Movimientos anómalos de EUR/CHF antes de la hora del anuncio en datos intradía oficiales.",
+     "distingue_de": [
+      "H-A",
+      "H-B",
+      "H-C"
+     ],
+     "disponible": "no_accesible"
+    }
+   },
+   "fecha": "2026-11-07T03:19:00Z"
+  },
+  {
+   "accion": "agregar_escenario",
+   "datos": {
+    "escenario_id": "esc-bns-2015-contrafactual"
+   },
+   "fecha": "2026-11-07T03:20:00Z"
+  },
+  {
+   "accion": "editar",
+   "datos": {
+    "campo": "supuestos",
+    "valor": [
+     "Las citas en inglés son fragmentos cortos devueltos por la herramienta de lectura; se cotejarán con los originales.",
+     "Los tipos de referencia del SEBC a las 14:15 no muestran el mínimo intradía.",
+     "Quien investigó (una IA en esta sesión) conocía el caso antes de buscar fuentes: hay riesgo de sesgo retrospectivo."
+    ]
+   },
+   "fecha": "2026-11-07T03:20:00Z"
+  },
+  {
+   "accion": "editar",
+   "datos": {
+    "campo": "incertidumbre",
+    "valor": {
+     "nivel": "alta",
+     "descripcion": "Las razones internas del BNS no son públicas: solo hay sus explicaciones declaradas, una de ellas ex post. Falta el volumen de intervención de enero de 2015 y una fuente sigue pendiente."
+    }
+   },
+   "fecha": "2026-11-07T03:20:00Z"
+  }
+ ],
+ "abogado": {
+  "fecha": "2026-11-07T03:21:00Z"
+ },
+ "pasos_finales": [
+  {
+   "accion": "revision",
+   "datos": {
+    "estado": "en_revision",
+    "nota": "Pendiente de revisión humana independiente (responsable del proyecto). Una IA no sustituye esa revisión."
+   },
+   "fecha": "2026-11-07T03:22:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bce-2011",
+    "resultado": "coincide",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Las 2 citas aparecen."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bns-2014-12",
+    "resultado": "coincide",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Las 3 citas aparecen en la copia de Mondo Visione."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bns-2015-01",
+    "resultado": "parcial",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Las 5 citas aparecen en la copia de Mondo Visione, una en dos fragmentos."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-jordan-2015-01",
+    "resultado": "corregido",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Solo se confirmó la cuarta cita hasta «-0.75%»: se recorta a lo confirmado.",
+    "extracto_corregido": "\"The minimum exchange rate was introduced during a period of exceptional overvaluation of the Swiss franc\" · \"Recently, divergences between the monetary policies of the major currency areas have increased significantly\" · \"The euro has depreciated substantially against the US dollar\" · \"the SNB will be lowering the interest rate for balances held on sight deposit accounts to -0.75%\""
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bce-2015-01",
+    "resultado": "coincide",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Las 2 citas aparecen."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-leucadia-2015-01",
+    "resultado": "coincide",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Las 3 citas aparecen; la cifra de 225 millones no está en las presentaciones 8-K de FXCM consultadas."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-jordan-2015-04",
+    "resultado": "coincide",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Las 3 citas aparecen."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-swissinfo-2016-01",
+    "resultado": "corregido",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). La tercera cita llevaba un punto final que no está en el original; la frase sigue «versus the euro on January 15, 2015.».",
+    "extracto_corregido": "\"expects to report a loss of CHF23 billion ($23.06 billion) for the 2015 financial year.\" · \"foreign currency positions amounting to CHF20 billion\" · \"The Swiss franc surged last year after the SNB unexpectedly dropped a CHF1.20 cap versus the euro on January 15, 2015.\""
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bdi-2015-01-14",
+    "resultado": "coincide",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Valor y encabezado coinciden."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bdi-2015-01-15",
+    "resultado": "coincide",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Valor y encabezado coinciden."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bns-2011",
+    "resultado": "no_localizado",
+    "metodo": "herramienta_sesion",
+    "detalle": "Cotejo 2, hecho entre las 04:05 y las 04:15 UTC del 7-nov-2026: segunda lectura del original con la herramienta web de la sesión (fragmentos de 125 caracteres como máximo; no es copia byte a byte). Solo título y fecha; sin cuerpo del PDF."
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-fxcm-8k-2015-01",
+     "titulo": "FXCM Provides Further Details on Financing with Leucadia National Corporation (anexo 99.1 del Form 8-K)",
+     "editor": "FXCM Inc. (presentación ante la SEC)",
+     "tipo": "informe_corporativo",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2015-01-19",
+     "consultada_en": "2026-11-07T04:12:00Z",
+     "enlace": "https://www.sec.gov/Archives/edgar/data/0001499912/000114420415002640/v398968_ex99-1.htm",
+     "extracto": "\"entered into a credit agreement with Leucadia on January 16, 2015 for a $300 million, two-year term loan.\" · \"FXCM is now in compliance with all regulatory capital requirements in the jurisdictions in which it operates.\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "herramienta_sesion",
+     "limitaciones": [
+      "Agregada durante el cotejo, después del análisis inicial: no estaba entre las fuentes elegidas al registrar el alcance.",
+      "Es del 19-ene-2015 y la presenta la propia empresa afectada.",
+      "No menciona la pérdida de 225 millones de dólares."
+     ],
+     "autor_actor_id": "fxcm",
+     "origen": "fxcm-sec"
+    }
+   },
+   "fecha": "2026-11-07T04:23:00Z"
+  },
+  {
+   "accion": "retirar_enunciado",
+   "datos": {
+    "enunciado_id": "e14",
+    "motivo": "Su cita terminaba en un punto que no existe en el original (la frase continúa). Se sustituye por e21 con la cita corregida y una fuente primaria más."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bce-2011",
+    "metodo": "copia_local",
+    "huella_contenido": "4488e4815901bc6d567bda2071709af708f6eefca5045ef63851d31ee3f89e0b",
+    "copia_local": "copia privada del investigador (no publicada): f-bce-2011.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:19:51 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bns-2014-12",
+    "metodo": "copia_local",
+    "huella_contenido": "3953137dd2adf3d4049b9de34217bcf6ba69255041f598b85d887743dd572b06",
+    "copia_local": "copia privada del investigador (no publicada): f-bns-2014-12.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:16:48 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bns-2015-01",
+    "metodo": "copia_local",
+    "huella_contenido": "3b65959a2205e4e437f890f34fa7b430f1d7cfac6dd95be50d9addbe8b9495ab",
+    "copia_local": "copia privada del investigador (no publicada): f-bns-2015-01.html",
+    "resultado": "corregido",
+    "extracto_corregido": "\"The Swiss National Bank (SNB) is discontinuing the minimum exchange rate of CHF 1.20 per euro.\" · \"by 0.5 percentage points, to −0.75%.\" · \"It is moving the target range for the three-month Libor further into negative territory, to between –1.25% and −0.25%\" · \"the overvaluation has decreased as a whole since the introduction of the minimum exchange rate.\" · \"divergences between the monetary policies of the major currency areas have increased significantly …\" [la frase sigue: «– a trend that is likely to become even more pronounced.»]",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:17:09 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas aparecen, pero una terminaba en un punto que no está en el original (la frase continúa): se corrige marcando el corte."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-jordan-2015-01",
+    "metodo": "copia_local",
+    "huella_contenido": "e0f872ae121ca22a92a899985fcffd8798c65e88f4604e78364eda33301c7020",
+    "copia_local": "copia privada del investigador (no publicada): f-jordan-2015-01.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:17:13 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bce-2015-01",
+    "metodo": "copia_local",
+    "huella_contenido": "1ce0316cdcd0ef557750b02305d71a954bae195e06ca21a6a9fe2ea4a829d954",
+    "copia_local": "copia privada del investigador (no publicada): f-bce-2015-01.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:19:58 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-leucadia-2015-01",
+    "metodo": "copia_local",
+    "huella_contenido": "af2145d367e9935262aad412102bcc253c744e4ca79da96ff4fa7c969317033f",
+    "copia_local": "copia privada del investigador (no publicada): f-leucadia-2015-01.html",
+    "resultado": "corregido",
+    "extracto_corregido": "\"Leucadia would be providing $300 million in cash to FXCM\" · \"yesterday's loss of $225 million due to the unprecedented actions of the Swiss National Bank\" · \"permit FXCM to meet its regulatory-capital requirements and continue normal operations …\" [la frase sigue: «after yesterday's loss of $225 million…»]",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:17:27 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas aparecen, pero una terminaba en un punto que no está en el original (la frase continúa): se corrige marcando el corte."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-jordan-2015-04",
+    "metodo": "copia_local",
+    "huella_contenido": "b1cf6ec080c24390e804ef9e1311e611f74f69f334f5bbce6c57d1c408de7c0d",
+    "copia_local": "copia privada del investigador (no publicada): f-jordan-2015-04.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:20:00 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-swissinfo-2016-01",
+    "metodo": "copia_local",
+    "huella_contenido": "a53ef5c4ac9ec3ceb22468eb28b5414c31ed1efced00b54fd179cc5849a0e125",
+    "copia_local": "copia privada del investigador (no publicada): f-swissinfo-2016-01.html",
+    "resultado": "corregido",
+    "extracto_corregido": "\"expects to report a loss of CHF23 billion ($23.06 billion) for the 2015 financial year …\" [la frase sigue: «, mainly due to currency fluctuations.»] · \"foreign currency positions amounting to CHF20 billion\" · \"The Swiss franc surged last year after the SNB unexpectedly dropped a CHF1.20 cap versus the euro on January 15, 2015.\"",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:17:34 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas aparecen, pero una terminaba en un punto que no está en el original (la frase continúa): se corrige marcando el corte."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bdi-2015-01-14",
+    "metodo": "copia_local",
+    "huella_contenido": "04b3c178eb939ec601481556e93e7b103f11500ec697ca691afafddf6a618913",
+    "copia_local": "copia privada del investigador (no publicada): f-bdi-2015-01-14.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:20:03 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bdi-2015-01-15",
+    "metodo": "copia_local",
+    "huella_contenido": "4595629ff751ec119b019602d61f7debdda9734aa7ec918d0528b084bbdb790a",
+    "copia_local": "copia privada del investigador (no publicada): f-bdi-2015-01-15.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:20:06 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-fxcm-8k-2015-01",
+    "metodo": "copia_local",
+    "huella_contenido": "14b42ebfb7937b013aa7e1a69970b7dc1be8a798b1983538f0cd55f598f9b17e",
+    "copia_local": "copia privada del investigador (no publicada): f-fxcm-8k-2015-01.html",
+    "resultado": "coincide",
+    "detalle": "Cotejo 3: copia byte a byte descargada en el equipo del responsable del proyecto el 7-nov-2026 a las 04:17:41 UTC (una descarga), SHA-256 calculada con Python y comprobada con certutil/Get-FileHash en muestras; búsqueda literal de cada cita en el texto de la copia (sin etiquetas, espacios y comillas normalizados). Todas las citas o cifras aparecen literalmente."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bns-2011",
+    "resultado": "no_localizado",
+    "metodo": "copia_local",
+    "detalle": "Cotejo 3: la dirección del PDF devolvió en el equipo del responsable del proyecto una página HTML de snb.ch (solo el título), no el PDF. No sirve como copia del original. Sigue PENDIENTE."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e21",
+     "tipo": "hecho",
+     "texto": "Leucadia acordó aportar 300 millones de dólares a FXCM (préstamo a plazo de dos años firmado el 16-ene-2015) para que siguiera cumpliendo sus requisitos regulatorios de capital.",
+     "fuentes": [
+      "f-leucadia-2015-01",
+      "f-fxcm-8k-2015-01"
+     ],
+     "sobre": "conducta",
+     "actor_id": "leucadia",
+     "cita": "permit FXCM to meet its regulatory-capital requirements and continue normal operations"
+    }
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "editar",
+   "datos": {
+    "campo": "supuestos",
+    "valor": [
+     "11 de 12 fuentes tienen copia byte a byte con SHA-256 en el equipo del responsable del proyecto (cotejo 3); la de 2011 del BNS sigue pendiente.",
+     "Los tipos de referencia del SEBC a las 14:15 no muestran el mínimo intradía.",
+     "Quien investigó (una IA en esta sesión) conocía el caso antes de buscar fuentes: hay riesgo de sesgo retrospectivo."
+    ]
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "revision",
+   "datos": {
+    "estado": "en_revision",
+    "nota": "Cotejos 2 y 3 registrados. Pendiente de revisión humana independiente (responsable del proyecto). Una IA no sustituye esa revisión."
+   },
+   "fecha": "2026-11-07T04:24:00Z"
+  },
+  {
+   "accion": "agregar_fuente",
+   "datos": {
+    "fuente": {
+     "id": "f-bns-2011-pdf",
+     "titulo": "Introduction of a minimum Swiss franc exchange rate against the euro (declaración breve de Philipp Hildebrand, Zúrich, PDF)",
+     "editor": "Banco Nacional Suizo (BNS)",
+     "tipo": "documento_oficial",
+     "clase": "primaria",
+     "estado": "consultada",
+     "publicada_en": "2011-09-06",
+     "consultada_en": "2026-11-07T04:30:36Z",
+     "enlace": "https://www.snb.ch/public/asset/en/www-snb-ch/publications/communication/speeches/2011/ref_20110906_pmh/publications0_en/ref_20110906_pmh.en.pdf",
+     "extracto": "\"With immediate effect, it will no longer tolerate a EUR/CHF exchange rate below one Swiss franc twenty.\" · \"It is prepared to purchase foreign exchange in unlimited quantities.\" · \"This has resulted in a massive overvaluation of our national currency.\" · \"Even at a rate of one Swiss franc twenty per euro, our currency is still at a high level.\"",
+     "extracto_tipo": "cita_textual",
+     "metodo_consulta": "copia_local",
+     "huella_contenido": "351b533d68bb705e8fd14963bcd0f30e4378584ec23006d4921c28de9891dd40",
+     "copia_local": "copia privada del investigador (no publicada): f-bns-2011-pdf.pdf",
+     "limitaciones": [
+      "Es el mismo documento que f-bns-2011, con el enlace de descarga real: el enlace registrado al principio devolvía una página HTML con solo el título.",
+      "Agregada durante el cotejo, después del análisis inicial.",
+      "Texto extraído del PDF con pypdf; las 4 citas aparecen literalmente. Metadatos del PDF: creado el 2011-09-06 17:11 +02:00 (los escribe quien genera el archivo; no es una hora acreditada).",
+      "La huella identifica la copia descargada el 7-nov-2026, no prueba que el archivo de 2011 fuera idéntico."
+     ],
+     "autor_actor_id": "bns",
+     "origen": "bns"
+    }
+   },
+   "fecha": "2026-11-07T04:32:00Z"
+  },
+  {
+   "accion": "cotejar_fuente",
+   "datos": {
+    "fuente_id": "f-bns-2011",
+    "resultado": "no_localizado",
+    "metodo": "copia_local",
+    "detalle": "Cotejo 4: el enlace registrado no es el PDF sino su página de presentación. El PDF real se encontró en esa página y se registró como f-bns-2011-pdf (copia con SHA-256 351b533d…). Esta entrada queda PENDIENTE solo como registro del enlace equivocado."
+   },
+   "fecha": "2026-11-07T04:32:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e22",
+     "tipo": "hecho",
+     "texto": "El 6-sep-2011 el propio BNS anunció que, con efecto inmediato, no toleraría un tipo EUR/CHF por debajo de 1,20 francos y que estaba dispuesto a comprar divisas en cantidades ilimitadas.",
+     "fuentes": [
+      "f-bns-2011-pdf",
+      "f-bce-2011"
+     ],
+     "sobre": "conducta",
+     "actor_id": "bns",
+     "cita": "With immediate effect, it will no longer tolerate a EUR/CHF exchange rate below one Swiss franc twenty."
+    }
+   },
+   "fecha": "2026-11-07T04:32:00Z"
+  },
+  {
+   "accion": "agregar_enunciado",
+   "datos": {
+    "enunciado": {
+     "id": "e23",
+     "tipo": "declaracion",
+     "texto": "Al introducir el mínimo, el BNS lo justificó por una sobrevaloración masiva del franco, con riesgo de recesión y de deflación.",
+     "fuentes": [
+      "f-bns-2011-pdf"
+     ],
+     "sobre": "contexto",
+     "actor_id": "bns",
+     "cita": "This has resulted in a massive overvaluation of our national currency."
+    }
+   },
+   "fecha": "2026-11-07T04:32:00Z"
+  },
+  {
+   "accion": "revision",
+   "datos": {
+    "estado": "en_revision",
+    "nota": "Cotejo 4 (PDF de 2011) registrado. Pendiente de revisión humana independiente (responsable del proyecto). Una IA no sustituye esa revisión."
+   },
+   "fecha": "2026-11-07T04:32:00Z"
+  }
+ ],
+ "actores": {
+  "contrato": "cauce.csi.actores",
+  "version_contrato": "0.2",
+  "es_demo": false,
+  "actualizado_en": "2026-11-07T03:21:00Z",
+  "fuentes": [
+   {
+    "id": "f-bce-2011",
+    "titulo": "Statement of the Governing Council of the ECB on the decision of the Swiss National Bank",
+    "editor": "Banco Central Europeo (BCE)",
+    "tipo": "documento_oficial",
+    "clase": "primaria",
+    "estado": "consultada",
+    "publicada_en": "2011-09-06",
+    "consultada_en": "2026-11-07T02:58:00Z",
+    "enlace": "https://www.ecb.europa.eu/press/pr/date/2011/html/pr110906.en.html",
+    "extracto": "El BCE reproduce la decisión del BNS: \"no longer tolerate a EUR/CHF exchange rate below the minimum rate of CHF 1.20\". Sobre la decisión: \"which has been taken by the Swiss National Bank under its responsibility\".",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "Es el BCE quien registra la decisión del BNS: para la decisión suiza es una fuente indirecta.",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "autor_actor_id": "bce",
+    "origen": "bce"
+   },
+   {
+    "id": "f-bns-2011",
+    "titulo": "Introduction of a minimum Swiss franc exchange rate against the euro (declaración breve, Zúrich)",
+    "editor": "Banco Nacional Suizo (BNS)",
+    "tipo": "documento_oficial",
+    "clase": "primaria",
+    "estado": "pendiente",
+    "publicada_en": "2011-09-06",
+    "consultada_en": "2026-11-07T02:59:00Z",
+    "enlace": "https://www.snb.ch/en/mmr/speeches/id/ref_20110906_pmh/source/ref_20110906_pmh.en.pdf",
+    "autor_actor_id": "bns",
+    "origen": "bns",
+    "pendiente_motivo": "Solo se verificaron título, emisor y fecha: la herramienta de lectura no devolvió el cuerpo del PDF. Falta cotejar el texto antes de usarla como evidencia.",
+    "limitaciones": [
+     "Contenido no verificado."
+    ]
+   },
+   {
+    "id": "f-bns-2014-12",
+    "titulo": "Swiss National Bank Introduces Negative Interest Rates, Minimum Exchange Rate Reaffirmed (título truncado)",
+    "editor": "Mondo Visione (reproduce un comunicado del Banco Nacional Suizo)",
+    "tipo": "documento_oficial",
+    "clase": "secundaria",
+    "estado": "consultada",
+    "publicada_en": "2014-12-18",
+    "consultada_en": "2026-11-07T02:57:00Z",
+    "enlace": "https://mondovisione.com/media-and-resources/news/swiss-national-bank-introduces-negative-interest-rates-minimum-exchange-rate-rea-20141218/",
+    "extracto": "\"The Swiss National Bank (SNB) is imposing an interest rate of –0.25% on sight deposit account balances at the SNB\" · \"The SNB reaffirms its commitment to the minimum exchange rate of CHF 1.20 per euro\" · \"The SNB is prepared to purchase foreign currency in unlimited quantities\"",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "Copia en un sitio de noticias financieras, no en snb.ch; el título está truncado en la página.",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "autor_actor_id": "bns",
+    "origen": "bns"
+   },
+   {
+    "id": "f-bns-2015-01",
+    "titulo": "Swiss National Bank Discontinues Minimum Exchange Rate And Lowers Interest Rate To –0.75%",
+    "editor": "Mondo Visione (reproduce un comunicado del Banco Nacional Suizo)",
+    "tipo": "documento_oficial",
+    "clase": "secundaria",
+    "estado": "consultada",
+    "publicada_en": "2015-01-15",
+    "consultada_en": "2026-11-07T02:56:00Z",
+    "enlace": "https://mondovisione.com/media-and-resources/news/swiss-national-bank-discontinues-minimum-exchange-rate-and-lowers-interest-rate-2015115/",
+    "extracto": "\"The Swiss National Bank (SNB) is discontinuing the minimum exchange rate of CHF 1.20 per euro.\" · \"by 0.5 percentage points, to −0.75%.\" · \"It is moving the target range for the three-month Libor further into negative territory, to between –1.25% and −0.25%\" · \"the overvaluation has decreased as a whole since the introduction of the minimum exchange rate.\" · \"divergences between the monetary policies of the major currency areas have increased significantly.\"",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "La página no dice que reproduce el comunicado ni enlaza al original de snb.ch (no se encontró el original en la búsqueda).",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "autor_actor_id": "bns",
+    "origen": "bns"
+   },
+   {
+    "id": "f-jordan-2015-01",
+    "titulo": "Thomas Jordan: The rationale for discontinuing the minimum exchange rate and lowering interest rates",
+    "editor": "Banco de Pagos Internacionales (BIS), discursos de banqueros centrales",
+    "tipo": "declaracion_publica",
+    "clase": "primaria",
+    "estado": "consultada",
+    "publicada_en": "2015-01-16",
+    "consultada_en": "2026-11-07T02:55:00Z",
+    "enlace": "https://www.bis.org/review/r150116a.htm",
+    "extracto": "\"The minimum exchange rate was introduced during a period of exceptional overvaluation of the Swiss franc\" · \"Recently, divergences between the monetary policies of the major currency areas have increased significantly\" · \"The euro has depreciated substantially against the US dollar\" · \"the SNB will be lowering the interest rate for balances held on sight deposit accounts to -0.75% from 22 January.\"",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "Es la explicación del propio BNS (presidente de su Dirección General): dice qué razones declaró, no verifica que fueran las únicas.",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "autor_actor_id": "bns",
+    "origen": "bns",
+    "disponible_en": "2015-01-15",
+    "disponible_segun": "La página del BIS la identifica como la declaración de la conferencia de prensa del BNS del 15 de enero de 2015 en Zúrich; el BIS la publicó el 16."
+   },
+   {
+    "id": "f-bce-2015-01",
+    "titulo": "ECB announces expanded asset purchase programme",
+    "editor": "Banco Central Europeo (BCE)",
+    "tipo": "documento_oficial",
+    "clase": "primaria",
+    "estado": "consultada",
+    "publicada_en": "2015-01-22",
+    "consultada_en": "2026-11-07T02:57:30Z",
+    "enlace": "https://www.ecb.europa.eu/press/pr/date/2015/html/pr150122_1.en.html",
+    "extracto": "\"Combined monthly purchases will amount to €60 billion.\" · \"They are intended to be carried out until at least September 2016\"",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "El extracto obtenido no indica la fecha de inicio de las compras.",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "autor_actor_id": "bce",
+    "origen": "bce"
+   },
+   {
+    "id": "f-leucadia-2015-01",
+    "titulo": "Leucadia National Corporation And FXCM Announce $300 Million Financing To Permit FXCM To Continue Normal Operations",
+    "editor": "Mondo Visione (reproduce un comunicado conjunto de Leucadia y FXCM)",
+    "tipo": "informe_corporativo",
+    "clase": "secundaria",
+    "estado": "consultada",
+    "publicada_en": "2015-01-16",
+    "consultada_en": "2026-11-07T02:59:30Z",
+    "enlace": "https://mondovisione.com/media-and-resources/news/leucadia-national-corporation-and-fxcm-announce-300-million-financing-to-permit-2015116/",
+    "extracto": "\"Leucadia would be providing $300 million in cash to FXCM\" · \"yesterday's loss of $225 million due to the unprecedented actions of the Swiss National Bank\" · \"permit FXCM to meet its regulatory-capital requirements and continue normal operations.\"",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "Cifras declaradas por las propias empresas al día siguiente; no son estados financieros auditados.",
+     "No menciona cómo se repartió la pérdida entre clientes y empresa.",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "autor_actor_id": "fxcm",
+    "origen": "fxcm-leucadia"
+   },
+   {
+    "id": "f-jordan-2015-04",
+    "titulo": "SNB monetary policy after the discontinuation of the minimum exchange rate (107ª Asamblea General de Accionistas, Berna)",
+    "editor": "Banco Nacional Suizo (BNS)",
+    "tipo": "declaracion_publica",
+    "clase": "primaria",
+    "estado": "consultada",
+    "publicada_en": "2015-04-24",
+    "consultada_en": "2026-11-07T03:00:00Z",
+    "enlace": "https://www.snb.ch/en/mmr/speeches/id/ref_20150424_tjn",
+    "extracto": "\"could only be enforced through permanent currency interventions of rapidly increasing magnitude.\" · \"This meant that the minimum exchange rate was no longer sustainable.\" · \"will remain active in the foreign exchange market as necessary in order to influence monetary conditions.\"",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "Explicación posterior (tres meses después) del propio BNS: es su razonamiento declarado ex post.",
+     "El extracto no da el tamaño del balance ni de las intervenciones.",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "autor_actor_id": "bns",
+    "origen": "bns"
+   },
+   {
+    "id": "f-swissinfo-2016-01",
+    "titulo": "SNB reports CHF23 billion loss",
+    "editor": "SWI swissinfo.ch",
+    "tipo": "prensa",
+    "clase": "secundaria",
+    "estado": "consultada",
+    "publicada_en": "2016-01-08",
+    "consultada_en": "2026-11-07T03:00:30Z",
+    "enlace": "https://www.swissinfo.ch/eng/balance-sheet_snb-reports-chf23-billion-loss/41881084",
+    "extracto": "\"expects to report a loss of CHF23 billion ($23.06 billion) for the 2015 financial year.\" · \"foreign currency positions amounting to CHF20 billion\" · \"The Swiss franc surged last year after the SNB unexpectedly dropped a CHF1.20 cap.\"",
+    "extracto_tipo": "cita_textual",
+    "metodo_consulta": "herramienta_sesion",
+    "limitaciones": [
+     "Medio que informa una cifra provisional del BNS; no se consultó el informe anual definitivo de 2015.",
+     "«unexpectedly» es una valoración del medio, no un dato.",
+     "Extracto obtenido con la herramienta de lectura web de esta sesión (convierte y resume la página); las citas son fragmentos cortos devueltos por ella y deben cotejarse con el original.",
+     "Sin copia local: no hay huella de contenido verificable."
+    ],
+    "origen": "swissinfo"
+   }
+  ],
+  "actores": [
+   {
+    "id": "bns",
+    "nombre": "Banco Nacional Suizo (BNS)",
+    "tipo": "banco_central",
+    "ficticio": false,
+    "descripcion": "Banco central de Suiza.",
+    "objetivos_documentados": [
+     {
+      "texto": "Mantener el tipo mínimo de 1.20 francos por euro (declarado hasta diciembre de 2014).",
+      "fuentes": [
+       "f-bns-2014-12"
+      ]
+     },
+     {
+      "texto": "Influir en las condiciones monetarias actuando en el mercado de divisas cuando sea necesario (declarado en abril de 2015).",
+      "fuentes": [
+       "f-jordan-2015-04"
+      ]
+     }
+    ],
+    "incentivos_hipoteticos": [
+     {
+      "texto": "Evitar que su balance siga creciendo con intervenciones de magnitud creciente.",
+      "basado_en": [
+       "f-jordan-2015-04"
+      ]
+     },
+     {
+      "texto": "Conservar la credibilidad de sus anuncios (en tensión con la reafirmación de diciembre de 2014).",
+      "basado_en": [
+       "f-bns-2014-12"
+      ]
+     }
+    ],
+    "recursos_conocidos": [
+     {
+      "texto": "Compra de divisas sin límite de cantidad declarado para defender el mínimo.",
+      "fuentes": [
+       "f-bns-2014-12"
+      ]
+     },
+     {
+      "texto": "Tasa sobre depósitos a la vista: −0.25 % (dic-2014) y −0.75 % (desde el 22-ene-2015).",
+      "fuentes": [
+       "f-bns-2014-12",
+       "f-bns-2015-01"
+      ]
+     }
+    ],
+    "intereses_economicos": [
+     {
+      "texto": "Resultado contable expuesto al tipo de cambio: previó una pérdida de 23 mil millones de francos en 2015, unos 20 mil millones por posiciones en divisas.",
+      "fuentes": [
+       "f-swissinfo-2016-01"
+      ]
+     }
+    ],
+    "restricciones": [
+     {
+      "texto": "Según su propia explicación posterior, sostener el mínimo exigía intervenciones permanentes de magnitud rápidamente creciente.",
+      "fuentes": [
+       "f-jordan-2015-04"
+      ],
+      "clase": "economica"
+     }
+    ],
+    "decisiones_posibles": [
+     {
+      "id": "mantener_minimo",
+      "texto": "Mantener el tipo mínimo con intervenciones"
+     },
+     {
+      "id": "abandonar_y_bajar_tasa",
+      "texto": "Abandonar el mínimo y bajar la tasa de depósitos"
+     },
+     {
+      "id": "tasa_sola",
+      "texto": "Bajar más la tasa y conservar el mínimo"
+     }
+    ],
+    "decisiones_historicas": [
+     {
+      "id": "2011-minimo",
+      "fecha": "2011-09-06",
+      "texto": "Introduce el tipo mínimo de 1.20 francos por euro (registrado por el BCE).",
+      "fuentes": [
+       "f-bce-2011"
+      ]
+     },
+     {
+      "id": "2014-tasa-negativa",
+      "fecha": "2014-12-18",
+      "texto": "Tasa de −0.25 % sobre depósitos a la vista y reafirma el mínimo.",
+      "fuentes": [
+       "f-bns-2014-12"
+      ]
+     },
+     {
+      "id": "2015-fin-minimo",
+      "fecha": "2015-01-15",
+      "texto": "Abandona el mínimo y baja la tasa a −0.75 %.",
+      "fuentes": [
+       "f-bns-2015-01",
+       "f-jordan-2015-01"
+      ]
+     }
+    ],
+    "conflictos_interes": [],
+    "incertidumbres": [
+     "No se conocen las proyecciones internas de intervención que usó al decidir.",
+     "No se consultó el informe anual definitivo de 2015."
+    ]
+   },
+   {
+    "id": "bce",
+    "nombre": "Banco Central Europeo (BCE)",
+    "tipo": "banco_central",
+    "ficticio": false,
+    "descripcion": "Banco central de la zona del euro.",
+    "objetivos_documentados": [],
+    "incentivos_hipoteticos": [
+     {
+      "texto": "Relajar las condiciones monetarias de la zona del euro (sus objetivos no se consultaron en estas fuentes)."
+     }
+    ],
+    "recursos_conocidos": [
+     {
+      "texto": "Compras combinadas de activos por 60 mil millones de euros al mes.",
+      "fuentes": [
+       "f-bce-2015-01"
+      ]
+     }
+    ],
+    "intereses_economicos": [],
+    "restricciones": [],
+    "decisiones_posibles": [
+     {
+      "id": "qe",
+      "texto": "Anunciar compras ampliadas de activos"
+     },
+     {
+      "id": "posponer",
+      "texto": "Posponer el anuncio"
+     }
+    ],
+    "decisiones_historicas": [
+     {
+      "id": "2011-toma-nota",
+      "fecha": "2011-09-06",
+      "texto": "Toma nota de la decisión del BNS, adoptada bajo responsabilidad del BNS.",
+      "fuentes": [
+       "f-bce-2011"
+      ]
+     },
+     {
+      "id": "2015-app",
+      "fecha": "2015-01-22",
+      "texto": "Anuncia el programa ampliado de compra de activos.",
+      "fuentes": [
+       "f-bce-2015-01"
+      ]
+     }
+    ],
+    "conflictos_interes": [],
+    "incertidumbres": [
+     "Las fuentes consultadas no documentan si hubo comunicación previa entre BCE y BNS sobre enero de 2015."
+    ]
+   },
+   {
+    "id": "fxcm",
+    "nombre": "FXCM (intermediario de divisas)",
+    "tipo": "institucion_financiera",
+    "ficticio": false,
+    "descripcion": "Intermediario minorista de divisas.",
+    "objetivos_documentados": [],
+    "incentivos_hipoteticos": [
+     {
+      "texto": "Seguir operando tras la pérdida."
+     }
+    ],
+    "recursos_conocidos": [],
+    "intereses_economicos": [
+     {
+      "texto": "Pérdida declarada de 225 millones de dólares por el movimiento del 15-ene-2015.",
+      "fuentes": [
+       "f-leucadia-2015-01"
+      ]
+     }
+    ],
+    "restricciones": [
+     {
+      "texto": "Requisitos regulatorios de capital que debía seguir cumpliendo.",
+      "fuentes": [
+       "f-leucadia-2015-01"
+      ],
+      "clase": "legal"
+     }
+    ],
+    "decisiones_posibles": [
+     {
+      "id": "financiarse",
+      "texto": "Buscar financiamiento externo"
+     },
+     {
+      "id": "cesar_operaciones",
+      "texto": "Dejar de operar"
+     }
+    ],
+    "decisiones_historicas": [
+     {
+      "id": "2015-financiamiento",
+      "fecha": "2015-01-16",
+      "texto": "Acepta un financiamiento de 300 millones de dólares de Leucadia.",
+      "fuentes": [
+       "f-leucadia-2015-01"
+      ]
+     }
+    ],
+    "conflictos_interes": [],
+    "incertidumbres": [
+     "No se consultaron los términos completos del préstamo ni los estados financieros."
+    ]
+   },
+   {
+    "id": "leucadia",
+    "nombre": "Leucadia National Corporation",
+    "tipo": "institucion_financiera",
+    "ficticio": false,
+    "descripcion": "Grupo financiero estadounidense.",
+    "objetivos_documentados": [],
+    "incentivos_hipoteticos": [
+     {
+      "texto": "Obtener rendimiento como prestamista de una empresa en dificultades (hipotético; términos no consultados)."
+     }
+    ],
+    "recursos_conocidos": [
+     {
+      "texto": "Aporta 300 millones de dólares en efectivo a FXCM.",
+      "fuentes": [
+       "f-leucadia-2015-01"
+      ]
+     }
+    ],
+    "intereses_economicos": [],
+    "restricciones": [],
+    "decisiones_posibles": [
+     {
+      "id": "financiar",
+      "texto": "Financiar a FXCM"
+     },
+     {
+      "id": "no_financiar",
+      "texto": "No financiar"
+     }
+    ],
+    "decisiones_historicas": [
+     {
+      "id": "2015-prestamo",
+      "fecha": "2015-01-16",
+      "texto": "Acuerda financiar a FXCM con 300 millones de dólares.",
+      "fuentes": [
+       "f-leucadia-2015-01"
+      ]
+     }
+    ],
+    "conflictos_interes": [
+     {
+      "texto": "Como prestamista de FXCM, su interés en las condiciones del préstamo es distinto del de los accionistas de FXCM (posible; términos no consultados).",
+      "fuentes": [],
+      "clase": "posible"
+     }
+    ],
+    "incertidumbres": []
+   },
+   {
+    "id": "mercado-chf",
+    "nombre": "Participantes del mercado EUR/CHF",
+    "tipo": "participante_colectivo",
+    "ficticio": false,
+    "descripcion": "Conjunto de participantes que operan euros contra francos.",
+    "objetivos_documentados": [],
+    "incentivos_hipoteticos": [
+     {
+      "texto": "Ajustar exposición tras el cambio de régimen cambiario."
+     }
+    ],
+    "recursos_conocidos": [],
+    "intereses_economicos": [],
+    "restricciones": [],
+    "decisiones_posibles": [
+     {
+      "id": "vender_eur",
+      "texto": "Vender euros y comprar francos"
+     },
+     {
+      "id": "mantener",
+      "texto": "Mantener posiciones"
+     }
+    ],
+    "decisiones_historicas": [],
+    "conflictos_interes": [],
+    "incertidumbres": [
+     "No hay datos de posiciones por tipo de participante en estas fuentes."
+    ]
+   }
+  ],
+  "relaciones": [
+   {
+    "id": "r-leucadia-fxcm",
+    "de": "leucadia",
+    "a": "fxcm",
+    "tipo": "financia",
+    "descripcion": "Préstamo de 300 millones de dólares (16-ene-2015).",
+    "fuentes": [
+     "f-leucadia-2015-01"
+    ]
+   }
+  ]
+ },
+ "escenarios": [
+  {
+   "contrato": "cauce.csi.escenario",
+   "version_contrato": "0.2",
+   "id": "esc-bns-2015-contrafactual",
+   "investigacion_id": "hist-bns-minimo-2015",
+   "titulo": "Contrafactual: ¿y si el BNS hubiera mantenido el mínimo?",
+   "es_demo": false,
+   "naturaleza": "simulacion",
+   "contrafactual": true,
+   "supuestos": [
+    "El BNS mantiene el mínimo después del 15-ene-2015.",
+    "El BCE anuncia lo mismo que anunció el 22-ene-2015."
+   ],
+   "creado_en": "2026-11-07T03:20:00Z",
+   "creado_por": {
+    "tipo": "ia",
+    "identificador": "claude-sesion-csi"
+   },
+   "detonante": "Euro depreciándose frente al dólar y políticas monetarias divergentes (según el BNS).",
+   "explicaciones": [
+    {
+     "id": "A",
+     "clave": "A",
+     "categoria": "fundamentales",
+     "hipotesis_id": "H-A",
+     "descripcion": "Divergencia de políticas: defender el mínimo exigía intervenciones crecientes.",
+     "senales_a_favor": [
+      {
+       "texto": "El BNS cita divergencia de políticas",
+       "enunciado_id": "e09"
+      },
+      {
+       "texto": "El BNS cita la depreciación del euro frente al dólar",
+       "enunciado_id": "e11"
+      },
+      {
+       "texto": "El BNS declara (ex post) intervenciones crecientes",
+       "enunciado_id": "e15"
+      }
+     ],
+     "senales_en_contra": [
+      {
+       "texto": "Reafirmación del mínimo cuatro semanas antes",
+       "enunciado_id": "e05"
+      }
+     ],
+     "datos_faltantes": [
+      "Reservas de divisas mensuales del BNS"
+     ]
+    },
+    {
+     "id": "B",
+     "clave": "B",
+     "categoria": "otra",
+     "hipotesis_id": "H-B",
+     "descripcion": "Riesgo contable del balance.",
+     "senales_a_favor": [
+      {
+       "texto": "Pérdida prevista en 2015 (posterior)",
+       "enunciado_id": "e16"
+      }
+     ],
+     "senales_en_contra": [
+      {
+       "texto": "Ninguna mención al balance el 15-ene (no verificado)"
+      }
+     ],
+     "datos_faltantes": [
+      "Tamaño del balance en enero de 2015"
+     ]
+    },
+    {
+     "id": "C",
+     "clave": "C",
+     "categoria": "otra",
+     "hipotesis_id": "H-C",
+     "descripcion": "Aviso o arreglo previo con el BCE.",
+     "senales_a_favor": [
+      {
+       "texto": "Documento oficial de contacto previo (no encontrado)"
+      }
+     ],
+     "senales_en_contra": [],
+     "datos_faltantes": [
+      "Comunicación oficial BNS–BCE"
+     ]
+    },
+    {
+     "id": "D",
+     "clave": "D",
+     "categoria": "manipulacion",
+     "hipotesis_id": "H-D",
+     "solo_hipotesis": true,
+     "descripcion": "Operaciones con información previa. Solo hipótesis.",
+     "senales_a_favor": [
+      {
+       "texto": "Investigación oficial por filtración (no encontrada)"
+      }
+     ],
+     "senales_en_contra": [],
+     "datos_faltantes": [
+      "Registros de órdenes (solo supervisor)"
+     ]
+    }
+   ],
+   "arbol": {
+    "nodos": [
+     {
+      "id": "n1",
+      "padre": null,
+      "actor_id": "bns",
+      "decision_id": "mantener_minimo",
+      "explicacion_id": "A",
+      "beneficios": [
+       "Evita la apreciación brusca (contrafactual)"
+      ],
+      "costos": [
+       "Seguir comprando divisas en cantidad no estimable con estas fuentes"
+      ],
+      "restricciones": [
+       "Según el BNS (ex post), insostenible"
+      ],
+      "consecuencias": [
+       "Balance mayor (no cuantificado)"
+      ]
+     },
+     {
+      "id": "n1a",
+      "padre": "n1",
+      "actor_id": "bce",
+      "decision_id": "qe",
+      "beneficios": [],
+      "costos": [],
+      "restricciones": [],
+      "consecuencias": [
+       "Más presión sobre el mínimo (supuesto)"
+      ]
+     },
+     {
+      "id": "n1b",
+      "padre": "n1a",
+      "actor_id": "mercado-chf",
+      "decision_id": "vender_eur",
+      "beneficios": [],
+      "costos": [],
+      "restricciones": [],
+      "consecuencias": [
+       "El BNS compra los euros vendidos (contrafactual)"
+      ]
+     },
+     {
+      "id": "n2",
+      "padre": null,
+      "actor_id": "bns",
+      "decision_id": "abandonar_y_bajar_tasa",
+      "beneficios": [
+       "Deja de comprar divisas sin límite"
+      ],
+      "costos": [
+       "Apreciación brusca del franco (observada: e01, e02)"
+      ],
+      "restricciones": [],
+      "consecuencias": [
+       "Lo ocurrido, para comparar"
+      ]
+     },
+     {
+      "id": "n2a",
+      "padre": "n2",
+      "actor_id": "mercado-chf",
+      "decision_id": "vender_eur",
+      "beneficios": [],
+      "costos": [],
+      "restricciones": [],
+      "consecuencias": [
+       "El franco se aprecia (observado)"
+      ]
+     },
+     {
+      "id": "n2b",
+      "padre": "n2a",
+      "actor_id": "fxcm",
+      "decision_id": "financiarse",
+      "beneficios": [
+       "Sigue cumpliendo requisitos de capital"
+      ],
+      "costos": [
+       "Deuda con Leucadia"
+      ],
+      "restricciones": [
+       "Requisitos de capital"
+      ],
+      "consecuencias": [
+       "Préstamo de 300 millones (observado)"
+      ]
+     },
+     {
+      "id": "n2c",
+      "padre": "n2b",
+      "actor_id": "leucadia",
+      "decision_id": "financiar",
+      "beneficios": [],
+      "costos": [],
+      "restricciones": [],
+      "consecuencias": [
+       "FXCM sigue operando (declarado)"
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

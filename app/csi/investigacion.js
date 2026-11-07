@@ -5,8 +5,10 @@
 
 import {
   VERSION_CSI, ID, esObj, L, esAutor, texto, esFechaConZona, esFechaODia, ms, huellaDe, sha256, jsonCanonico, mismoId, clon,
-  claves, controlesComunes, validarFuentes, esFuenteNexus, seguroAntes, FUENTES_DOCUMENTALES,
+  claves, controlesComunes, validarFuentes, esFuenteNexus, seguroAntes, FUENTES_DOCUMENTALES, VERSIONES_CSI, VERSION_CSI_2,
 } from "./base.js";
+import { validarFuentes02, esPendiente, citaConProcedencia, RESULTADOS_COTEJO } from "./fuentes.js";
+import { buscarPsicologia, buscarCoordinacion } from "./lenguaje.js";
 
 export const CONTRATO_INVESTIGACION = "cauce.csi.investigacion";
 /** Las cinco clases de enunciado (bloque 3). Solo hechos y declaraciones pueden ser evidencia. */
@@ -17,6 +19,8 @@ export const CATEGORIAS = ["fundamentales", "liquidez", "oportunista", "manipula
 export const ESTADOS_REVISION = ["borrador", "en_revision", "revisada", "devuelta"];
 export const NIVELES_INCERTIDUMBRE = ["baja", "media", "alta", "no_estimada"];
 export const TIPOS_OBJECION = ["explicacion_alternativa", "sesgo", "dato_faltante", "circularidad", "fuente_debil"];
+/** 0.2: qué clase de estudio es. HISTÓRICO = acontecimiento real ya ocurrido, analizado en retrospectiva (nunca predicción). */
+export const NATURALEZAS_ESTUDIO = ["demo", "historico", "prospectivo"];
 
 const C = {
   raiz: ["contrato", "version_contrato", "id", "titulo", "pregunta", "creada_en", "creada_por", "es_demo", "acontecimiento", "actores", "fuentes", "enunciados", "incentivos", "hipotesis", "supuestos", "incertidumbre", "objeciones", "escenarios", "revision", "historial"],
@@ -28,16 +32,27 @@ const C = {
   revision: ["estado", "revisor", "fecha", "nota"],
   historial: ["n", "fecha", "autor", "accion", "detalle", "huella_anterior", "huella_contenido", "huella"],
 };
+/** Claves que añade la versión 0.2 (las 0.1 siguen igual; un documento 0.1 con estas claves es un error). */
+const C2 = {
+  raiz: [...C.raiz, "naturaleza_estudio", "alcance"],
+  enunciado: [...C.enunciado, "cita", "contrafactual"],
+  hipotesis: [...C.hipotesis, "observaciones_distintivas", "momento_decision", "sobre_actor"],
+  alcance: ["descripcion", "periodo", "incluye", "excluye", "criterios_fuentes", "registrado_en"],
+  observacion: ["texto", "distingue_de", "disponible"],
+};
+const es02 = (inv) => inv?.version_contrato === VERSION_CSI_2;
 
 /** Validación de FORMA y de las reglas de separación. Con errores la investigación no se registra. */
 export function validarInvestigacion(inv) {
   const errores = [], avisos = [];
   const e = (t) => errores.push(t);
   if (!esObj(inv)) return { errores: ["La investigación debe ser un objeto JSON."], avisos };
-  claves(inv, C.raiz, "", e);
+  const v2 = es02(inv);
+  const K = v2 ? C2 : C;
+  claves(inv, K.raiz, "", e);
   for (const k of C.raiz) if (!(k in inv)) e(`${k} es obligatorio.`);
   if (inv.contrato !== CONTRATO_INVESTIGACION) e(`contrato debe ser "${CONTRATO_INVESTIGACION}".`);
-  if (inv.version_contrato !== VERSION_CSI) e(`version_contrato debe ser "${VERSION_CSI}".`);
+  if (!VERSIONES_CSI.includes(inv.version_contrato)) e(`version_contrato debe ser uno de: ${VERSIONES_CSI.join(", ")}.`);
   if (typeof inv.id !== "string" || !ID.test(inv.id)) e("id inválido (letras, números, . _ -).");
   for (const k of ["titulo", "pregunta"]) if (!texto(inv[k])) e(`${k} es obligatorio.`);
   if (!esFechaConZona(inv.creada_en)) e("creada_en: instante ISO con zona horaria.");
@@ -47,14 +62,19 @@ export function validarInvestigacion(inv) {
   if (!esObj(inv.acontecimiento)) e("acontecimiento debe ser un objeto.");
   else { claves(inv.acontecimiento, C.acontecimiento, "acontecimiento.", e); if (!texto(inv.acontecimiento.descripcion)) e("acontecimiento.descripcion es obligatoria."); if (!esFechaODia(inv.acontecimiento.fecha)) e("acontecimiento.fecha: AAAA-MM-DD o instante con zona."); }
   if (!Array.isArray(inv.actores) || inv.actores.some((a) => typeof a !== "string" || !ID.test(a))) e("actores: lista de ids del registro de actores.");
-  validarFuentes(inv.fuentes, { es_demo: demo, e });
+  if (v2) {
+    validarFuentes02(inv.fuentes, { es_demo: demo, e, aviso: (t) => avisos.push(t) });
+    if (!NATURALEZAS_ESTUDIO.includes(inv.naturaleza_estudio)) e(`naturaleza_estudio: ${NATURALEZAS_ESTUDIO.join(" | ")}.`);
+    else if ((inv.naturaleza_estudio === "demo") !== demo) e("naturaleza_estudio «demo» va solo con es_demo: true (y un estudio histórico o prospectivo es REAL).");
+    validarAlcance(inv, e);
+  } else validarFuentes(inv.fuentes, { es_demo: demo, e });
   const fuentes = new Map(L(inv.fuentes).map((f) => [f?.id, f]));
   const enun = new Map();
 
   L(inv.enunciados).forEach((x, i) => {
     const r = `enunciados[${i}].`;
     if (!esObj(x)) return e(`${r} debe ser un objeto.`);
-    claves(x, C.enunciado, r, e);
+    claves(x, K.enunciado, r, e);
     if (typeof x.id !== "string" || !ID.test(x.id)) return e(`${r}id inválido.`);
     if (enun.has(x.id)) e(`${r}id «${x.id}» repetido.`);
     enun.set(x.id, x);
@@ -67,7 +87,8 @@ export function validarInvestigacion(inv) {
     if (!Array.isArray(x.fuentes)) e(`${r}fuentes debe ser una lista (puede estar vacía en inferencias y simulaciones).`);
     for (const id of fs) if (!fuentes.has(id)) e(`${r}fuente «${id}» no existe.`);
     const conocidas = fs.map((id) => fuentes.get(id)).filter(Boolean);
-    const primarias = conocidas.filter((f) => !esFuenteNexus(f));
+    // 0.2: una fuente pendiente (no consultada de forma verificable) se puede listar, pero no respalda nada.
+    const primarias = conocidas.filter((f) => !esFuenteNexus(f) && !(v2 && esPendiente(f)));
     // Protección contra información futura: una fuente no puede respaldar algo anotado antes de publicarse.
     for (const f of conocidas) if (esFechaConZona(x.registrado_en) && !seguroAntes(f, x.registrado_en)) e(`${r}la fuente «${f.id}» (publicada ${f.publicada_en}) es posterior a la anotación (${x.registrado_en}): información futura.`);
     if (x.tipo === "hecho" || x.tipo === "declaracion") {
@@ -75,6 +96,7 @@ export function validarInvestigacion(inv) {
       if (conocidas.length !== primarias.length) e(`${r}cita a Nexus como fuente de un ${x.tipo}: las recomendaciones de Nexus no son evidencia primaria.`);
     }
     if (x.tipo === "declaracion" && !x.actor_id) e(`${r}una declaración dice QUIÉN declaró (actor_id): registra lo dicho, no que sea cierto.`);
+    if (v2) validarEnunciado02(x, { r, e, conocidas, primarias, demo, inv });
     // Intenciones privadas: nunca son hecho salvo documento oficial o regulatorio publicado por el propio actor.
     if (x.tipo === "hecho" && x.sobre === "intencion") {
       const doc = primarias.some((f) => FUENTES_DOCUMENTALES.includes(f.tipo) && f.autor_actor_id && f.autor_actor_id === x.actor_id);
@@ -103,7 +125,7 @@ export function validarInvestigacion(inv) {
   L(inv.hipotesis).forEach((h, i) => {
     const r = `hipotesis[${i}].`;
     if (!esObj(h)) return e(`${r} debe ser un objeto.`);
-    claves(h, C.hipotesis, r, e);
+    claves(h, K.hipotesis, r, e);
     if (typeof h.id !== "string" || !ID.test(h.id)) e(`${r}id inválido.`); else if (hips.has(h.id)) e(`${r}id repetido.`); else hips.add(h.id);
     if (!CATEGORIAS.includes(h.categoria)) e(`${r}categoria debe ser una de: ${CATEGORIAS.join(", ")}.`);
     if (!texto(h.enunciado)) e(`${r}enunciado es obligatorio.`);
@@ -115,7 +137,14 @@ export function validarInvestigacion(inv) {
     }
     const ambos = L(h.a_favor).filter((id) => L(h.en_contra).includes(id));
     if (ambos.length) e(`${r}«${ambos.join(", ")}» no puede estar a favor y en contra a la vez.`);
+    if (v2) {
+      if (h.momento_decision !== undefined && !esFechaODia(h.momento_decision)) e(`${r}momento_decision: fecha (hasta cuándo se mide lo que el actor podía saber).`);
+      if (h.sobre_actor !== undefined && !L(inv.actores).includes(h.sobre_actor)) e(`${r}sobre_actor «${h.sobre_actor}» no está en la investigación.`);
+      if (h.observaciones_distintivas !== undefined && !Array.isArray(h.observaciones_distintivas)) e(`${r}observaciones_distintivas debe ser una lista.`);
+      L(h.observaciones_distintivas).forEach((o, j) => { claves(o, C2.observacion, `${r}observaciones_distintivas[${j}].`, e); if (!texto(o?.texto) || !L(o?.distingue_de).length) e(`${r}observaciones_distintivas[${j}]: texto y distingue_de (ids de hipótesis rivales).`); if (o?.disponible !== undefined && !["ya_observable", "futura", "no_accesible"].includes(o.disponible)) e(`${r}observaciones_distintivas[${j}].disponible: ya_observable | futura | no_accesible.`); });
+    }
   });
+  if (v2) for (const [i, h] of L(inv.hipotesis).entries()) for (const o of L(h?.observaciones_distintivas)) for (const id of L(o?.distingue_de)) if (!hips.has(id) || id === h.id) e(`hipotesis[${i}].observaciones_distintivas: «${id}» no es otra hipótesis de la investigación.`);
 
   const objs = new Set();
   L(inv.objeciones).forEach((o, i) => {
@@ -148,6 +177,46 @@ export function validarInvestigacion(inv) {
   return { errores, avisos };
 }
 
+// ---------- Reglas 0.2 ----------
+/** El alcance y los criterios de selección se registran ANTES de la primera fuente (bloque 6), y no se editan después. */
+function validarAlcance(inv, e) {
+  const a = inv.alcance;
+  if (a !== undefined && a !== null) {
+    if (!esObj(a)) return e("alcance debe ser un objeto o null.");
+    claves(a, C2.alcance, "alcance.", e);
+    if (!texto(a.descripcion)) e("alcance.descripcion es obligatoria.");
+    if (!esObj(a.periodo) || !esFechaODia(a.periodo.desde) || !esFechaODia(a.periodo.hasta) || ms(a.periodo.hasta.length === 10 ? `${a.periodo.hasta}T12:00:00Z` : a.periodo.hasta) < ms(a.periodo.desde.length === 10 ? `${a.periodo.desde}T12:00:00Z` : a.periodo.desde)) e("alcance.periodo: {desde, hasta} fechas, hasta ≥ desde.");
+    for (const k of ["incluye", "excluye", "criterios_fuentes"]) if (!Array.isArray(a[k])) e(`alcance.${k} debe ser una lista.`);
+    if (!L(a.criterios_fuentes).length) e("alcance.criterios_fuentes: di de antemano cómo se eligen las fuentes (evita elegir solo las que convienen).");
+    if (!esFechaConZona(a.registrado_en)) e("alcance.registrado_en: instante con zona.");
+  }
+  if (inv.naturaleza_estudio === "historico") {
+    if (L(inv.fuentes).length && !esObj(a)) e("Un estudio histórico registra su alcance y criterios de fuentes antes de agregar fuentes.");
+    const hist = L(inv.historial);
+    const iAlc = hist.findIndex((h) => h?.accion === "definir_alcance");
+    const iFue = hist.findIndex((h) => h?.accion === "agregar_fuente");
+    if (iFue >= 0 && (iAlc < 0 || iAlc > iFue)) e("historial: la primera fuente se agregó antes de registrar el alcance (los criterios se fijan antes de analizar).");
+    if (L(inv.enunciados).some((x) => x?.tipo === "prediccion")) e("Un estudio HISTÓRICO es retrospectivo: no contiene predicciones (se registrarían después del resultado).");
+  }
+}
+
+function validarEnunciado02(x, { r, e, conocidas, primarias, demo, inv }) {
+  const evid = x.tipo === "hecho" || x.tipo === "declaracion";
+  if (evid && conocidas.some(esPendiente) && !primarias.length) e(`${r}sus fuentes están pendientes (no consultadas de forma verificable): no respalda un ${x.tipo}.`);
+  if (x.tipo === "hecho" && primarias.length && primarias.every((f) => f.clase === "interpretacion")) e(`${r}un hecho no descansa solo en interpretaciones: hace falta una fuente primaria o secundaria (si no, es una inferencia).`);
+  if (x.cita !== undefined) {
+    if (!texto(x.cita)) e(`${r}cita vacía.`);
+    else if (!x.retirado && !citaConProcedencia(x.cita, conocidas)) e(`${r}cita sin procedencia: el texto citado no aparece en el extracto textual de ninguna de sus fuentes consultadas.`);
+  }
+  if (x.contrafactual !== undefined && (x.contrafactual !== true || x.tipo !== "simulacion")) e(`${r}contrafactual: true solo en simulaciones («qué habría pasado si…»).`);
+  if (inv.naturaleza_estudio === "historico" && x.tipo === "simulacion" && x.contrafactual !== true) e(`${r}en un estudio histórico toda simulación es contrafactual: márcala contrafactual: true.`);
+  if (!demo && x.tipo !== "declaracion") {
+    const psi = buscarPsicologia(x.texto), coo = buscarCoordinacion(x.texto);
+    if (psi.length) e(`${r}atribuye un estado psicológico (${psi.join(", ")}) a un actor real: regístralo solo como declaración atribuida a una fuente.`);
+    if (coo.length && x.tipo === "hecho") e(`${r}«${coo.join(", ")}» como hecho: una relación pública no prueba coordinación secreta; sin documento regulatorio o judicial es una hipótesis.`);
+  }
+}
+
 // ---------- Historial con huellas ----------
 const contenido = (inv) => { const c = { ...inv }; delete c.historial; return c; };
 const huellaEntrada = (h) => { const x = { ...h }; delete x.huella; return huellaDe(x); };
@@ -161,19 +230,20 @@ async function anexar(inv, { fecha, autor, accion, detalle }) {
 }
 
 /** Crea una investigación vacía (borrador) con su primera entrada de historial. */
-export async function crearInvestigacion({ id, titulo, pregunta, acontecimiento, autor, fecha, es_demo = false, actores = [] }) {
+export async function crearInvestigacion({ id, titulo, pregunta, acontecimiento, autor, fecha, es_demo = false, actores = [], version = VERSION_CSI, naturaleza_estudio = null }) {
   const inv = {
-    contrato: CONTRATO_INVESTIGACION, version_contrato: VERSION_CSI, id, titulo, pregunta, creada_en: fecha, creada_por: autor ? { tipo: autor.tipo, identificador: autor.identificador } : null, es_demo,
+    contrato: CONTRATO_INVESTIGACION, version_contrato: version, id, titulo, pregunta, creada_en: fecha, creada_por: autor ? { tipo: autor.tipo, identificador: autor.identificador } : null, es_demo,
     acontecimiento, actores: [...actores], fuentes: [], enunciados: [], incentivos: [], hipotesis: [], supuestos: [],
     incertidumbre: { nivel: "no_estimada", descripcion: "Todavía no se estima." }, objeciones: [], escenarios: [], revision: { estado: "borrador" }, historial: [],
   };
+  if (version === VERSION_CSI_2) { inv.naturaleza_estudio = naturaleza_estudio ?? (es_demo ? "demo" : "prospectivo"); inv.alcance = null; }
   const v = validarInvestigacion({ ...inv, historial: [{ n: 1 }] });
   const errores = v.errores.filter((t) => !t.startsWith("historial"));
   if (errores.length) return { ok: false, errores };
   return { ok: true, inv: await anexar(inv, { fecha, autor, accion: "crear", detalle: titulo }) };
 }
 
-export const ACCIONES = ["agregar_actor", "agregar_fuente", "agregar_enunciado", "retirar_enunciado", "agregar_incentivo", "agregar_hipotesis", "vincular_evidencia", "agregar_objecion", "responder_objecion", "agregar_escenario", "editar", "revision"];
+export const ACCIONES = ["definir_alcance", "agregar_actor", "agregar_fuente", "agregar_enunciado", "retirar_enunciado", "agregar_incentivo", "agregar_hipotesis", "agregar_observacion", "vincular_evidencia", "agregar_objecion", "responder_objecion", "agregar_escenario", "editar", "revision", "cotejar_fuente"];
 const EDITABLES = ["titulo", "pregunta", "supuestos", "incertidumbre"];
 
 /**
@@ -194,6 +264,11 @@ export async function aplicarCambio(original, cambio, { autor, fecha }) {
   const busca = (lista, id) => L(inv[lista]).find((x) => x.id === id);
   let detalle = null;
   switch (cambio.accion) {
+    case "definir_alcance":
+      if (!es02(inv)) return { ok: false, errores: ["definir_alcance existe desde la versión 0.2."] };
+      if (inv.alcance) return { ok: false, errores: ["El alcance ya se registró: no se reescribe (cambiarlo después de ver las fuentes sería mover la portería). Crea una investigación nueva si cambia."] };
+      if (L(inv.fuentes).length) return { ok: false, errores: ["El alcance se registra antes de la primera fuente."] };
+      inv.alcance = { descripcion: d.descripcion, periodo: d.periodo, incluye: L(d.incluye), excluye: L(d.excluye), criterios_fuentes: L(d.criterios_fuentes), registrado_en: fecha }; detalle = "alcance y criterios de fuentes"; break;
     case "agregar_actor": if (!inv.actores.includes(d.actor_id)) inv.actores.push(d.actor_id); detalle = d.actor_id; break;
     case "agregar_fuente": inv.fuentes.push(d.fuente); detalle = d.fuente?.id; break;
     case "agregar_enunciado": inv.enunciados.push({ registrado_en: fecha, fuentes: [], ...d.enunciado }); detalle = `${d.enunciado?.tipo} ${d.enunciado?.id}`; break;
@@ -205,6 +280,12 @@ export async function aplicarCambio(original, cambio, { autor, fecha }) {
     }
     case "agregar_incentivo": inv.incentivos.push(d.incentivo); detalle = d.incentivo?.id; break;
     case "agregar_hipotesis": inv.hipotesis.push({ a_favor: [], en_contra: [], supuestos: [], condiciones_refutacion: [], datos_faltantes: [], ...d.hipotesis }); detalle = d.hipotesis?.id; break;
+    case "agregar_observacion": {
+      const h = busca("hipotesis", d.hipotesis_id);
+      if (!h || !es02(inv)) return { ok: false, errores: ["agregar_observacion: hipotesis_id existente (versión 0.2)."] };
+      h.observaciones_distintivas = [...L(h.observaciones_distintivas), d.observacion];
+      detalle = `${d.hipotesis_id} ↔ ${L(d.observacion?.distingue_de).join(", ")}`; break;
+    }
     case "vincular_evidencia": {
       const h = busca("hipotesis", d.hipotesis_id);
       if (!h || !["a_favor", "en_contra"].includes(d.sentido)) return { ok: false, errores: ["vincular_evidencia: hipotesis_id existente y sentido a_favor|en_contra."] };
@@ -216,6 +297,22 @@ export async function aplicarCambio(original, cambio, { autor, fecha }) {
       const o = busca("objeciones", d.objecion_id);
       if (!o) return { ok: false, errores: [`objeción «${d.objecion_id}» no existe.`] };
       o.estado = "respondida"; o.respuesta = d.respuesta; detalle = d.objecion_id; break;
+    }
+    case "cotejar_fuente": {
+      // Volver a comparar una fuente con su original. Nunca borra: una corrección guarda el extracto anterior, y si una
+      // cita de un enunciado deja de tener procedencia la validación lo rechaza (hay que retirar el enunciado antes).
+      if (!es02(inv)) return { ok: false, errores: ["cotejar_fuente existe desde la versión 0.2."] };
+      const f = busca("fuentes", d.fuente_id);
+      if (!f) return { ok: false, errores: [`fuente «${d.fuente_id}» no existe.`] };
+      if (!RESULTADOS_COTEJO.includes(d.resultado)) return { ok: false, errores: [`resultado: ${RESULTADOS_COTEJO.join(" | ")}.`] };
+      const c = { fecha, autor: { tipo: autor.tipo, identificador: autor.identificador }, resultado: d.resultado, metodo: d.metodo, detalle: d.detalle };
+      if (d.resultado === "corregido") {
+        if (!texto(d.extracto_corregido) || d.extracto_corregido === f.extracto) return { ok: false, errores: ["corregido: extracto_corregido distinto del actual."] };
+        c.extracto_anterior = f.extracto ?? ""; f.extracto = d.extracto_corregido;
+      } else if (d.extracto_corregido !== undefined) return { ok: false, errores: ["extracto_corregido solo con resultado «corregido»."] };
+      if (d.huella_contenido !== undefined) { f.huella_contenido = d.huella_contenido; f.copia_local = d.copia_local; f.metodo_consulta = "copia_local"; }
+      f.cotejos = [...L(f.cotejos), c];
+      detalle = `${d.fuente_id} ${d.resultado}`; break;
     }
     case "agregar_escenario": if (!inv.escenarios.includes(d.escenario_id)) inv.escenarios.push(d.escenario_id); detalle = d.escenario_id; break;
     case "editar":

@@ -28,6 +28,7 @@
     import { registrarCasosNexus } from "./pruebas/casos-nexus.js";
     import { registrarCasosNexus15 } from "./pruebas/casos-nexus-15.js";
     import { registrarCasosCSI } from "./pruebas/casos-csi.js";
+    import { registrarCasosCSIFase2 } from "./pruebas/casos-csi-fase2.js";
     import { ejecutar } from "./pruebas/mini.js";
     const leer = async (ruta) => {
       const r = await fetch(ruta, { cache: "no-store" });
@@ -46,6 +47,7 @@ registrarCasosFaseL(leer);
     registrarCasosNexus(leer);
     registrarCasosNexus15(leer);
     registrarCasosCSI(leer);
+    registrarCasosCSIFase2();
     const r = await ejecutar();
     const resumen = document.getElementById("resumen");
     resumen.textContent = `${r.pasaron} pasaron, ${r.fallaron} fallaron`;

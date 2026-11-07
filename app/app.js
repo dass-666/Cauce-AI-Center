@@ -18,7 +18,7 @@ import { leerNexus, resumirNexus, admisionReal, contextoGerente } from "./nexus/
 import { verificarContinuidad, anclaDe } from "./nexus/integridad.js";
 import { evaluarLeccion } from "./nexus/gerente.js";
 import { dibujarNexus } from "./vistas/nexus.js";
-import { dibujarCSI } from "./vistas/csi.js";
+import { dibujarCSI, olvidarCalculosCSI } from "./vistas/csi.js";
 import { leerCSI } from "./csi/registro.js";
 
 const INTERVALO_MS = 30_000;
@@ -182,7 +182,7 @@ async function iniciar() {
   await actualizar();
   if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
   else if (new URLSearchParams(location.search).get("nexus") === "1") ponerNexus(true);
-  else if (new URLSearchParams(location.search).get("csi") === "1") ponerCSI(true);
+  else if (["1", "historico", "demo", "registro"].includes(new URLSearchParams(location.search).get("csi") ?? "")) ponerCSI(true);
   estado.temporizador = setInterval(() => { if (!document.hidden) actualizar(); }, INTERVALO_MS);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) actualizar(); });
   // En window (no en document): así corre después de la vista 3D, que usa Esc para volver al piso.
@@ -283,19 +283,27 @@ function ponerCSI(abrir) {
   } else if (document.activeElement === document.body || $("#csi").contains(document.activeElement)) $("#boton-csi").focus({ preventScroll: true });
 }
 
-async function leerYDibujarCSI() {
+// Tres conjuntos que NUNCA se mezclan: REAL (almacén local), HISTÓRICO (caso real retrospectivo, local) y DEMO (ficticio).
+const CONJUNTOS_CSI = [["registro", "REAL", "datos/csi/registro"], ["historico", "HISTÓRICO", "datos/csi/historico"], ["demo", "DEMO", "datos/csi/demo"]];
+const csiUI = { conjunto: null };
+async function leerYDibujarCSI(conjunto = null) {
   const leerDe = async (base) => {
-    const [a, i, e, p] = await Promise.all(["actores", "investigaciones", "escenarios", "predicciones"].map((n) => cargarJSON(`${base}/${n}.json`)));
-    return { docs: { actores: a.tipo === "ok" ? a.datos : null, investigaciones: i.tipo === "ok" ? i.datos : null, escenarios: e.tipo === "ok" ? e.datos : null, predicciones: p.tipo === "ok" ? p.datos : null },
-      avisos: [a, i, e, p].filter((r) => r.tipo !== "ok" && r.tipo !== "no_encontrado").map((r) => r.mensaje) };
+    const nombres = ["actores", "investigaciones", "escenarios", "predicciones", "anclas"];
+    const rs = await Promise.all(nombres.map((n) => cargarJSON(`${base}/${n}.json`)));
+    const docs = Object.fromEntries(nombres.map((n, i) => [n, rs[i].tipo === "ok" ? rs[i].datos : null]));
+    return { docs, avisos: rs.filter((r) => r.tipo !== "ok" && r.tipo !== "no_encontrado").map((r) => r.mensaje), hay: rs.slice(0, 4).some((r) => r.tipo === "ok") };
   };
-  let r = await leerDe("datos/csi/registro");
-  const hayReal = Object.values(r.docs).some(Boolean) || r.avisos.length;
-  if (!hayReal) r = await leerDe("datos/csi/demo");
-  const csi = await leerCSI(r.docs, { ahoraMs: hayReal ? Date.now() : null });
+  const leidos = Object.fromEntries(await Promise.all(CONJUNTOS_CSI.map(async ([id, , base]) => [id, await leerDe(base)])));
+  const pedido = conjunto ?? csiUI.conjunto ?? new URLSearchParams(location.search).get("csi");
+  // Por defecto, como en la fase 1: el almacén REAL si tiene algo; si no, el DEMO. El HISTÓRICO se elige a mano (o ?csi=historico).
+  const elegido = leidos[pedido]?.hay ? pedido : (leidos.registro.hay || leidos.registro.avisos.length) ? "registro" : "demo";
+  csiUI.conjunto = elegido;
+  const r = leidos[elegido];
+  const csi = await leerCSI(r.docs, { ahoraMs: elegido === "demo" ? null : Date.now() });
   csi.errores.unshift(...r.avisos);
   if (!csiAbierto()) return;
-  dibujarCSI($("#csi"), csi, { alCerrar: () => ponerCSI(false) });
+  dibujarCSI($("#csi"), csi, { alCerrar: () => ponerCSI(false), conjunto: elegido, conjuntos: CONJUNTOS_CSI.map(([id, etiqueta]) => ({ id, etiqueta, hay: leidos[id].hay })),
+    alConjunto: (id) => { olvidarCalculosCSI(); leerYDibujarCSI(id).then(() => $(`[data-conjunto="${id}"]`)?.focus({ preventScroll: true })); } });
 }
 
 function empresaActual() {

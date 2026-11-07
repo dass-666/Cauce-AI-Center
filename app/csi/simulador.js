@@ -2,7 +2,7 @@
 // Sin probabilidades: cada explicación se mide por señales observadas (enunciados registrados) a favor y en contra,
 // y por los datos que faltan. Cada ruta del árbol es una SIMULACIÓN, nunca un resultado real ni una predicción.
 
-import { VERSION_CSI, ID, esObj, L, texto, esAutor, esFechaConZona, claves, controlesComunes } from "./base.js";
+import { VERSION_CSI, VERSION_CSI_2, VERSIONES_CSI, ID, esObj, L, texto, esAutor, esFechaConZona, claves, controlesComunes } from "./base.js";
 import { EVIDENCIABLES } from "./investigacion.js";
 import { actorPorId } from "./actores.js";
 
@@ -15,14 +15,19 @@ const C = {
   senal: ["texto", "enunciado_id"],
   nodo: ["id", "padre", "actor_id", "decision_id", "explicacion_id", "beneficios", "costos", "restricciones", "consecuencias"],
 };
+/** 0.2: el escenario declara si es CONTRAFACTUAL («qué habría pasado si…» sobre un hecho ya ocurrido) y sus supuestos. */
+const RAIZ_02 = [...C.raiz, "contrafactual", "supuestos"];
 
 export function validarEscenario(x) {
   const errores = [], avisos = [];
   const e = (t) => errores.push(t);
   if (!esObj(x)) return { errores: ["El escenario debe ser un objeto."], avisos };
-  claves(x, C.raiz, "", e);
+  const v2 = x.version_contrato === VERSION_CSI_2;
+  claves(x, v2 ? RAIZ_02 : C.raiz, "", e);
   if (x.contrato !== CONTRATO_ESCENARIO) e(`contrato debe ser "${CONTRATO_ESCENARIO}".`);
-  if (x.version_contrato !== VERSION_CSI) e(`version_contrato debe ser "${VERSION_CSI}".`);
+  if (!VERSIONES_CSI.includes(x.version_contrato)) e(`version_contrato debe ser uno de: ${VERSIONES_CSI.join(", ")}.`);
+  if (v2 && typeof x.contrafactual !== "boolean") e("contrafactual debe ser true o false (en 0.2 se declara siempre).");
+  if (v2 && (!Array.isArray(x.supuestos) || (x.contrafactual === true && !x.supuestos.length))) e("supuestos: lista; un contrafactual dice qué supone distinto de lo ocurrido.");
   if (!ID.test(String(x.id ?? "")) || !ID.test(String(x.investigacion_id ?? ""))) e("id e investigacion_id son obligatorios.");
   if (x.naturaleza !== "simulacion") e('naturaleza debe ser "simulacion": un escenario nunca es un resultado real.');
   if (typeof x.es_demo !== "boolean") e("es_demo debe ser true o false.");
@@ -101,8 +106,10 @@ export function simular(esc, { investigacion = null, actores = null } = {}) {
   for (const r of nodos.filter((n) => n.padre === null).sort((a, b) => String(a.id).localeCompare(String(b.id)))) recorrer(r, [], new Set());
   for (const n of nodos) if (n.padre !== null && !porId.has(n.padre)) problemas.push(`Nodo ${n.id} sin padre válido.`);
   return {
-    escenario_id: esc?.id ?? null, naturaleza: "simulacion",
-    aviso: "SIMULACIÓN determinista: muestra opciones y respuestas posibles con la evidencia registrada. No es un resultado real, no es una predicción y no asigna probabilidades.",
+    escenario_id: esc?.id ?? null, naturaleza: "simulacion", contrafactual: esc?.contrafactual === true,
+    aviso: esc?.contrafactual === true
+      ? "CONTRAFACTUAL · SIMULACIÓN determinista sobre un acontecimiento ya ocurrido: explora qué habría pasado bajo supuestos distintos. No describe lo que pasó, no es una predicción y no asigna probabilidades."
+      : "SIMULACIÓN determinista: muestra opciones y respuestas posibles con la evidencia registrada. No es un resultado real, no es una predicción y no asigna probabilidades.",
     explicaciones, rutas, problemas: [...new Set(problemas)],
   };
 }

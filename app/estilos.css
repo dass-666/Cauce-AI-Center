@@ -762,3 +762,22 @@ html.csi-abierto .principal { grid-template-columns: 1fr !important; }
   .controles .boton-sala, #recargar, .boton-inmersivo, .controles .segmentado .boton { padding-left: 8px; padding-right: 8px; min-width: 0; }
   .controles .interruptor { min-width: 0; font-size: 12px; gap: 4px; }
 }
+/* CSI fase 2: HISTÓRICO / PREDICCIÓN, fuentes, mapa y Abogado (sin animaciones, Intel UHD). */
+.csi-historico { background: #12283a; border-color: #3d7fa8; color: #d6ecfa; }
+.csi-prediccion { background: #261a36; border-color: #8a5fc4; color: #eadcff; }
+.csi-conjuntos { align-items: center; font-size: 13px; margin: 0; }
+.csi-pendiente { border-style: dashed; border-color: #a8873d; }
+.csi-extracto { margin: 4px 0; padding: 6px 10px; border-left: 3px solid var(--borde); font-size: 12.5px; overflow-wrap: anywhere; }
+.csi-codigo { display: inline-block; max-width: 100%; overflow-wrap: anywhere; font-size: 12px; background: #0b0f1c; padding: 2px 6px; border-radius: 4px; }
+.csi-archivo { max-width: 160px; font-size: 11px; }
+.csi-pasos { margin: 0; padding-left: 4px; list-style: none; display: grid; gap: 6px; font-size: 13px; }
+.csi-pasos li { border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; overflow-wrap: anywhere; }
+.csi-mapa { max-width: 100%; overflow: hidden; }
+.csi-mapa-svg { width: 100%; height: auto; max-height: 380px; display: block; }
+.csi-mapa-linea { stroke: #6fb5c9; stroke-width: 2; }
+.csi-mapa-sin { stroke: #a8873d; stroke-dasharray: 5 4; }
+.csi-mapa-nodo { fill: #5fb3c4; stroke: #0b0f1c; stroke-width: 2; }
+.csi-mapa-banco_central { fill: #e0b84f; } .csi-mapa-gobierno { fill: #c97b5f; } .csi-mapa-participante_colectivo { fill: #9a8fd6; }
+.csi-mapa-nombre { fill: var(--texto); font-size: 12px; }
+.csi-mapa-rel { fill: var(--texto-suave); font-size: 10.5px; }
+.csi a[data-original] { color: #8fd0ff; }
