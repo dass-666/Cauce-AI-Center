@@ -15,14 +15,18 @@
 //
 // Códigos de salida: 0 bien · 1 hay problemas (se explican) · 2 uso incorrecto o archivo ilegible.
 
-import { readFile, writeFile, rename, rm, mkdir, readdir, stat } from "node:fs/promises";
+import { readFile, writeFile, rename, rm, mkdir, readdir, stat, lstat } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validarEncargo, validarEjecucion, validarVerificacion } from "../app/laboratorio/contratos.js";
 import { verificarYValidar } from "../app/laboratorio/verificador.js";
 import { nuevaEntrada, serializar, verificarRegistro, indicesDesdeEntradas } from "../app/laboratorio/registro.js";
 import { construirBanco, comprobarBanco, textoJSON } from "../app/laboratorio/banco.js";
-import { esFechaConZona } from "../app/laboratorio/base.js";
+import { esFechaConZona, LIMITES } from "../app/laboratorio/base.js";
+
+/** Topes de lectura: un archivo mayor no se abre (un JSON enorme o una «copia» gigante no deben tumbar la herramienta). */
+export const MAX_BYTES_JSON = LIMITES.bytes_documento * 2;
+export const MAX_BYTES_COPIA = 50_000_000;
 
 const VALIDADORES = { "cauce.lab.encargo": validarEncargo, "cauce.lab.ejecucion": validarEjecucion, "cauce.lab.verificacion": validarVerificacion };
 
@@ -44,8 +48,17 @@ export async function escribirAtomico(ruta, texto, fs = { writeFile, rename, rm 
 }
 
 const existe = (r) => stat(r).then(() => true, () => false);
+/** Comprueba, sin seguir enlaces, que `ruta` es un archivo normal (no un enlace simbólico) y que no supera `max` bytes. */
+async function archivoNormal(ruta, max, que) {
+  let st;
+  try { st = await lstat(ruta); } catch { throw new ErrorUso(`No se pudo leer ${ruta}.`); }
+  if (st.isSymbolicLink()) throw new ErrorUso(`${ruta} es un enlace simbólico: ${que} no se leen a través de enlaces (podría apuntar fuera de la carpeta permitida).`);
+  if (!st.isFile()) throw new ErrorUso(`${ruta} no es un archivo.`);
+  if (st.size > max) throw new ErrorUso(`${ruta} pesa ${st.size} bytes y el límite para ${que} es ${max}.`);
+}
 async function leerJSON(ruta) {
   let t;
+  await archivoNormal(ruta, MAX_BYTES_JSON, "documentos JSON");
   try { t = await readFile(ruta, "utf8"); } catch { throw new ErrorUso(`No se pudo leer ${ruta}.`); }
   try { return { doc: JSON.parse(t), texto: t }; } catch { throw new ErrorUso(`${ruta} no es JSON válido.`); }
 }
@@ -85,7 +98,10 @@ async function leerCopias(dir, encargo) {
     const propios = nombres.filter((n) => n.startsWith(`${id}.`) && !n.includes(".tmp-"));
     if (!propios.length) continue;
     const txt = propios.find((n) => n === `${id}.txt`);
-    const original = propios.find((n) => n !== `${id}.txt`) ?? txt;
+    const originales = propios.filter((n) => n !== `${id}.txt`);
+    if (originales.length > 1) throw new ErrorUso(`La fuente ${id} tiene ${originales.length} copias originales en ${dir} (${originales.join(", ")}): debe haber una sola.`);
+    const original = originales[0] ?? txt;
+    for (const n of propios) await archivoNormal(join(dir, n), MAX_BYTES_COPIA, "copias de fuentes");
     const bytes = new Uint8Array(await readFile(join(dir, original)));
     const texto = txt ? await readFile(join(dir, txt), "utf8") : null;
     copias.set(id, { bytes, texto });
@@ -146,7 +162,7 @@ const ORDENES = {
       for (const p of r.problemas) log(`  línea ${p.linea}: ${p.codigo} — ${p.detalle}`);
       return 1;
     }
-    const n = await nuevaEntrada(r.ultima, { tipo: o.tipo, documento: doc, registrado_en: ahoraDe(o), registro_es_demo: es_demo });
+    const n = await nuevaEntrada(r.ultima, { tipo: o.tipo, documento: doc, registrado_en: ahoraDe(o), registro_es_demo: es_demo, ids_validos: r.ids_validos });
     if (!n.ok) { log(`✗ No se anexa:\n  - ${n.errores.join("\n  - ")}`); return 1; }
     await mkdir(dirname(resolve(o.registro)), { recursive: true });
     await escribirAtomico(o.registro, texto + serializar(n.entrada));

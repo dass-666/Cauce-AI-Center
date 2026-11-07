@@ -14,8 +14,9 @@
 | Ejemplos DEMO | `datos/laboratorio/demo/` | usados por las pruebas de Node |
 
 ```
-node pruebas/ejecutar.mjs          # 430: las 395 anteriores + 35 del Laboratorio (también en pruebas.html)
-node pruebas/laboratorio-node.mjs  # 6: disco, atomicidad y la herramienta de punta a punta
+node pruebas/ejecutar.mjs          # 441: las 395 anteriores + 35 del Laboratorio + 11 de la fase 1.1 (también en pruebas.html)
+node pruebas/laboratorio-node.mjs  # 8: disco, atomicidad, enlaces simbólicos, tamaños y la herramienta de punta a punta
+node pruebas/piloto-node.mjs       # 6: paquete del piloto, comprobador de fallo seguro y puntuación (banco de prueba)
 ```
 
 ## Qué verifica lab-V (y qué NO)
@@ -58,7 +59,7 @@ lab-V **no** comprueba que la cita respalde la afirmación (respaldo semántico)
 - El banco real del franco suizo (10 defectos) **no** está en el repositorio. Se entregó aparte para que Diego lo revise.
 - En el repositorio solo hay una especificación de prueba con 2 defectos (`datos/laboratorio/banco-prueba/`).
 
-Hallazgo: con las reglas actuales (motor CSI + Abogado), solo 1 de los 10 defectos se detecta: la hipótesis sin condición de refutación. Eso justifica el Laboratorio y fija la línea base contra la que se medirá cualquier IA.
+Hallazgo: con las reglas actuales (motor CSI + Abogado), solo 1 de los 10 defectos se detecta (cuál, y de qué tipo son los demás, está solo en la clave privada). Eso justifica el Laboratorio y fija la línea base contra la que se medirá cualquier IA.
 
 ## Integración futura (documentada, NO implementada)
 
@@ -79,6 +80,16 @@ CSI / Nexus por sus contratos actuales:
 - Un modelo local (adaptador `ollama`) queda reservado. No se instala nada sin aprobación.
 - Ninguna salida de IA se convierte en fuente. Una lección de IA no entra a Nexus sin aprobación humana.
 - No hay sala 3D para el Laboratorio en esta fase.
+
+## Fase 1.1 · auditoría (2026-11-07)
+
+Catorce defectos reproducidos con sondas antes de corregirlos (cada uno tiene ahora una prueba que falla en el código anterior y pasa en este): sin límites de tamaño (una respuesta de 1.5 MB tardaba 21 s y una de 60 MB no terminaba, por la búsqueda cuadrática de datos privados de `app/nexus/comun.js`, que no se tocó), ids con `..`, referencias rotas en objeciones e hipótesis, ids de objeción repetidos, contradicciones con fuentes repetidas o no textuales, encargo DEMO con insumos REALES, ejecución anterior al encargo, verificación anterior a la ejecución, latido fuera de rango, límites del encargo sin comprobar, caracteres invisibles/bidireccionales, verificaciones con estados imposibles (apta con alertas, resumen que no cuadra), registro sin orden temporal ni ids únicos, verificaciones repetidas con el mismo id, contradicciones declaradas sin constancia. Detalle de reglas en `contrato/LABORATORIO-CONTRATOS.md` («Fase 1.1»).
+
+Pendiente que NO se corrigió aquí (fuera del Laboratorio): el patrón de correo de `buscarDatosPrivados` en `app/nexus/comun.js` es cuadrático en textos largos sin `@`; afecta a cualquier contrato de Nexus que reciba textos de cientos de KB. El Laboratorio lo esquiva con sus límites.
+
+## Piloto aislado (fase 1.1, preparado, NO ejecutado)
+
+`app/laboratorio/paquete.js` (paquete mínimo por rol y comprobador de fallo seguro), `app/laboratorio/puntuacion.js` (puntuación del crítico contra la clave, solo en el entorno privado) y `herramientas/piloto.mjs` (`empaquetar · comprobar · puntuar`). Procedimiento por roles, criterios y exposición residual en `docs/PILOTO-AISLADO.md`.
 
 ## Límites conocidos
 

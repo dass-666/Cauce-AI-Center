@@ -22,5 +22,7 @@ jobs:
         run: node pruebas/ejecutar.mjs
       - name: Pruebas de Node del Laboratorio (disco y herramienta)
         run: node pruebas/laboratorio-node.mjs
+      - name: Pruebas de Node del piloto aislado (empaquetar, comprobar, puntuar)
+        run: node pruebas/piloto-node.mjs
       - name: Pruebas de la herramienta de Nexus
         run: node pruebas/nexus-cli.mjs

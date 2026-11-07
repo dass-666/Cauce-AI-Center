@@ -12,6 +12,7 @@ import {
   VERSION_LAB, AUTOR_VERIFICADOR, CONTRATO_ENCARGO, CONTRATO_EJECUCION, CONTRATO_VERIFICACION, ROLES, ESTADOS_EJECUCION,
   ESTADOS_CON_SALIDA, ESTADOS_CON_ERROR, CLASES_AFIRMACION, TIPOS_INSUMO, ADAPTADORES, TIPOS_OBJECION, ID_FUENTE,
   esIdLab, esIdDeLaboratorio, esObj, L, esEnteroEntre, clavesExactas, esFechaConZona, esFechaODia, texto, esHuella, buscarDatosPrivados,
+  LIMITES, tamanoDocumento, tieneInvisibles,
 } from "./base.js";
 
 const nuloO = (v, f) => v === null || f(v);
@@ -25,8 +26,26 @@ function cabecera(doc, contrato, tipo, e) {
   if (typeof doc.es_demo !== "boolean") e("es_demo debe ser true o false.");
   else if (!esIdLab(doc.id, tipo, doc.es_demo)) e(`id «${doc.id}» inválido: ${doc.es_demo ? "un documento DEMO usa «demo-" : "un documento REAL usa «"}${{ encargo: "lab-enc-", ejecucion: "lab-run-", verificacion: "lab-ver-" }[tipo]}…» (minúsculas, cifras, . _ -).`);
 }
-function privacidad(doc, e) {
+function privacidad(doc, e, errores = []) {
+  // La búsqueda de datos privados (patrones de correo, tokens…) es cuadrática en textos largos: con un texto que ya
+  // supera su límite no se ejecuta (el documento ya está rechazado) para que una respuesta enorme no bloquee nada.
+  if (errores.some((t) => /superan el límite/.test(t))) { e("datos privados: no se revisaron porque hay textos que superan su límite (corrige el tamaño primero)."); return; }
   for (const p of buscarDatosPrivados(doc)) e(`Dato privado no permitido en ${p.ruta}: ${p.motivo}.`);
+}
+/** Tamaño total: se comprueba ANTES de todo lo demás (un documento enorme se rechaza con un solo error y no se recorre). */
+function tamano(doc, e) {
+  const t = tamanoDocumento(doc);
+  if (t > LIMITES.bytes_documento) { e(`documento de ${t} caracteres: supera el límite de ${LIMITES.bytes_documento} (no se revisa).`); return false; }
+  return true;
+}
+const cuenta = (lista, max, ruta, e) => { if (Array.isArray(lista) && lista.length > max) e(`${ruta}: ${lista.length} elementos superan el límite de ${max}.`); };
+/** Texto humano: obligatorio o no, con tope de longitud y sin caracteres invisibles o de control bidireccional. */
+function textoLimpio(v, ruta, e, { max = LIMITES.texto, obligatorio = true } = {}) {
+  if (v === null || v === undefined) { if (obligatorio) e(`${ruta} es obligatorio.`); return; }
+  if (typeof v !== "string") { e(`${ruta} debe ser texto.`); return; }
+  if (obligatorio && v.trim() === "") e(`${ruta} es obligatorio.`);
+  if (v.length > max) e(`${ruta}: ${v.length} caracteres superan el límite de ${max}.`);
+  if (tieneInvisibles(v)) e(`${ruta}: contiene caracteres invisibles o de control bidireccional (anchura cero, U+202E…): no se admiten.`);
 }
 const resultado = (errores) => ({ ok: errores.length === 0, errores });
 
@@ -40,10 +59,13 @@ const C_LIM = ["max_minutos", "max_tokens_salida", "max_consultas_web"];
 export function validarEncargo(doc) {
   const errores = []; const e = (t) => errores.push(t);
   if (!clavesExactas(doc, [...C_ENC, "nota"], "", e, C_ENC)) return resultado(errores);
+  if (!tamano(doc, e)) return resultado(errores);
   cabecera(doc, CONTRATO_ENCARGO, "encargo", e);
   if (!ROLES.includes(doc.rol)) e(`rol «${doc.rol}» inválido: ${ROLES.join(" | ")} (cada rol es una ejecución separada).`);
-  if (!texto(doc.pregunta)) e("pregunta es obligatoria.");
-  if ("nota" in doc && typeof doc.nota !== "string") e("nota debe ser texto.");
+  textoLimpio(doc.pregunta, "pregunta", e);
+  if ("nota" in doc) textoLimpio(doc.nota, "nota", e, { obligatorio: false });
+  cuenta(doc.insumos, LIMITES.insumos, "insumos", e);
+  cuenta(doc.fuentes_permitidas, LIMITES.fuentes, "fuentes_permitidas", e);
 
   if (!Array.isArray(doc.insumos)) e("insumos debe ser una lista.");
   L(doc.insumos).forEach((x, i) => {
@@ -54,6 +76,7 @@ export function validarEncargo(doc) {
     if (!esHuella(x.sha256)) e(`${r}sha256 debe ser una huella SHA-256 (64 hex): cada insumo se fija con su huella.`);
     if (x.tipo === "lab_ejecucion_verificada") {
       if (!esIdDeLaboratorio(x.ref) || !/lab-run-/.test(x.ref)) e(`${r}ref debe ser una ejecución del Laboratorio (lab-run-…).`);
+      else if (typeof doc.es_demo === "boolean" && !esIdLab(x.ref, "ejecucion", doc.es_demo)) e(`${r}ref ${x.ref} es de otro mundo: un encargo ${doc.es_demo ? "DEMO" : "REAL"} no usa ejecuciones ${doc.es_demo ? "REALES" : "DEMO"}.`);
       if (doc.rol === "investigador") e(`${r}el investigador trabaja solo con fuentes primarias: no recibe salidas de otros roles.`);
     } else if (esIdDeLaboratorio(x.ref)) e(`${r}una salida del Laboratorio (${x.ref}) no puede entrar como «${x.tipo}»: una respuesta de IA no es una fuente ni una investigación.`);
     if (x.tipo === "banco_evaluacion" && doc.rol !== "critico") e(`${r}el banco de evaluación es solo para el crítico.`);
@@ -104,7 +127,7 @@ export function validarEncargo(doc) {
     if (!texto(doc.creado_por.identificador)) e("creado_por.identificador es obligatorio.");
   }
   if (!esFechaConZona(doc.creado_en)) e("creado_en debe ser instante con zona.");
-  privacidad(doc, e);
+  privacidad(doc, e, errores);
   return resultado(errores);
 }
 
@@ -120,6 +143,7 @@ const ID_LOCAL = /^[a-z0-9][a-z0-9._-]{0,40}$/i;
 export function validarEjecucion(doc) {
   const errores = []; const e = (t) => errores.push(t);
   if (!clavesExactas(doc, C_EJ, "", e)) return resultado(errores);
+  if (!tamano(doc, e)) return resultado(errores);
   cabecera(doc, CONTRATO_EJECUCION, "ejecucion", e);
   if (!esIdLab(doc.encargo_id, "encargo", doc.es_demo === true)) e(`encargo_id «${doc.encargo_id}» inválido (y debe ser del mismo mundo DEMO/REAL que la ejecución).`);
   if (!esHuella(doc.encargo_sha256)) e("encargo_sha256 debe ser la huella del encargo exacto que se ejecutó.");
@@ -129,27 +153,39 @@ export function validarEjecucion(doc) {
   if (doc.estado !== "en_cola" && doc.inicio === null) e("inicio es obligatorio salvo en_cola.");
   if (["terminado", "fallo", "cancelado", "sin_conexion", "excedio_limite"].includes(doc.estado) && doc.fin === null) e(`fin es obligatorio en estado ${doc.estado}.`);
   if (esFechaConZona(doc.inicio) && esFechaConZona(doc.fin) && Date.parse(doc.fin) < Date.parse(doc.inicio)) e("fin es anterior a inicio.");
+  if (esFechaConZona(doc.inicio) && esFechaConZona(doc.latido) && Date.parse(doc.latido) < Date.parse(doc.inicio)) e("latido es anterior a inicio.");
+  if (esFechaConZona(doc.fin) && esFechaConZona(doc.latido) && Date.parse(doc.latido) > Date.parse(doc.fin)) e("latido es posterior a fin.");
 
   if (clavesExactas(doc.autor, ["tipo", "identificador", "adaptador"], "autor.", e)) {
     if (doc.autor.tipo !== "ia") e("autor.tipo debe ser «ia»: una salida de modelo no puede presentarse como humana ni como código.");
     if (!texto(doc.autor.identificador)) e("autor.identificador es obligatorio (el modelo que declaró responder).");
     if (!ADAPTADORES.includes(doc.autor.adaptador)) e(`autor.adaptador debe ser ${ADAPTADORES.join(" | ")}.`);
   }
-  for (const k of ["afirmaciones", "hipotesis", "objeciones", "dudas", "contradicciones", "consultas_web"]) if (!Array.isArray(doc[k])) e(`${k} debe ser una lista (vacía si no hay): una respuesta incompleta no se rellena.`);
+  for (const k of ["afirmaciones", "hipotesis", "objeciones", "dudas", "contradicciones", "consultas_web"]) {
+    if (!Array.isArray(doc[k])) e(`${k} debe ser una lista (vacía si no hay): una respuesta incompleta no se rellena.`);
+    else cuenta(doc[k], LIMITES[k], k, e);
+  }
+  const idsAf = new Set(L(doc.afirmaciones).map((a) => a?.id)), idsHip = new Set(L(doc.hipotesis).map((h) => h?.id));
+  /** Una objeción apunta a algo de esta misma salida (afirmación o hipótesis) o a «<insumo>#<id>»: una entidad de un
+   *  insumo del encargo (p. ej. `banco-bns-2015-v1#e01`, `lab-run-x#a3`). lab-V comprueba que el insumo exista en el encargo. */
+  const referenciaObjecion = (a) => typeof a === "string" && (idsAf.has(a) || idsHip.has(a) || (/^[a-z0-9][a-z0-9._-]{1,80}#[a-z0-9._-]{1,41}$/i.test(a) && !a.includes("..")));
 
   L(doc.afirmaciones).forEach((a, i) => {
     const r = `afirmaciones[${i}].`;
     if (!clavesExactas(a, C_AF, r, e)) return;
     if (typeof a.id !== "string" || !ID_LOCAL.test(a.id)) e(`${r}id inválido.`);
-    if (!texto(a.texto)) e(`${r}texto es obligatorio.`);
+    textoLimpio(a.texto, `${r}texto`, e);
     if (!CLASES_AFIRMACION.includes(a.clase)) e(`${r}clase «${a.clase}» inválida: ${CLASES_AFIRMACION.join(" | ")}.`);
     if (!Array.isArray(a.citas)) { e(`${r}citas debe ser una lista.`); return; }
+    cuenta(a.citas, LIMITES.citas_por_afirmacion, `${r}citas`, e);
     a.citas.forEach((c, j) => {
       const rc = `${r}citas[${j}].`;
       if (!clavesExactas(c, C_CITA, rc, e)) return;
       if (typeof c.fuente_id !== "string" || !ID_FUENTE.test(c.fuente_id)) e(`${rc}fuente_id inválido.`);
       if (typeof c.extracto !== "string") e(`${rc}extracto debe ser texto.`);
+      else textoLimpio(c.extracto, `${rc}extracto`, e, { max: LIMITES.extracto, obligatorio: false });
       if (!nuloO(c.ubicacion, (v) => typeof v === "string")) e(`${rc}ubicacion debe ser texto o null.`);
+      else textoLimpio(c.ubicacion, `${rc}ubicacion`, e, { obligatorio: false });
     });
   });
   unicos(L(doc.afirmaciones).map((a) => a?.id), e, "afirmaciones");
@@ -157,22 +193,29 @@ export function validarEjecucion(doc) {
     const r = `hipotesis[${i}].`;
     if (!clavesExactas(h, C_HIP, r, e)) return;
     if (typeof h.id !== "string" || !ID_LOCAL.test(h.id)) e(`${r}id inválido.`);
-    for (const k of ["enunciado", "se_refuta_si", "experimento"]) if (!texto(h[k])) e(`${r}${k} es obligatorio (una hipótesis sin condición de refutación ni experimento no es falsable).`);
+    for (const k of ["enunciado", "se_refuta_si", "experimento"]) { if (!texto(h[k])) e(`${r}${k} es obligatorio (una hipótesis sin condición de refutación ni experimento no es falsable).`); else textoLimpio(h[k], `${r}${k}`, e); }
     if (!nuloO(h.alternativa_a, (v) => typeof v === "string")) e(`${r}alternativa_a debe ser texto o null.`);
+    else if (h.alternativa_a !== null && (!idsHip.has(h.alternativa_a) || h.alternativa_a === h.id)) e(`${r}alternativa_a «${h.alternativa_a}» no es otra hipótesis de esta salida (referencia rota).`);
   });
   unicos(L(doc.hipotesis).map((h) => h?.id), e, "hipotesis");
   L(doc.objeciones).forEach((o, i) => {
     const r = `objeciones[${i}].`;
     if (!clavesExactas(o, C_OBJ, r, e)) return;
     if (!texto(o.id) || !texto(o.a) || !texto(o.texto)) e(`${r}id, a y texto son obligatorios.`);
+    else { if (typeof o.id !== "string" || !ID_LOCAL.test(o.id)) e(`${r}id inválido.`); textoLimpio(o.texto, `${r}texto`, e); if (!referenciaObjecion(o.a)) e(`${r}a «${o.a}» no apunta a una afirmación o hipótesis de esta salida ni a «<insumo>#<id>» (referencia rota).`); }
     if (!TIPOS_OBJECION.includes(o.tipo)) e(`${r}tipo debe ser ${TIPOS_OBJECION.join(" | ")}.`);
   });
-  L(doc.dudas).forEach((d, i) => { if (!texto(d)) e(`dudas[${i}] debe ser texto.`); });
+  unicos(L(doc.objeciones).map((o) => o?.id), e, "objeciones");
+  L(doc.dudas).forEach((d, i) => { if (!texto(d)) e(`dudas[${i}] debe ser texto.`); else textoLimpio(d, `dudas[${i}]`, e); });
   L(doc.contradicciones).forEach((c, i) => {
     const r = `contradicciones[${i}].`;
     if (!clavesExactas(c, ["fuentes", "texto"], r, e)) return;
     if (!Array.isArray(c.fuentes) || c.fuentes.length < 2) e(`${r}fuentes: una contradicción necesita al menos dos fuentes.`);
-    if (!texto(c.texto)) e(`${r}texto es obligatorio.`);
+    else {
+      c.fuentes.forEach((f, j) => { if (typeof f !== "string" || !ID_FUENTE.test(f)) e(`${r}fuentes[${j}] debe ser un id de fuente.`); });
+      unicos(c.fuentes, e, `${r}fuentes`);
+    }
+    if (!texto(c.texto)) e(`${r}texto es obligatorio.`); else textoLimpio(c.texto, `${r}texto`, e);
   });
   L(doc.consultas_web).forEach((w, i) => {
     const r = `consultas_web[${i}].`;
@@ -187,11 +230,12 @@ export function validarEjecucion(doc) {
     if (typeof doc.uso.costo_mxn !== "number" || !(doc.uso.costo_mxn >= 0)) e("uso.costo_mxn debe ser número ≥ 0.");
   }
   if (!nuloO(doc.error, (v) => typeof v === "string")) e("error debe ser texto o null.");
+  else textoLimpio(doc.error, "error", e, { obligatorio: false });
   if (ESTADOS_CON_ERROR.includes(doc.estado) && !texto(doc.error)) e(`estado ${doc.estado}: error es obligatorio (se conserva literal para auditoría).`);
   if (ESTADOS_CON_ERROR.includes(doc.estado) && L(doc.afirmaciones).length) e(`estado ${doc.estado}: no puede traer afirmaciones (una salida fallida no se usa).`);
   if (ESTADOS_CON_SALIDA.includes(doc.estado) && doc.error !== null) e("estado terminado: error debe ser null (si hubo error, el estado es fallo).");
   if (ESTADOS_CON_SALIDA.includes(doc.estado) && !L(doc.afirmaciones).length && !L(doc.hipotesis).length && !L(doc.objeciones).length) e("estado terminado sin afirmaciones, hipótesis ni objeciones: respuesta vacía.");
-  privacidad(doc, e);
+  privacidad(doc, e, errores);
   return resultado(errores);
 }
 
@@ -212,6 +256,7 @@ const C_RES = ["n_afirmaciones", "n_citas", "n_citas_utilizables", "n_citas_inex
 export function validarVerificacion(doc) {
   const errores = []; const e = (t) => errores.push(t);
   if (!clavesExactas(doc, C_VER, "", e)) return resultado(errores);
+  if (!tamano(doc, e)) return resultado(errores);
   cabecera(doc, CONTRATO_VERIFICACION, "verificacion", e);
   // Una verificación RECHAZADA conserva los ids tal como llegaron (pueden ser justamente el error: mezcla DEMO/REAL).
   if (doc.resultado === "rechazada") { if (typeof doc.ejecucion_id !== "string" || typeof doc.encargo_id !== "string") e("ejecucion_id y encargo_id deben ser texto."); }
@@ -226,8 +271,14 @@ export function validarVerificacion(doc) {
   if (!RESULTADOS_VERIFICACION.includes(doc.resultado)) e(`resultado debe ser ${RESULTADOS_VERIFICACION.join(" | ")} (no existe «verdadera» ni «aprobada»).`);
   if (typeof doc.incompleta !== "boolean") e("incompleta debe ser true o false.");
   if (!Array.isArray(doc.errores) || doc.errores.some((t) => typeof t !== "string")) e("errores debe ser una lista de textos.");
+  else cuenta(doc.errores, LIMITES.errores, "errores", e);
   if (doc.resultado === "rechazada" && !L(doc.errores).length) e("una verificación rechazada debe conservar sus errores.");
+  if (doc.resultado !== "rechazada" && L(doc.errores).length) e(`resultado «${doc.resultado}» con ${L(doc.errores).length} error(es): con errores el resultado es «rechazada» (estado imposible).`);
   for (const k of ["fuentes", "citas", "afirmaciones", "alertas"]) if (!Array.isArray(doc[k])) e(`${k} debe ser una lista.`);
+  L(doc.alertas).forEach((a, i) => {
+    if (!clavesExactas(a, ["codigo", "ruta", "detalle"], `alertas[${i}].`, e)) return;
+    for (const k of ["codigo", "ruta", "detalle"]) if (typeof a[k] !== "string") e(`alertas[${i}].${k} debe ser texto.`);
+  });
   L(doc.fuentes).forEach((f, i) => {
     if (!clavesExactas(f, C_VF, `fuentes[${i}].`, e)) return;
     if (!INTEGRIDAD.includes(f.integridad)) e(`fuentes[${i}].integridad inválida.`);
@@ -240,6 +291,8 @@ export function validarVerificacion(doc) {
     if (!nuloO(c.integridad, (v) => INTEGRIDAD.includes(v))) e(`${r}integridad inválida.`);
     if (!COINCIDENCIA.includes(c.coincidencia)) e(`${r}coincidencia inválida.`);
     if (!TEMPORAL.includes(c.temporal)) e(`${r}temporal inválido.`);
+    if (!Number.isInteger(c.apariciones) || c.apariciones < 0) e(`${r}apariciones debe ser entero ≥ 0.`);
+    if (!Array.isArray(c.alertas) || c.alertas.some((t) => typeof t !== "string")) e(`${r}alertas debe ser una lista de códigos.`);
     if (typeof c.cita_utilizable !== "boolean") e(`${r}cita_utilizable debe ser booleano.`);
     if (c.cita_utilizable && (c.existencia !== "registrada" || c.integridad !== "integra" || !["literal", "normalizada"].includes(c.coincidencia) || !["dentro_de_corte", "sin_corte"].includes(c.temporal)))
       e(`${r}cita_utilizable = true exige fuente registrada e íntegra, extracto encontrado y fecha dentro del corte.`);
@@ -251,7 +304,25 @@ export function validarVerificacion(doc) {
     if (!ESTADO_CITA_AFIRMACION.includes(a.estado_cita)) e(`${r}estado_cita inválido.`);
     if (a.respaldo_semantico !== "pendiente_revision_humana") e(`${r}respaldo_semantico debe ser «pendiente_revision_humana»: encontrar un extracto no demuestra que la afirmación sea verdadera.`);
   });
-  if (clavesExactas(doc.resumen, C_RES, "resumen.", e)) for (const k of C_RES) if (!Number.isInteger(doc.resumen[k]) || doc.resumen[k] < 0) e(`resumen.${k} debe ser entero ≥ 0.`);
+  if (clavesExactas(doc.resumen, C_RES, "resumen.", e)) {
+    for (const k of C_RES) if (!Number.isInteger(doc.resumen[k]) || doc.resumen[k] < 0) e(`resumen.${k} debe ser entero ≥ 0.`);
+    // El resumen se recalcula de las listas: un resumen que no cuadra es una verificación manipulada o un defecto de lab-V.
+    const citas = L(doc.citas), n = (f) => citas.filter(f).length;
+    const esperado = {
+      n_afirmaciones: L(doc.afirmaciones).length, n_citas: citas.length, n_citas_utilizables: n((c) => c?.cita_utilizable === true),
+      n_citas_inexistentes: n((c) => c?.existencia === "inexistente"), n_extractos_no_encontrados: n((c) => c?.coincidencia === "no_encontrada"),
+      n_fuera_de_corte: n((c) => c?.temporal === "posterior_al_corte"), n_fecha_desconocida: n((c) => c?.temporal === "fecha_desconocida"),
+      n_alertas: L(doc.alertas).length,
+    };
+    for (const [k, v] of Object.entries(esperado)) if (doc.resumen[k] !== v) e(`resumen.${k} = ${doc.resumen[k]} no cuadra con las listas (${v}).`);
+  }
+  // Estados imposibles: «apta» solo si nada mecánico la descalifica; «sin_salida» no tiene citas ni afirmaciones.
+  if (doc.resultado === "apta_para_revision_humana") {
+    if (L(doc.alertas).length) e("resultado «apta_para_revision_humana» con alertas: con alertas el resultado es «con_fallas».");
+    if (doc.incompleta === true) e("resultado «apta_para_revision_humana» con incompleta = true: una salida parcial nunca es apta.");
+    if (L(doc.citas).some((c) => c?.cita_utilizable !== true)) e("resultado «apta_para_revision_humana» con citas no utilizables.");
+  }
+  if (doc.resultado === "sin_salida" && (L(doc.citas).length || L(doc.afirmaciones).length)) e("resultado «sin_salida» con citas o afirmaciones verificadas (estado imposible).");
   if (!esObj(doc.revision_humana) || doc.revision_humana.estado !== "pendiente" || Object.keys(doc.revision_humana).length !== 1)
     e("revision_humana debe ser {estado: «pendiente»}: en la fase 1 nada se aprueba; la revisión la hará una persona.");
   return resultado(errores);

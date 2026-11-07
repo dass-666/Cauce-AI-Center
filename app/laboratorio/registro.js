@@ -17,15 +17,21 @@ const huellaEntrada = (e) => { const { sha256_entrada, ...resto } = e; return sh
  * Prepara la siguiente entrada. No escribe. Rechaza (ok:false) mezclar DEMO/REAL o un tipo desconocido;
  * un documento que no cumple su contrato SÍ se registra, marcado valido:false con sus errores.
  */
-export async function nuevaEntrada(anterior, { tipo, documento, registrado_en, registro_es_demo }) {
+export async function nuevaEntrada(anterior, { tipo, documento, registrado_en, registro_es_demo, ids_validos = null }) {
   const errores = [];
   if (!TIPOS_ENTRADA.includes(tipo)) errores.push(`tipo «${tipo}» inválido: ${TIPOS_ENTRADA.join(" | ")}.`);
   if (!esFechaConZona(registrado_en)) errores.push("registrado_en debe ser instante con zona.");
   if (typeof registro_es_demo !== "boolean") errores.push("registro_es_demo debe ser true o false.");
   if (!esObj(documento)) errores.push("documento debe ser un objeto.");
   else if (documento.es_demo !== registro_es_demo) errores.push(`mezcla DEMO/REAL: el documento es ${documento.es_demo === true ? "DEMO" : documento.es_demo === false ? "REAL" : "sin marca es_demo"} y el registro ${registro_es_demo ? "DEMO" : "REAL"}.`);
+  // El registro es solo-anexado y cronológico: una entrada fechada antes que la anterior es un reloj atrasado o un reordenamiento.
+  if (anterior && esFechaConZona(registrado_en) && esFechaConZona(anterior.registrado_en) && Date.parse(registrado_en) < Date.parse(anterior.registrado_en))
+    errores.push(`orden temporal: registrado_en ${registrado_en} es anterior a la última entrada (${anterior.registrado_en}).`);
   if (errores.length) return { ok: false, errores };
   const v = VALIDADORES[tipo](documento);
+  // Un id válido no se registra dos veces (ni con el mismo contenido ni con otro): `ids_validos` son los ids ya
+  // registrados como válidos, tipo:id. Un documento inválido sí puede volver a registrarse corregido con el mismo id.
+  if (v.ok && ids_validos?.has?.(`${tipo}:${documento.id}`)) return { ok: false, errores: [`id duplicado: ya hay un ${tipo} válido con id ${documento.id} en el registro.`] };
   const e = {
     contrato: CONTRATO_REGISTRO, version_contrato: "0.1",
     n: anterior ? anterior.n + 1 : 1, tipo, id: typeof documento.id === "string" ? documento.id : null, es_demo: registro_es_demo,
@@ -50,6 +56,7 @@ export async function verificarRegistro(textoRegistro, { es_demo }) {
   const terminaBien = String(textoRegistro ?? "").endsWith("\n") || textoRegistro === "";
   if (lineas.at(-1) === "") lineas.pop();
   let anterior = null;
+  const idsValidos = new Map();
   for (const [i, linea] of lineas.entries()) {
     const nl = i + 1, ultima = i === lineas.length - 1;
     let e;
@@ -67,9 +74,16 @@ export async function verificarRegistro(textoRegistro, { es_demo }) {
     const prevHuella = anterior ? anterior.sha256_entrada : (entradas.length ? undefined : null);
     if (prevHuella !== undefined && e.sha256_anterior !== prevHuella) problemas.push({ linea: nl, codigo: "cadena_rota", detalle: "sha256_anterior no es la huella de la entrada anterior (se borró, insertó o reordenó algo)." });
     if (!TIPOS_ENTRADA.includes(e.tipo)) problemas.push({ linea: nl, codigo: "tipo_desconocido", detalle: `tipo «${e.tipo}».` });
+    if (anterior && esFechaConZona(e.registrado_en) && esFechaConZona(anterior.registrado_en) && Date.parse(e.registrado_en) < Date.parse(anterior.registrado_en))
+      problemas.push({ linea: nl, codigo: "orden_temporal", detalle: `registrado_en ${e.registrado_en} es anterior a la entrada previa (${anterior.registrado_en}).` });
+    if (e.valido === true && typeof e.id === "string") {
+      const clave = `${e.tipo}:${e.id}`;
+      if (idsValidos.has(clave)) problemas.push({ linea: nl, codigo: "id_duplicado", detalle: `ya había un ${e.tipo} válido con id ${e.id} (línea ${idsValidos.get(clave)}).` });
+      else idsValidos.set(clave, nl);
+    }
     entradas.push(e); anterior = e;
   }
-  return { ok: problemas.length === 0, entradas, problemas, ultima: entradas.at(-1) ?? null };
+  return { ok: problemas.length === 0, entradas, problemas, ultima: entradas.at(-1) ?? null, ids_validos: new Set(idsValidos.keys()) };
 }
 
 /** Índices de lectura (para circularidad): solo entradas válidas; el resto queda para auditoría. */

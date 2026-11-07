@@ -136,6 +136,17 @@ export async function verificar({ encargo, ejecucion, copias = new Map(), regist
       if (!L(encargo.herramientas.dominios_permitidos).some((d) => host === d || host.endsWith(`.${d}`))) err("dominio_no_permitido", `consultas_web[${i}]: ${host || w?.url} no está en dominios_permitidos.`);
     }
     if (ejecucion.uso?.costo_mxn > 0) alerta("costo_no_cero", "uso.costo_mxn", `La ejecución declara un costo de ${ejecucion.uso.costo_mxn} MXN: el presupuesto de la fase es $0.`);
+    // Orden de los hechos: nada se ejecuta antes de encargarse ni se verifica antes de terminar.
+    if (esFechaConZona(ejecucion.inicio) && esFechaConZona(encargo.creado_en) && Date.parse(ejecucion.inicio) < Date.parse(encargo.creado_en)) err("ejecucion_antes_del_encargo", `la ejecución empezó (${ejecucion.inicio}) antes de que existiera el encargo (${encargo.creado_en}).`);
+    const ultimo = ejecucion.fin ?? ejecucion.latido ?? ejecucion.inicio;
+    if (esFechaConZona(ultimo) && Date.parse(ahora) < Date.parse(ultimo)) err("verificacion_antes_de_la_ejecucion", `la verificación está fechada (${ahora}) antes del último instante de la ejecución (${ultimo}).`);
+    // Límites del encargo: se avisan, no se corrigen (la salida se verifica tal cual).
+    if (esFechaConZona(ejecucion.inicio) && esFechaConZona(ejecucion.fin) && Number.isInteger(encargo.limites?.max_minutos)) {
+      const min = (Date.parse(ejecucion.fin) - Date.parse(ejecucion.inicio)) / 60000;
+      if (min > encargo.limites.max_minutos) alerta("excede_max_minutos", "fin", `La ejecución duró ${Math.round(min)} min y el encargo permitía ${encargo.limites.max_minutos}.`);
+    }
+    if (Number.isInteger(ejecucion.uso?.tokens_salida) && Number.isInteger(encargo.limites?.max_tokens_salida) && ejecucion.uso.tokens_salida > encargo.limites.max_tokens_salida)
+      alerta("excede_max_tokens", "uso.tokens_salida", `${ejecucion.uso.tokens_salida} tokens de salida superan el límite ${encargo.limites.max_tokens_salida} del encargo.`);
   }
 
   // ---------- circularidad y reutilización de salidas de IA ----------
@@ -239,7 +250,19 @@ export async function verificar({ encargo, ejecucion, copias = new Map(), regist
       afirmaciones.push({ afirmacion_id: a.id, clase: a.clase, estado_cita: estadoCita, respaldo_semantico: "pendiente_revision_humana", alertas: alertasAf });
     }
     for (const [i, h] of L(ejecucion.hipotesis).entries()) if (INSTRUCCIONES.test(`${h.enunciado} ${h.experimento}`)) alerta("contiene_instrucciones_no_ejecutadas", `hipotesis[${i}]`, "La hipótesis o su experimento contiene algo parecido a un comando: no se ejecuta.");
-    for (const [i, c] of L(ejecucion.contradicciones).entries()) for (const id of c.fuentes) if (!fuentes.has(id)) alerta("fuente_inexistente", `contradicciones[${i}]`, `${id} no está en el catálogo del encargo.`);
+    // Una objeción a «<insumo>#<id>» debe apuntar a un insumo que el encargo declare (o a una ejecución registrada).
+    const refsInsumos = new Set(L(encargo.insumos).map((x) => x?.ref));
+    for (const [i, o] of L(ejecucion.objeciones).entries()) {
+      const m = /^([^#]+)#/.exec(String(o?.a ?? ""));
+      if (m && !refsInsumos.has(m[1]) && !registro?.ejecuciones?.has?.(m[1])) err("objecion_a_insumo_desconocido", `objeciones[${i}]: «${m[1]}» no es un insumo del encargo ni una ejecución registrada.`);
+    }
+    for (const [i, c] of L(ejecucion.contradicciones).entries()) {
+      for (const id of c.fuentes) if (!fuentes.has(id)) alerta("fuente_inexistente", `contradicciones[${i}]`, `${id} no está en el catálogo del encargo.`);
+      // Una contradicción la DECLARA la IA; lab-V solo deja constancia de que existe y de en qué estado están sus fuentes.
+      // Ni la confirma ni la descarta: eso es revisión humana.
+      const estado = c.fuentes.map((id) => `${id}: ${fuentes.get(id)?.integridad ?? "inexistente"}`).join(", ");
+      alerta("posible_contradiccion_declarada", `contradicciones[${i}]`, `La IA declara una contradicción entre ${c.fuentes.length} fuentes (${estado}). No está verificada: la decide una persona.`);
+    }
   }
 
   const vf = [...fuentes.values()].map(({ _texto, _meta, ...x }) => x);
@@ -263,10 +286,13 @@ export async function verificar({ encargo, ejecucion, copias = new Map(), regist
   else if (resumen.n_citas_utilizables < resumen.n_citas || resumen.n_sin_respaldo || resumen.n_fuentes_alteradas || alertas.length) resultado = "con_fallas";
   else resultado = "apta_para_revision_humana";
 
-  const cuerpo = String(ejecucion?.id ?? "desconocida").replace(/^(demo-)?lab-run-/, "").replace(/[^a-z0-9._-]/gi, "-").slice(0, 60).toLowerCase() || "desconocida";
+  // El id lleva el instante de verificación: una misma ejecución puede verificarse más de una vez (p. ej. cuando
+  // llegan las copias) y cada verificación debe poder distinguirse en el registro.
+  const cuerpo = String(ejecucion?.id ?? "desconocida").replace(/^(demo-)?lab-run-/, "").replace(/[^a-z0-9._-]/gi, "-").replace(/\.\.+/g, ".").slice(0, 44).toLowerCase() || "desconocida";
+  const sello = ahora.replace(/[-:]/g, "").replace(/\.\d+/, "").toLowerCase();
   const verificacion = {
     contrato: CONTRATO_VERIFICACION, version_contrato: VERSION_LAB,
-    id: `${esDemo ? "demo-" : ""}lab-ver-${cuerpo}`, es_demo: esDemo,
+    id: `${esDemo ? "demo-" : ""}lab-ver-${cuerpo}-${sello}`, es_demo: esDemo,
     ejecucion_id: typeof ejecucion?.id === "string" ? ejecucion.id : `${esDemo ? "demo-" : ""}lab-run-desconocida`,
     ejecucion_sha256: ejSha,
     encargo_id: typeof encargo?.id === "string" ? encargo.id : `${esDemo ? "demo-" : ""}lab-enc-desconocido`,

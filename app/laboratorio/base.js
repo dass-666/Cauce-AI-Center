@@ -28,7 +28,7 @@ export const TIPOS_OBJECION = ["supuesto", "circularidad", "sobreajuste", "sesgo
 
 /** Identificadores: prefijo por tipo de documento; los de prueba empiezan por «demo-». */
 export const PREFIJOS = { encargo: "lab-enc-", ejecucion: "lab-run-", verificacion: "lab-ver-" };
-const CUERPO_ID = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+const CUERPO_ID = /^(?!.*\.\.)[a-z0-9][a-z0-9._-]{0,63}$/;
 export function esIdLab(id, tipo, esDemo) {
   if (typeof id !== "string") return false;
   const pre = (esDemo ? "demo-" : "") + PREFIJOS[tipo];
@@ -36,7 +36,33 @@ export function esIdLab(id, tipo, esDemo) {
 }
 /** Cualquier id producido por el Laboratorio (encargo, ejecución o verificación), demo o real. */
 export const esIdDeLaboratorio = (v) => typeof v === "string" && /^(demo-)?lab-(enc|run|ver)-/.test(v);
-export const ID_FUENTE = /^[a-z0-9][a-z0-9._-]{1,80}$/i;
+/** Id de fuente o insumo. Nunca «..»: los ids se usan como nombres de archivo de copias y no deben salir de su carpeta. */
+export const ID_FUENTE = /^(?!.*\.\.)[a-z0-9][a-z0-9._-]{1,80}$/i;
+
+/**
+ * Límites de tamaño (fase 1.1). Antes no había ninguno: una respuesta enorme hacía que la validación tardara
+ * minutos (la búsqueda de datos privados es cuadrática en textos largos) y bloqueaba el verificador.
+ * Son límites de ENTRADA: un documento que los supera se rechaza entero, con un solo error, antes de revisarlo.
+ */
+export const LIMITES = Object.freeze({
+  bytes_documento: 2_000_000, // JSON serializado (caracteres); un expediente CSI real pesa ~80 KB
+  texto: 8000,                // pregunta, afirmación, hipótesis, objeción, duda, contradicción, error
+  extracto: 2000,             // extracto de una cita
+  afirmaciones: 500, hipotesis: 100, objeciones: 500, dudas: 200, contradicciones: 200, citas_por_afirmacion: 20,
+  consultas_web: 50, insumos: 200, fuentes: 500, errores: 500,
+});
+/** Tamaño de un documento como JSON (caracteres). Un documento no serializable cuenta como infinito. */
+export function tamanoDocumento(doc) {
+  try { return JSON.stringify(doc)?.length ?? Infinity; } catch { return Infinity; }
+}
+
+/**
+ * Caracteres que no se ven pero cambian lo que una persona lee: anchura cero, control bidireccional (pueden
+ * invertir visualmente un número o esconder texto), marca de orden de bytes y guion suave.
+ * Un texto así se rechaza: una respuesta legítima no los necesita y un revisor humano no los vería.
+ */
+const INVISIBLES = /[­​-‏‪-‮⁠-⁤⁦-⁩﻿]/;
+export const tieneInvisibles = (t) => typeof t === "string" && INVISIBLES.test(t);
 
 export const esObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 export const L = (v) => (Array.isArray(v) ? v : []);

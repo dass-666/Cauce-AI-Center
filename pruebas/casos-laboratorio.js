@@ -7,6 +7,8 @@ import { validarEncargo, validarEjecucion, validarVerificacion } from "../app/la
 import { verificar, verificarYValidar, huellaDoc, catalogoDesdeInvestigacion, fechasMencionadas } from "../app/laboratorio/verificador.js";
 import { nuevaEntrada, serializar, verificarRegistro, indicesDesdeEntradas } from "../app/laboratorio/registro.js";
 import { construirBanco, comprobarBanco } from "../app/laboratorio/banco.js";
+import { construirPaquete, comprobarPaquete, entradasDesdeArchivos } from "../app/laboratorio/paquete.js";
+import { puntuar, entidadDeUbicacion } from "../app/laboratorio/puntuacion.js";
 import { sha256Bytes, normalizarEspacios, jsonCanonico, sha256 } from "../app/laboratorio/base.js";
 import { construirDesdeExpediente } from "../app/csi/expediente.js";
 
@@ -434,6 +436,125 @@ export function registrarCasosLaboratorio(leerTexto) {
     verdadero(enReal.problemas.filter((p) => p.codigo === "mezcla_demo_real").length === 3, "registro DEMO leído como REAL");
   });
 
+  // ================================================================ auditoría fase 1.1 (defectos reproducidos antes de corregirlos)
+  prueba("Laboratorio 1.1 · contratos: referencias rotas (objeción a id inexistente, alternativa_a) e ids repetidos de objeciones se rechazan", async () => {
+    const m = await mundo();
+    m.ejecucion.objeciones = [{ id: "o1", a: "no-existe", tipo: "supuesto", texto: "x" }, { id: "o1", a: "a1", tipo: "supuesto", texto: "y" }];
+    let v = validarEjecucion(m.ejecucion);
+    verdadero(!v.ok && tiene(v.errores, /objeciones\[0\]\.a .*referencia rota/) && tiene(v.errores, /objeciones: «o1» está repetido/), v.errores.join(" | "));
+    m.ejecucion.objeciones = [{ id: "o1", a: "a1", tipo: "supuesto", texto: "x" }, { id: "o2", a: "demo-lab-run-000#a7", tipo: "alcance", texto: "y" }];
+    m.ejecucion.hipotesis = [{ id: "h1", enunciado: "e", se_refuta_si: "r", experimento: "x", alternativa_a: "h9" }];
+    v = validarEjecucion(m.ejecucion); verdadero(!v.ok && tiene(v.errores, /alternativa_a «h9»/), v.errores.join(" | "));
+    m.ejecucion.hipotesis = [{ id: "h1", enunciado: "e", se_refuta_si: "r", experimento: "x", alternativa_a: null }, { id: "h2", enunciado: "e", se_refuta_si: "r", experimento: "x", alternativa_a: "h1" }];
+    v = validarEjecucion(m.ejecucion); igual(v.errores, [], "objeción a otra ejecución y alternativa a otra hipótesis son válidas");
+    const rv = await verificar({ ...m, ahora: AHORA });
+    verdadero(tiene(rv.verificacion.errores, /objecion_a_insumo_desconocido.*demo-lab-run-000/), "lab-V exige que el insumo objetado exista en el encargo");
+    m.encargo.insumos = [{ tipo: "banco_evaluacion", ref: "demo-banco", sha256: "b".repeat(64) }]; await firmar(m);
+    m.ejecucion.objeciones[1].a = "demo-banco#e01";
+    verdadero(!tiene((await verificar({ ...m, ahora: AHORA })).verificacion.errores, /objecion_a_insumo/), "objeción a una entidad del banco declarado: válida");
+    m.ejecucion.contradicciones = [{ fuentes: ["demo-f-a", "demo-f-a"], texto: "t" }, { fuentes: [1, {}], texto: "t" }];
+    v = validarEjecucion(m.ejecucion); verdadero(tiene(v.errores, /contradicciones\[0\]\.fuentes: «demo-f-a» está repetido/) && tiene(v.errores, /contradicciones\[1\]\.fuentes\[0\] debe ser un id/), v.errores.join(" | "));
+  });
+
+  prueba("Laboratorio 1.1 · contratos: límites de tamaño — un documento enorme se rechaza con un solo error y sin recorrerlo; textos y listas tienen tope", async () => {
+    const m = await mundo();
+    m.ejecucion.afirmaciones = Array.from({ length: 120 }, (_, i) => af(`a${i}`, "x".repeat(20000), "inferencia"));
+    const t0 = Date.now(); const v = validarEjecucion(m.ejecucion);
+    igual(v.ok, false); igual(v.errores.length, 1); verdadero(/supera el límite de 2000000/.test(v.errores[0]), v.errores[0]);
+    verdadero(Date.now() - t0 < 5000, `tardó ${Date.now() - t0} ms`);
+    m.ejecucion.afirmaciones = [af("a1", "x".repeat(8001), "inferencia", [cita("demo-f-a", "y".repeat(2001))])];
+    const v2 = validarEjecucion(m.ejecucion);
+    verdadero(tiene(v2.errores, /afirmaciones\[0\]\.texto: 8001 caracteres/) && tiene(v2.errores, /extracto: 2001 caracteres/) && tiene(v2.errores, /datos privados: no se revisaron/), v2.errores.join(" | "));
+    m.ejecucion.afirmaciones = Array.from({ length: 501 }, (_, i) => af(`a${i}`, "texto breve", "inferencia"));
+    verdadero(tiene(validarEjecucion(m.ejecucion).errores, /afirmaciones: 501 elementos superan el límite de 500/), "tope de lista");
+    const e = clon(m.encargo); e.pregunta = "p".repeat(8001);
+    verdadero(tiene(validarEncargo(e).errores, /pregunta: 8001 caracteres/), "pregunta con tope");
+    const r = await verificar({ ...m, ahora: AHORA }); igual(r.verificacion.resultado, "rechazada", "lab-V rechaza en vez de recorrer");
+  });
+
+  prueba("Laboratorio 1.1 · contratos: caracteres invisibles o bidireccionales (U+200B, U+202E, U+FEFF) en textos y extractos se rechazan", async () => {
+    const m = await mundo();
+    m.ejecucion.afirmaciones[0].texto = "Mantendrá la tasa\u202e %00.4 ne";
+    m.ejecucion.afirmaciones[0].citas[0].extracto = "El Instituto\u200b mantendrá la tasa de referencia en 4.00 % durante el trimestre.";
+    const v = validarEjecucion(m.ejecucion);
+    igual(v.errores.filter((t) => /caracteres invisibles/.test(t)).length, 2, v.errores.join(" | "));
+    const e = clon(m.encargo); e.pregunta = "\ufeff¿Qué dice?"; verdadero(tiene(validarEncargo(e).errores, /pregunta: contiene caracteres invisibles/), "encargo");
+    const r = await verificar({ ...m, ahora: AHORA }); igual(r.verificacion.resultado, "rechazada"); verdadero(tiene(r.verificacion.errores, /invisibles/), "lab-V conserva el motivo");
+  });
+
+  prueba("Laboratorio 1.1 · contratos: ids con «..» se rechazan (los ids nombran archivos de copias); encargo DEMO no usa ejecuciones REALES", async () => {
+    const m = await mundo();
+    const e = clon(m.encargo); e.fuentes_permitidas[0].fuente_id = "a..b"; verdadero(tiene(validarEncargo(e).errores, /fuentes_permitidas\[0\]\.fuente_id inválido/), "fuente_id");
+    const e2 = clon(m.encargo); e2.insumos = [{ tipo: "copia_fuente", ref: "x/..", sha256: "a".repeat(64) }]; verdadero(tiene(validarEncargo(e2).errores, /insumos\[0\]\.ref inválida/), "ref");
+    const x = clon(m.ejecucion); x.id = "demo-lab-run-a..b"; verdadero(tiene(validarEjecucion(x).errores, /id «demo-lab-run-a\.\.b» inválido/), "id de ejecución");
+    const e3 = clon(m.encargo); e3.insumos = [{ tipo: "lab_ejecucion_verificada", ref: "lab-run-real", sha256: "a".repeat(64) }];
+    verdadero(tiene(validarEncargo(e3).errores, /es de otro mundo/), "DEMO con insumo REAL");
+    const e4 = clon(m.encargo); e4.insumos = [{ tipo: "lab_ejecucion_verificada", ref: "demo-lab-run-000", sha256: "a".repeat(64) }];
+    verdadero(!tiene(validarEncargo(e4).errores, /otro mundo/), "DEMO con insumo DEMO sí");
+  });
+
+  prueba("Laboratorio 1.1 · lab-V: orden de los hechos — ejecución anterior al encargo o verificación anterior a la ejecución se rechazan; latido fuera de [inicio, fin] también", async () => {
+    const m = await firmar(await mundo());
+    m.ejecucion.inicio = "2030-03-30T10:05:00Z"; m.ejecucion.fin = "2030-03-31T10:09:00Z"; m.ejecucion.latido = "2030-03-31T10:09:00Z";
+    const r = await ver(m); igual(r.resultado, "rechazada"); verdadero(tiene(r.errores, /ejecucion_antes_del_encargo/), r.errores.join(" | "));
+    const m2 = await mundo(); const r2 = await ver(m2, { ahora: "2030-03-31T10:07:00Z" });
+    igual(r2.resultado, "rechazada"); verdadero(tiene(r2.errores, /verificacion_antes_de_la_ejecucion/), r2.errores.join(" | "));
+    const m3 = await mundo(); m3.ejecucion.latido = "2030-03-31T10:00:00Z";
+    verdadero(tiene(validarEjecucion(m3.ejecucion).errores, /latido es anterior a inicio/), "latido");
+  });
+
+  prueba("Laboratorio 1.1 · lab-V: superar max_minutos o max_tokens_salida del encargo se avisa (con_fallas), no se corrige", async () => {
+    const m = await mundo(); m.ejecucion.fin = "2030-03-31T10:20:00Z"; m.ejecucion.latido = m.ejecucion.fin; m.ejecucion.uso.tokens_salida = 999999;
+    const r = await ver(m); igual(r.resultado, "con_fallas"); igual(r.errores, []);
+    verdadero(tiene(r.alertas, /excede_max_minutos/) && tiene(r.alertas, /excede_max_tokens/), JSON.stringify(r.alertas));
+    const m2 = await mundo(); m2.ejecucion.uso.tokens_salida = 8000; igual((await ver(m2)).resultado, "apta_para_revision_humana", "en el límite exacto no avisa");
+  });
+
+  prueba("Laboratorio 1.1 · lab-V: una contradicción declarada por la IA queda como «posible», con el estado de sus fuentes, nunca confirmada", async () => {
+    const m = await mundo(); m.ejecucion.contradicciones = [{ fuentes: ["demo-f-a", "demo-f-c"], texto: "se contradicen" }];
+    const r = await ver(m); igual(r.resultado, "con_fallas");
+    const al = r.alertas.find((a) => a.codigo === "posible_contradiccion_declarada");
+    verdadero(al && /demo-f-a: integra/.test(al.detalle) && /No está verificada/.test(al.detalle), JSON.stringify(r.alertas));
+    verdadero(!JSON.stringify(r).includes("contradiccion_confirmada"), "no existe «confirmada»");
+  });
+
+  prueba("Laboratorio 1.1 · contratos: una verificación con estados imposibles (apta con alertas o incompleta, resumen que no cuadra, apariciones negativas) se rechaza", async () => {
+    const m = await mundo(); const v = await ver(m);
+    verdadero(validarVerificacion(v).ok, "la real es válida");
+    const r1 = validarVerificacion({ ...v, alertas: [{ codigo: "x", ruta: "y", detalle: "z" }], incompleta: true, resumen: { ...v.resumen, n_alertas: 1 } });
+    verdadero(tiene(r1.errores, /con alertas/) && tiene(r1.errores, /incompleta = true/), r1.errores.join(" | "));
+    const r2 = validarVerificacion({ ...v, resumen: { ...v.resumen, n_citas: 99, n_citas_utilizables: 98 } });
+    verdadero(tiene(r2.errores, /resumen\.n_citas = 99 no cuadra/) && tiene(r2.errores, /n_citas_utilizables = 98 no cuadra/), r2.errores.join(" | "));
+    const r3 = validarVerificacion({ ...v, citas: [{ ...v.citas[0], apariciones: -3 }], alertas: ["texto suelto"], resumen: { ...v.resumen, n_alertas: 1 } });
+    verdadero(tiene(r3.errores, /apariciones debe ser entero/) && tiene(r3.errores, /alertas\[0\]/), r3.errores.join(" | "));
+    const r4 = validarVerificacion({ ...v, errores: ["algo"] }); verdadero(tiene(r4.errores, /con errores el resultado es «rechazada»/), r4.errores.join(" | "));
+    const r5 = validarVerificacion({ ...v, resultado: "sin_salida" }); verdadero(tiene(r5.errores, /«sin_salida» con citas/), r5.errores.join(" | "));
+  });
+
+  prueba("Laboratorio 1.1 · registro: id válido repetido y orden temporal invertido se niegan al anexar y se detectan al verificar; cada verificación tiene id propio", async () => {
+    const m = await mundo();
+    const e1 = await nuevaEntrada(null, { tipo: "encargo", documento: m.encargo, registrado_en: "2030-04-01T12:00:00Z", registro_es_demo: true });
+    const atras = await nuevaEntrada(e1.entrada, { tipo: "encargo", documento: { ...m.encargo, id: "demo-lab-enc-002" }, registrado_en: "2030-04-01T11:00:00Z", registro_es_demo: true });
+    igual(atras.ok, false); verdadero(tiene(atras.errores, /orden temporal/), atras.errores.join(" | "));
+    const dup = await nuevaEntrada(e1.entrada, { tipo: "encargo", documento: { ...m.encargo, pregunta: "otra" }, registrado_en: "2030-04-01T12:30:00Z", registro_es_demo: true, ids_validos: new Set(["encargo:demo-lab-enc-001"]) });
+    igual(dup.ok, false); verdadero(tiene(dup.errores, /id duplicado/), dup.errores.join(" | "));
+    const mala = clon(m.encargo); mala.rol = "jefe";
+    const inv = await nuevaEntrada(e1.entrada, { tipo: "encargo", documento: mala, registrado_en: "2030-04-01T12:30:00Z", registro_es_demo: true, ids_validos: new Set(["encargo:demo-lab-enc-001"]) });
+    igual(inv.ok, true, "un documento inválido con el mismo id sí se registra (auditoría), marcado inválido"); igual(inv.entrada.valido, false);
+    // Un registro fabricado a mano con duplicado y hora invertida: verificarRegistro lo señala.
+    const e2 = await nuevaEntrada(e1.entrada, { tipo: "encargo", documento: { ...m.encargo, pregunta: "otra" }, registrado_en: "2030-04-01T11:00:00Z", registro_es_demo: true });
+    igual(e2.ok, false, "sin ids_validos el orden temporal sigue negándose");
+    const forzada = await nuevaEntrada(e1.entrada, { tipo: "encargo", documento: { ...m.encargo, pregunta: "otra" }, registrado_en: "2030-04-01T12:30:00Z", registro_es_demo: true });
+    const t = serializar(e1.entrada) + serializar({ ...forzada.entrada, registrado_en: "2030-04-01T11:00:00Z" });
+    const r = await verificarRegistro(t, { es_demo: true });
+    verdadero(r.problemas.some((p) => p.codigo === "entrada_modificada"), "la hora cambiada rompe la huella de la entrada");
+    const r2 = await verificarRegistro(serializar(e1.entrada) + serializar(forzada.entrada), { es_demo: true });
+    verdadero(r2.problemas.some((p) => p.codigo === "id_duplicado" && p.linea === 2), JSON.stringify(r2.problemas));
+    verdadero(r2.ids_validos.has("encargo:demo-lab-enc-001"), "ids válidos para la herramienta");
+    const a = await ver(m), b = await ver(m, { ahora: "2030-04-02T12:00:00Z" });
+    verdadero(a.id !== b.id && /^demo-lab-ver-001-20300401t120000z$/.test(a.id), `${a.id} / ${b.id}`);
+  });
+
   // ================================================================ banco
   const ORIGINAL = "datos/csi/casos-publicados/expediente-bns-2015.json";
   prueba("Laboratorio · banco: genera evaluación, clave y manifiesto separados; original, fuentes, cotejos y pendiente de 2011 intactos", async () => {
@@ -497,8 +618,52 @@ export function registrarCasosLaboratorio(leerTexto) {
     igual(v.citas.map((c) => c.cita_utilizable), [false, false]);
   });
 
+  // ================================================================ piloto aislado (paquete y puntuación, código puro)
+  async function paqueteDePrueba(leerTexto) {
+    const original = JSON.parse(await leerTexto(ORIGINAL));
+    const espec = JSON.parse(await leerTexto("datos/laboratorio/banco-prueba/especificacion-prueba.json"));
+    const b = await construirBanco(original, espec);
+    verdadero(b.ok, b.errores?.join(" | "));
+    const r = await construirPaquete({ rol: "critico", corrida_id: "prueba-1", es_demo: true, pregunta: "¿Qué está mal?", corte: "2015-01-15T00:00:00Z", creado_por: "diego", creado_en: AHORA, evaluacion: { texto: b.textos.evaluacion }, banco_id: "banco-prueba-v1" });
+    verdadero(r.ok, r.errores?.join(" | "));
+    return { r, b, original };
+  }
+  prueba("Laboratorio 1.1 · paquete: el crítico recibe exactamente 5 archivos con huellas; el comprobador aprueba lo construido y rechaza clave, original, archivo extra y huella cambiada", async () => {
+    const { r, b, original } = await paqueteDePrueba(leerTexto);
+    igual([...r.archivos.keys()].sort(), ["INSTRUCCIONES.md", "catalogo-fuentes.json", "expediente-evaluacion.json", "formato-respuesta.json", "paquete.json"]);
+    igual(r.paquete.encargo.insumos[0].sha256, await sha256(b.textos.evaluacion));
+    igual((await comprobarPaquete(await entradasDesdeArchivos(r.archivos), { rol: "critico" })).ok, true);
+    const con = async (ruta, texto) => { const m = new Map(r.archivos); m.set(ruta, { texto }); return comprobarPaquete(await entradasDesdeArchivos(m), { rol: "critico" }); };
+    const c1 = await con("notas.json", b.textos.clave); verdadero(!c1.ok && c1.problemas.some((p) => p.codigo === "contrato_prohibido"), JSON.stringify(c1.problemas));
+    const c2 = await con("expediente-evaluacion.json", `${JSON.stringify(original, null, 2)}\n`); verdadero(c2.problemas.some((p) => p.codigo === "expediente_original") && c2.problemas.some((p) => p.codigo === "huella_distinta"), JSON.stringify(c2.problemas));
+    const c3 = await con("extra.txt", "hola"); verdadero(c3.problemas.some((p) => p.codigo === "no_declarado") && c3.problemas.some((p) => p.codigo === "archivo_no_permitido"), JSON.stringify(c3.problemas));
+    const c4 = await con("INSTRUCCIONES.md", "lee ../clave"); verdadero(c4.problemas.some((p) => p.codigo === "contenido_prohibido"), JSON.stringify(c4.problemas));
+    const sinMan = new Map(r.archivos); sinMan.delete("paquete.json");
+    verdadero((await comprobarPaquete(await entradasDesdeArchivos(sinMan))).problemas.some((p) => p.codigo === "falta_manifiesto"), "sin manifiesto");
+    const enlace = await comprobarPaquete([...(await entradasDesdeArchivos(r.archivos)), { ruta: "catalogo-fuentes.json", bytes: new Uint8Array(), texto: null, enlace: true, fuera: true }], { rol: "critico" });
+    verdadero(enlace.problemas.some((p) => p.codigo === "enlace_simbolico") && enlace.problemas.some((p) => p.codigo === "fuera_del_paquete"), "enlace");
+    const otroRol = await comprobarPaquete(await entradasDesdeArchivos(r.archivos), { rol: "investigador" });
+    verdadero(otroRol.problemas.some((p) => p.codigo === "rol_distinto") && otroRol.problemas.some((p) => p.codigo === "expediente_en_rol_indebido"), "rol");
+    const c5 = await construirPaquete({ rol: "critico", corrida_id: "prueba-2", es_demo: true, pregunta: "¿?", corte: null, creado_por: "diego", creado_en: AHORA, evaluacion: { texto: JSON.stringify(original) } });
+    verdadero(!c5.ok && tiene(c5.errores, /parece el original/), "no empaqueta el original");
+  });
+
+  prueba("Laboratorio 1.1 · puntuación: entidad desde la clave, correcto/parcial/no_detectado, falsos positivos aparte, control y criterios explícitos; la salida es determinista", async () => {
+    const { b } = await paqueteDePrueba(leerTexto);
+    igual(entidadDeUbicacion("pasos[3] agregar_enunciado e02 (texto)"), "e02"); igual(entidadDeUbicacion("pasos_finales[1] agregar_observacion H-A#2 (texto)"), "H-A"); igual(entidadDeUbicacion("x"), null);
+    const ej = (objeciones) => ({ contrato: "cauce.lab.ejecucion", id: "demo-lab-run-p", rol: "critico", objeciones });
+    const r = puntuar({ ejecucion: ej([{ id: "o1", a: "banco-prueba-v1#e02", tipo: "evidencia", texto: "e02 dice 1.0820 francos y la fuente dice otra cosa" }, { id: "o2", a: "banco-prueba-v1#e09", tipo: "otra", texto: "x" }]), clave: b.clave, insumo: "banco-prueba-v1" });
+    verdadero(r.ok, r.errores?.join(" | "));
+    igual(r.puntuacion.resultados.map((x) => x.estado), ["correcto", "no_detectado"]); igual(r.puntuacion.falsos_positivos.length, 1); igual(r.puntuacion.resumen.puntaje, 0.5);
+    const r2 = puntuar({ ejecucion: ej([{ id: "o1", a: "banco-prueba-v1#H-D", tipo: "supuesto", texto: "no es falsable" }]), clave: b.clave, criterios: { control: ["D02"], defectos: { D02: { exige_palabras: ["refut"] } } } });
+    igual(r2.puntuacion.resumen.n_retos, 1); igual(r2.puntuacion.resumen.controles, [{ defecto_id: "D02", estado: "parcial" }]); igual(r2.puntuacion.resumen.puntaje, 0);
+    igual(JSON.stringify(puntuar({ ejecucion: ej([]), clave: b.clave })), JSON.stringify(puntuar({ ejecucion: ej([]), clave: b.clave })), "determinista");
+    igual(puntuar({ ejecucion: { ...ej([]), rol: "analista" }, clave: b.clave }).ok, false, "solo crítico");
+    igual(puntuar({ ejecucion: ej([]), clave: b.manifiesto }).ok, false, "el manifiesto no es la clave");
+  });
+
   prueba("Laboratorio · aislamiento: el código del Laboratorio no escribe, no usa red, no ejecuta y no llama a los motores para escribir", async () => {
-    for (const f of ["base.js", "contratos.js", "verificador.js", "registro.js", "banco.js"]) {
+    for (const f of ["base.js", "contratos.js", "verificador.js", "registro.js", "banco.js", "paquete.js", "puntuacion.js"]) {
       const t = await leerTexto(`app/laboratorio/${f}`);
       for (const re of [/\bfetch\s*\(/, /XMLHttpRequest/, /WebSocket/, /localStorage/, /child_process/, /writeFile/, /\beval\s*\(/, /new Function/, /aplicarCambio/, /registrarLeccion|guardarAlmacen|escribirAlmacen/, /from ["']node:/])
         verdadero(!re.test(t), `${f} contiene ${re}`);
