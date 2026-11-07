@@ -17,7 +17,7 @@ Base de código: rama `claude/project-thread-fwbit2`, encima de PR #25 (`claude/
 |---|---|---|
 | Node (motor, contratos, reglas, informe, casos publicados) | **394 pasaron, 0 fallaron** · HECHO | `node pruebas/ejecutar.mjs` o `pruebas.html` en el navegador |
 | Chromium real · recorrido de cierre (6 recorridos + celular) | **42 OK, 0 FALLA** · HECHO | `node pruebas/navegador/cierre.cjs` (Playwright, SwiftShader) |
-| Chromium real · regresión completa (29 guiones) | ver `docs/CIERRE-PRUEBAS.md` | `node pruebas/navegador/todas.cjs` |
+| Chromium real · regresión completa (29 guiones) | **28 verdes**; el rojo (`csi.cjs`, nombre viejo de una descarga) se corrigió y pasó **39 OK** por separado · HECHO; detalle en `docs/CIERRE-PRUEBAS.md` | `node pruebas/navegador/todas.cjs` |
 | Intel UHD (cps reales en la MSI) | **SIN VERIFICAR** desde la fase G; SwiftShader no cuenta | `?medir=1` en la MSI, ver §7 |
 
 ## 2. Oficina: navegación, proyectos y estados
