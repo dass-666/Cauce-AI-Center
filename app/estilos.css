@@ -781,3 +781,21 @@ html.csi-abierto .principal { grid-template-columns: 1fr !important; }
 .csi-mapa-nombre { fill: var(--texto); font-size: 12px; }
 .csi-mapa-rel { fill: var(--texto-suave); font-size: 10.5px; }
 .csi a[data-original] { color: #8fd0ff; }
+
+/* ---------- Bloque D: ascensor virtual entre pisos ---------- */
+/* Velo que tapa el cambio de escena a mitad del viaje (su opacidad la pone escena3d.js cuadro a cuadro).
+   Solo composición: no agrega dibujo en WebGL. No recibe clics. */
+.vista3d-ascensor {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none; display: flex; align-items: center; justify-content: center;
+}
+.vista3d-ascensor[hidden] { display: none; }
+.vista3d-ascensor::before {
+  /* guías del cubo del ascensor: dos franjas tenues a los lados */
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, #0000 0 14%, #ffffff0d 14% 15%, #0000 15% 85%, #ffffff0d 85% 86%, #0000 86%);
+}
+.vista3d-ascensor-letrero {
+  position: relative; font-weight: 700; font-size: 15px; letter-spacing: .03em; padding: 8px 14px; border-radius: 10px;
+  background: #0f1526e6; color: var(--texto); border: 1px solid var(--borde);
+}
+.vista3d.camara-sin-animacion canvas { transition: none; }
