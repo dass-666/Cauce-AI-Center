@@ -93,7 +93,7 @@ const agente = (d, id) => d.departamentos.flatMap((x) => x.agentes).find((a) => 
   const antesSala = await cam(p);
   await p.keyboard.press('s'); await p.waitForTimeout(700);
   const ids = await p.locator('.sala-tarjeta').evaluateAll((n) => n.map((x) => x.dataset.proyecto));
-  ok('sala: 6 proyectos; los pendientes (Tezcatlipoca, CauceService, Repacar) al final y compactos', ids.length === 6 && ids.slice(-3).sort().join() === 'cauceservice,repacar,tezcatlipoca' && (await p.locator('.sala-tarjeta-compacta').count()) === 3, ids.join(', '));
+  ok('sala: 7 proyectos (CSI incluido); los pendientes (Tezcatlipoca, CauceService, Repacar) al final y compactos', ids.length === 7 && ids.slice(-3).sort().join() === 'cauceservice,repacar,tezcatlipoca' && (await p.locator('.sala-tarjeta-compacta').count()) === 3, ids.join(', '));
   ok('sala: Compago muestra su estilo «Análisis comercial» y su color de identidad', /Análisis comercial/i.test(await p.locator('.sala-tarjeta[data-proyecto="compago"]').innerText()) && /--identidad/.test(await p.locator('.sala-tarjeta[data-proyecto="compago"]').getAttribute('style')));
   ok('sala: ningún botón actúa sobre un sistema (solo navegar)', (await p.locator('#sala-control button').evaluateAll((n) => n.map((x) => x.textContent))).every((t) => /Ir al|Volver|Ver|Atención|Proyectos|Cambios|edificio/.test(t)));
   await p.keyboard.press('s'); await p.waitForTimeout(900);
@@ -215,12 +215,12 @@ const agente = (d, id) => d.departamentos.flatMap((x) => x.agentes).find((a) => 
   await s.route('**/datos/reales/*', (x) => x.fulfill({ status: 404, body: '' }));
   await s.goto(BASE + '?medir=1'); await s.waitForTimeout(7000);
   const mas = s.locator('#pisos .pisos-mas summary');
-  ok('10 proyectos: los 7 pendientes se juntan en «+7 pendientes»; los pisos con datos siguen a la vista', /\+7 pendientes/.test(await mas.innerText().catch(() => '')) && (await s.locator('#pisos > .piso').count()) === 3, `${await s.locator('#pisos > .piso').count()} pestañas`);
+  ok('11 proyectos (con CSI): los 7 pendientes se juntan en «+7 pendientes»; los pisos con datos siguen a la vista', /\+7 pendientes/.test(await mas.innerText().catch(() => '')) && (await s.locator('#pisos > .piso').count()) === 4, `${await s.locator('#pisos > .piso').count()} pestañas`);
   await mas.click(); await s.waitForTimeout(300);
   await s.locator('.pisos-mas-lista .piso', { hasText: 'Extra 2' }).click(); await s.waitForTimeout(2500);
   ok('10 proyectos: elegir uno agrupado lo abre y su pestaña queda a la vista', /Extra 2/.test(await s.locator('#pisos [aria-selected="true"]').innerText()));
   await s.keyboard.press('s'); await s.waitForTimeout(600);
-  ok('10 proyectos: la sala sigue mostrando los 10', (await s.locator('.sala-tarjeta').count()) === 10);
+  ok('11 proyectos (con CSI): la sala sigue mostrando los 11', (await s.locator('.sala-tarjeta').count()) === 11);
   await s.close();
 
   console.log(res.join('\n'));

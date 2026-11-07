@@ -104,7 +104,7 @@ const plantilla = fs.readFileSync('contrato/ejemplos/nexus/leccion-plantilla.jso
   ok('N otra vez cierra Nexus', await nexus.isHidden());
   // «Un cuarto» sigue disponible y la sala de control sigue igual (6 proyectos; Nexus no es un piso).
   await p.keyboard.press('s'); await p.waitForTimeout(600);
-  ok('la sala de control sigue con los 6 proyectos (Nexus no se mezcla con el contrato v1)', (await p.locator('.sala-tarjeta').count()) === 6);
+  ok('la sala de control sigue con los 7 proyectos (6 + piso CSI; Nexus no se mezcla con el contrato v1)', (await p.locator('.sala-tarjeta').count()) === 7);
   await p.keyboard.press('Escape'); await p.waitForTimeout(400);
   await p.locator('[data-modo3d="individual"]').click(); await p.waitForTimeout(2500);
   const modoCuarto = await p.evaluate(() => window.__cauce3d?.metricas().modo);

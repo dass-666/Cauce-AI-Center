@@ -40,7 +40,7 @@ const pedir = (ruta) => new Promise((listo) => http.get(ORIGEN + ruta, (r) => { 
     ok('subruta: sin archivos faltantes (salvo los datos reales que aún no existen)', inesperados.length === 0, inesperados.slice(0, 4).join(', '));
     ok('subruta: personajes de Kenney cargados desde la subruta', pedidos.some((u) => /\/cauce\/vendor\/kenney-mini-characters\/.+\.glb$/.test(u.pathname)));
     await p.keyboard.press('s'); await p.waitForTimeout(800);
-    ok('subruta: la sala de control funciona', (await p.locator('.sala-tarjeta').count()) === 6);
+    ok('subruta: la sala de control funciona', (await p.locator('.sala-tarjeta').count()) === 7);
     await p.keyboard.press('s');
 
     await p.goto(ORIGEN + '/cauce/?incrustado=1'); await p.waitForTimeout(7000);

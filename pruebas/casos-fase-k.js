@@ -36,7 +36,7 @@ export function registrarCasosFaseK(leerTexto) {
     const pend = proyectos.filter((p) => p.pendiente).map((p) => p.id);
     igual(pend, ["tezcatlipoca", "cauceservice", "repacar"]);
     verdadero(/uno o dos/.test(proyectos.find((p) => p.id === "repacar").pendiente));
-    verdadero(proyectos.every((p) => !p.demo || ["compago", "ek-chuah"].includes(p.id)), "ningún pendiente trae demostración inventada");
+    verdadero(proyectos.every((p) => !p.demo || ["compago", "ek-chuah", "csi"].includes(p.id)), "ningún pendiente trae demostración inventada (CSI: caso ficticio propio, no un proyecto externo)");
   });
 
   prueba("K · sala: proyecto sin archivo y pendiente = «pendiente», sin conexión, sin agentes ni asuntos", () => {

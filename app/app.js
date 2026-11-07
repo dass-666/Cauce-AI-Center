@@ -18,6 +18,8 @@ import { leerNexus, resumirNexus, admisionReal, contextoGerente } from "./nexus/
 import { verificarContinuidad, anclaDe } from "./nexus/integridad.js";
 import { evaluarLeccion } from "./nexus/gerente.js";
 import { dibujarNexus } from "./vistas/nexus.js";
+import { dibujarCSI } from "./vistas/csi.js";
+import { leerCSI } from "./csi/registro.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
@@ -91,6 +93,7 @@ function ponerInmersivo(activo) {
   activo = activo && tipoVista === "3d";
   if (activo && salaAbierta()) ponerSala(false);
   if (activo && nexusAbierto()) ponerNexus(false);
+  if (activo && csiAbierto()) ponerCSI(false);
   document.documentElement.classList.toggle("inmersivo", activo);
   $("#salir-inmersivo").hidden = !activo;
   $(".boton-inmersivo").setAttribute("aria-pressed", activo ? "true" : "false");
@@ -113,7 +116,7 @@ async function cambiarVista(tipo, { forzada = false } = {}) {
       const { crearVista3D } = await import("./vistas/vista3d/escena3d.js");
       if (tipoVista !== "3d") return; // el usuario cambió mientras cargaba
       vista = crearVista3D($("#oficina"), opcionesVista);
-      if (salaAbierta() || nexusAbierto()) vista.pausar?.(true);
+      if (salaAbierta() || nexusAbierto() || csiAbierto()) vista.pausar?.(true);
       avisarVista(null);
     } catch (e) {
       console.error(e);
@@ -157,12 +160,14 @@ async function iniciar() {
   $("#recargar").addEventListener("click", () => actualizar());
   $("#boton-sala").addEventListener("click", () => ponerSala(!salaAbierta()));
   $("#boton-nexus").addEventListener("click", () => ponerNexus(!nexusAbierto()));
+  $("#boton-csi").addEventListener("click", () => ponerCSI(!csiAbierto()));
   // S abre o cierra la sala de control (fuera de campos de texto y sin teclas modificadoras).
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     if (e.target instanceof HTMLElement && e.target.closest("input, select, textarea")) return;
     if (e.key === "s" || e.key === "S") { e.preventDefault(); ponerSala(!salaAbierta()); }
     if (e.key === "n" || e.key === "N") { e.preventDefault(); ponerNexus(!nexusAbierto()); }
+    if (e.key === "i" || e.key === "I") { e.preventDefault(); ponerCSI(!csiAbierto()); }
   });
 
   const registro = await cargarRegistro();
@@ -177,6 +182,7 @@ async function iniciar() {
   await actualizar();
   if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
   else if (new URLSearchParams(location.search).get("nexus") === "1") ponerNexus(true);
+  else if (new URLSearchParams(location.search).get("csi") === "1") ponerCSI(true);
   estado.temporizador = setInterval(() => { if (!document.hidden) actualizar(); }, INTERVALO_MS);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) actualizar(); });
   // En window (no en document): así corre después de la vista 3D, que usa Esc para volver al piso.
@@ -185,6 +191,7 @@ async function iniciar() {
     // Esc primero cierra la sala, luego el detalle; con el detalle cerrado, sale del modo inmersivo.
     if (salaAbierta()) ponerSala(false);
     else if (nexusAbierto()) ponerNexus(false);
+    else if (csiAbierto()) ponerCSI(false);
     else if (estado.seleccion) { estado.seleccion = null; dibujar(); }
     else if (enInmersivo()) ponerInmersivo(false);
   });
@@ -196,12 +203,12 @@ const salaAbierta = () => !$("#sala-control").hidden;
 /** Abre o cierra la sala. Mientras está abierta, la vista 3D se pausa (no gasta tarjeta gráfica). */
 function ponerSala(abrir) {
   if (abrir === salaAbierta()) return;
-  if (abrir) { ponerInmersivo(false); ponerNexus(false); }
+  if (abrir) { ponerInmersivo(false); ponerNexus(false); ponerCSI(false); }
   $("#sala-control").hidden = !abrir;
   document.documentElement.classList.toggle("sala-abierta", abrir);
   $("#boton-sala").setAttribute("aria-pressed", abrir ? "true" : "false");
   guardarPreferencia("cauce.sala", abrir ? "1" : "0");
-  vista?.pausar?.(abrir || nexusAbierto());
+  vista?.pausar?.(abrir || nexusAbierto() || csiAbierto());
   if (abrir) { dibujarSalaSiAbierta(); $("#sala-titulo")?.focus({ preventScroll: true }); }
   else if (document.activeElement === document.body || $("#sala-control").contains(document.activeElement)) $("#boton-sala").focus({ preventScroll: true });
 }
@@ -213,11 +220,11 @@ let nexusDocs = null;
 
 function ponerNexus(abrir) {
   if (abrir === nexusAbierto()) return;
-  if (abrir) { ponerInmersivo(false); ponerSala(false); }
+  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerCSI(false); }
   $("#nexus").hidden = !abrir;
   document.documentElement.classList.toggle("nexus-abierto", abrir);
   $("#boton-nexus").setAttribute("aria-pressed", abrir ? "true" : "false");
-  vista?.pausar?.(abrir || salaAbierta());
+  vista?.pausar?.(abrir || salaAbierta() || csiAbierto());
   if (abrir) {
     if (!nexusDocs) dibujarNexus($("#nexus"), null, { alCerrar: () => ponerNexus(false) });
     leerYDibujarNexus().then(() => $("#nexus-titulo")?.focus({ preventScroll: true }));
@@ -256,6 +263,39 @@ async function leerYDibujarNexus() {
     .filter((x) => x.evaluacion && x.leccion?.hallazgo);
   if (!nexusAbierto()) return;
   dibujarNexus($("#nexus"), resumirNexus(nx, { ahora }), { alCerrar: () => ponerNexus(false), fuente: docs.fuente, docLecciones: docs.lecciones, docsRegistro: docs, manifiesto: docs.manifiesto ?? null, integridad, candidatas, ahoraMs: ahora });
+}
+
+// ---------- Laboratorio CSI (Inteligencia Estratégica) ----------
+// Solo lee datos/csi/: primero el almacén REAL (local, fuera de git); si no hay nada, el caso DEMO ficticio.
+const csiAbierto = () => !$("#csi").hidden;
+
+function ponerCSI(abrir) {
+  if (abrir === csiAbierto()) return;
+  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerNexus(false); }
+  $("#csi").hidden = !abrir;
+  document.documentElement.classList.toggle("csi-abierto", abrir);
+  $("#boton-csi").setAttribute("aria-pressed", abrir ? "true" : "false");
+  vista?.pausar?.(abrir || salaAbierta() || nexusAbierto());
+  if (abrir) {
+    dibujarCSI($("#csi"), null, { alCerrar: () => ponerCSI(false) });
+    $("#csi-titulo")?.focus({ preventScroll: true });
+    leerYDibujarCSI().then(() => $("#csi-titulo")?.focus({ preventScroll: true }));
+  } else if (document.activeElement === document.body || $("#csi").contains(document.activeElement)) $("#boton-csi").focus({ preventScroll: true });
+}
+
+async function leerYDibujarCSI() {
+  const leerDe = async (base) => {
+    const [a, i, e, p] = await Promise.all(["actores", "investigaciones", "escenarios", "predicciones"].map((n) => cargarJSON(`${base}/${n}.json`)));
+    return { docs: { actores: a.tipo === "ok" ? a.datos : null, investigaciones: i.tipo === "ok" ? i.datos : null, escenarios: e.tipo === "ok" ? e.datos : null, predicciones: p.tipo === "ok" ? p.datos : null },
+      avisos: [a, i, e, p].filter((r) => r.tipo !== "ok" && r.tipo !== "no_encontrado").map((r) => r.mensaje) };
+  };
+  let r = await leerDe("datos/csi/registro");
+  const hayReal = Object.values(r.docs).some(Boolean) || r.avisos.length;
+  if (!hayReal) r = await leerDe("datos/csi/demo");
+  const csi = await leerCSI(r.docs, { ahoraMs: hayReal ? Date.now() : null });
+  csi.errores.unshift(...r.avisos);
+  if (!csiAbierto()) return;
+  dibujarCSI($("#csi"), csi, { alCerrar: () => ponerCSI(false) });
 }
 
 function empresaActual() {

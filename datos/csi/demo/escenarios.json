@@ -1,0 +1,292 @@
+{
+  "contrato": "cauce.csi.escenarios",
+  "version_contrato": "0.1",
+  "es_demo": true,
+  "escenarios": [
+    {
+      "contrato": "cauce.csi.escenario",
+      "version_contrato": "0.1",
+      "id": "esc-caida-lumen",
+      "investigacion_id": "demo-caida-lumen",
+      "titulo": "[DEMO] Caída abrupta: Índice Lumen 40 (ficticio)",
+      "es_demo": true,
+      "naturaleza": "simulacion",
+      "creado_en": "2026-10-13T08:30:00-06:00",
+      "creado_por": {
+        "tipo": "humano",
+        "identificador": "analista-demo"
+      },
+      "detonante": "Índice Lumen 40 (ficticio) cae bruscamente en una sesión.",
+      "explicaciones": [
+        {
+          "id": "A",
+          "clave": "A",
+          "categoria": "fundamentales",
+          "descripcion": "Cambio económico fundamental (expectativas de crecimiento, tasas, utilidades).",
+          "senales_a_favor": [
+            {
+              "texto": "Revisión pública de indicadores o pronósticos anterior a la caída"
+            },
+            {
+              "texto": "Anuncio de política monetaria o fiscal relevante"
+            }
+          ],
+          "senales_en_contra": [
+            {
+              "texto": "Sin noticias fundamentales en la ventana de la caída",
+              "enunciado_id": "h6"
+            },
+            {
+              "texto": "Recuperación rápida sin cambio de fundamentales"
+            }
+          ],
+          "datos_faltantes": [
+            "Calendario de publicaciones oficiales de la ventana",
+            "Revisión de utilidades del sector"
+          ],
+          "hipotesis_id": "H-A"
+        },
+        {
+          "id": "B",
+          "clave": "B",
+          "categoria": "liquidez",
+          "descripcion": "Problema de liquidez y ventas forzadas (llamadas de margen, rescates de fondos).",
+          "senales_a_favor": [
+            {
+              "texto": "Reportes de llamadas de margen o rescates",
+              "enunciado_id": "d2"
+            },
+            {
+              "texto": "Diferenciales de compra-venta ampliados",
+              "enunciado_id": "h5"
+            }
+          ],
+          "senales_en_contra": [
+            {
+              "texto": "Volumen normal y diferenciales estables"
+            }
+          ],
+          "datos_faltantes": [
+            "Flujos de fondos por día",
+            "Datos de margen de la cámara de compensación"
+          ],
+          "hipotesis_id": "H-B"
+        },
+        {
+          "id": "C",
+          "clave": "C",
+          "categoria": "oportunista",
+          "descripcion": "Compras oportunistas de grandes participantes tras la caída.",
+          "senales_a_favor": [
+            {
+              "texto": "Reportes regulatorios de compras en bloque posteriores a la caída"
+            }
+          ],
+          "senales_en_contra": [
+            {
+              "texto": "Sin cambios de tenencia reportados en el plazo legal",
+              "enunciado_id": "h7"
+            }
+          ],
+          "datos_faltantes": [
+            "Reportes de tenencias de los participantes grandes"
+          ],
+          "hipotesis_id": "H-C"
+        },
+        {
+          "id": "D",
+          "clave": "D",
+          "categoria": "manipulacion",
+          "solo_hipotesis": true,
+          "descripcion": "Posible manipulación. SOLO hipótesis: requiere evidencia (investigación o sanción del regulador, registros de órdenes).",
+          "senales_a_favor": [
+            {
+              "texto": "Investigación o sanción publicada por el regulador"
+            },
+            {
+              "texto": "Registros de órdenes con patrón documentado por una autoridad"
+            }
+          ],
+          "senales_en_contra": [
+            {
+              "texto": "El regulador revisa y descarta irregularidades"
+            }
+          ],
+          "datos_faltantes": [
+            "Registros de órdenes (solo los tiene el regulador)",
+            "Comunicados oficiales del regulador"
+          ],
+          "hipotesis_id": "H-D"
+        }
+      ],
+      "arbol": {
+        "nodos": [
+          {
+            "id": "n1",
+            "padre": null,
+            "actor_id": "bc-lumen",
+            "decision_id": "facilidad_liquidez",
+            "beneficios": [
+              "Reduce ventas forzadas (hipotético)"
+            ],
+            "costos": [
+              "Riesgo moral"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Diferenciales podrían estrecharse (simulado)"
+            ],
+            "explicacion_id": "B"
+          },
+          {
+            "id": "n1a",
+            "padre": "n1",
+            "actor_id": "fondo-arce",
+            "decision_id": "mantener",
+            "beneficios": [
+              "Evita vender en la baja"
+            ],
+            "costos": [
+              "Usa la línea de crédito"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Menos presión de venta (simulado)"
+            ]
+          },
+          {
+            "id": "n1b",
+            "padre": "n1",
+            "actor_id": "minoristas",
+            "decision_id": "mantener",
+            "beneficios": [
+              "Evitan realizar pérdidas"
+            ],
+            "costos": [
+              "Siguen expuestos"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Rebote posible, no asegurado"
+            ]
+          },
+          {
+            "id": "n2",
+            "padre": null,
+            "actor_id": "bc-lumen",
+            "decision_id": "recorte_tasa",
+            "beneficios": [
+              "Señal fuerte"
+            ],
+            "costos": [
+              "Contradice el mandato con inflación sobre meta"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "—"
+            ]
+          },
+          {
+            "id": "n2a",
+            "padre": "n2",
+            "actor_id": "banco-torre",
+            "decision_id": "mantener",
+            "beneficios": [
+              "Sin cambio"
+            ],
+            "costos": [
+              "—"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "—"
+            ]
+          },
+          {
+            "id": "n3",
+            "padre": null,
+            "actor_id": "bc-lumen",
+            "decision_id": "comunicado",
+            "beneficios": [
+              "Sin costo"
+            ],
+            "costos": [
+              "Puede no bastar"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Las ventas forzadas siguen (simulado)"
+            ]
+          },
+          {
+            "id": "n3a",
+            "padre": "n3",
+            "actor_id": "fondo-arce",
+            "decision_id": "vender",
+            "beneficios": [
+              "Paga rescates"
+            ],
+            "costos": [
+              "Vende con descuento"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Más caída (simulado)"
+            ],
+            "explicacion_id": "B"
+          },
+          {
+            "id": "n3a1",
+            "padre": "n3a",
+            "actor_id": "banco-torre",
+            "decision_id": "ampliar_margen",
+            "beneficios": [
+              "Reduce su exposición"
+            ],
+            "costos": [
+              "Acelera ventas del fondo"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Espiral de liquidez (simulado)"
+            ]
+          },
+          {
+            "id": "n3b",
+            "padre": "n3",
+            "actor_id": "fondo-arce",
+            "decision_id": "comprar_en_bloque",
+            "beneficios": [
+              "Compra barato"
+            ],
+            "costos": [
+              "Necesita liquidez que quizá no tiene"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Contradicho por h7 en esta investigación"
+            ],
+            "explicacion_id": "C"
+          },
+          {
+            "id": "n3c",
+            "padre": "n3",
+            "actor_id": "cnv-lumen",
+            "decision_id": "abrir_investigacion",
+            "beneficios": [
+              "Muestra vigilancia"
+            ],
+            "costos": [
+              "Costo reputacional si no halla nada"
+            ],
+            "restricciones": [],
+            "consecuencias": [
+              "Solo así se obtendrían datos para D"
+            ],
+            "explicacion_id": "D"
+          }
+        ]
+      }
+    }
+  ]
+}

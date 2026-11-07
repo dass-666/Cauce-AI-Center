@@ -85,6 +85,21 @@ Ninguna de estas reglas es autenticación: solo deja registrado quién **dice** 
 
 `datos/nexus/candidatas/indice.json` tiene la forma `{contrato, version_contrato, nota, archivos: ["ek-chuah/EK-L001.json", …]}`. La oficina muestra estas lecciones aparte, con la etiqueta «Candidata · no registrada». No cuentan en ninguna cifra.
 
-## Hallazgo de contrato para v0.3 (no se cambió)
+## `cauce.leccion` 0.3 · cambio mínimo: `muestra.naturaleza = "desconocida"` (CSI, 2026-11-06)
+
+Autorizado por Diego (decisión 7 del encargo CSI). **Único cambio** respecto de 0.2:
+
+| | 0.2 | 0.3 |
+|---|---|---|
+| `muestra.naturaleza` | `sintetica`, `demo`, `real_historica`, `real_comercial` | lo mismo + `desconocida` |
+| Todo lo demás | — | idéntico a 0.2 |
+
+- **Compatibilidad**: el validador acepta `version_esquema` `"0.2"` y `"0.3"`. Una lección 0.2 válida sigue siéndolo; una lección 0.2 con `desconocida` se **rechaza** con el aviso «usa 0.3». Los registros existentes no se reinterpretan ni se reescriben (el almacén real sigue vacío; los DEMO siguen en 0.2 y su archivo no cambió).
+- **Gerente (R08)**: con `desconocida`, cualquier confianza que no sea «baja» sobre «método» queda **no evaluada** (nunca «cumple» por omisión) → la lección nunca llega a «sin objeciones». Los demás casos de R08 (beneficio económico) siguen dando «no cumple». La rama nueva es inalcanzable para lecciones 0.2, así que sus dictámenes no cambian; por eso la versión de reglas sigue siendo `nexus-R 0.2`.
+- **Pruebas**: `pruebas/casos-csi.js` (bloque «contrato 0.3» y «PR #23 intacto»).
+- **Pendiente**: las candidatas EK-L001/L003/L007 siguen en 0.2 con `sintetica`; pasarlas a 0.3 con `desconocida` es una decisión aparte (no se tocaron).
+
+## Hallazgo de contrato para v0.3 (resuelto arriba)
+
 
 `muestra.naturaleza` no admite «desconocida». Una lección preparada sin acceso a los datos tiene que elegir un valor que nadie confirmó. Las candidatas Ek Chuah usan `sintetica`, el valor más restrictivo según R08, y lo declaran en `limitaciones`. La propuesta para v0.3 es agregar `desconocida`.

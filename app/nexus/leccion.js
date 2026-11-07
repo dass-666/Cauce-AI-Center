@@ -7,12 +7,16 @@ import { esFechaConZona, esFechaODia, texto, buscarDatosPrivados } from "./comun
 
 export const ESQUEMA_LECCION = "cauce.leccion";
 export const VERSION_LECCION = "0.2";
+/** Versiones aceptadas. 0.3 = 0.2 + muestra.naturaleza «desconocida» (cambio mínimo; ver contrato/NEXUS-CONTRATOS.md § 0.3). */
+export const VERSIONES_LECCION = ["0.2", "0.3"];
 export const TIPOS = ["metodo", "hallazgo", "estrategia"];
 export const TIPOS_ORIGEN = ["medicion", "revision_humana", "texto_ia"];
 export const TIPOS_AUTOR = ["humano", "codigo", "ia"];
 export const UBICACIONES = ["main", "pr_abierto", "desplegado", "fuera_de_repo"];
 export const BASES = ["vintage", "observed", "estimated", "desconocida"];
 export const NATURALEZAS = ["sintetica", "demo", "real_historica", "real_comercial"];
+/** Solo en 0.3: «desconocida» = no se sabe de qué datos sale el resultado. Nunca respalda un efecto (R08). */
+export const NATURALEZAS_03 = [...NATURALEZAS, "desconocida"];
 export const NATURALEZAS_RESULTADO = ["prueba_tecnica", "backtest", "simulacion", "resultado_operativo_real", "sin_resultado"];
 export const NIVELES_CONFIANZA = ["baja", "media", "alta"];
 export const OBJETOS_CONFIANZA = ["metodo", "efecto_operativo", "beneficio_economico"];
@@ -44,7 +48,7 @@ export function validarLeccion(l) {
   const avisos = [];
   const e = (t) => errores.push(t);
   if (!esObj(l)) return { errores: ["La lección debe ser un objeto JSON."], avisos };
-  const claves = (obj, lista, ruta) => { for (const k of Object.keys(obj)) if (!lista.includes(k)) e(`${ruta}${k}: clave desconocida (el contrato 0.2 la rechaza).`); };
+  const claves = (obj, lista, ruta) => { for (const k of Object.keys(obj)) if (!lista.includes(k)) e(`${ruta}${k}: clave desconocida (el contrato la rechaza).`); };
   const obligatorio = (obj, k, ruta) => { if (!(k in obj)) e(`${ruta}${k} es obligatorio.`); };
   const enumera = (v, lista, r) => { if (!lista.includes(v)) e(`${r} debe ser uno de: ${lista.join(", ")}.`); };
   const instante = (v, r) => { if (v !== null && v !== undefined && !esFechaConZona(v)) e(`${r} «${v}» debe ser instante ISO 8601 con zona horaria o null.`); };
@@ -54,7 +58,7 @@ export function validarLeccion(l) {
   for (const k of CLAVES.raiz) obligatorio(l, k, "");
   if (typeof l.id !== "string" || !ID.test(l.id)) e("id: identificador estable (letras, números, . _ -).");
   if (l.esquema !== ESQUEMA_LECCION) e(`esquema debe ser "${ESQUEMA_LECCION}".`);
-  if (l.version_esquema !== VERSION_LECCION) e(`version_esquema debe ser "${VERSION_LECCION}".`);
+  if (!VERSIONES_LECCION.includes(l.version_esquema)) e(`version_esquema debe ser uno de: ${VERSIONES_LECCION.join(", ")}.`);
   enumera(l.tipo, TIPOS, "tipo");
   if (!esObj(l.origen)) e("origen debe ser un objeto.");
   else {
@@ -105,7 +109,8 @@ export function validarLeccion(l) {
     for (const k of ["unidad", "independencia", "naturaleza", "naturaleza_resultado", "seleccion_en_muestra", "supuestos"]) obligatorio(m, k, "muestra.");
     if (!("n" in m) && !("n_rango" in m)) e("muestra necesita n o n_rango.");
     for (const k of ["n", "n_independiente", "n_efectivo", "n_comparaciones"]) if (m[k] !== undefined && m[k] !== null && !(Number.isInteger(m[k]) && m[k] >= 0)) e(`muestra.${k}: entero ≥ 0 o null.`);
-    enumera(m.naturaleza, NATURALEZAS, "muestra.naturaleza");
+    if (m.naturaleza === "desconocida" && l.version_esquema === "0.2") e('muestra.naturaleza «desconocida» no existe en 0.2: usa version_esquema "0.3" (el registro 0.2 no se reinterpreta).');
+    else enumera(m.naturaleza, l.version_esquema === "0.3" ? NATURALEZAS_03 : NATURALEZAS, "muestra.naturaleza");
     enumera(m.naturaleza_resultado, NATURALEZAS_RESULTADO, "muestra.naturaleza_resultado");
     if (typeof m.seleccion_en_muestra !== "boolean") e("muestra.seleccion_en_muestra debe ser true o false.");
     if (!Array.isArray(m.supuestos)) e("muestra.supuestos debe ser una lista.");
