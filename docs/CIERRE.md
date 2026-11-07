@@ -17,7 +17,7 @@ Base de código: rama `claude/project-thread-fwbit2`, encima de PR #25 (`claude/
 |---|---|---|
 | Node (motor, contratos, reglas, informe, casos publicados) | **395 pasaron, 0 fallaron** · HECHO en la MSI (`pruebas.html`, Edge y navegador de la app) sobre el commit entregado; 394 en b52f6c9 + 1 nueva (L6 compartible) | `node pruebas/ejecutar.mjs` o `pruebas.html` en el navegador |
 | Chromium real · recorrido de cierre (6 recorridos + celular) | **42 OK, 0 FALLA** · HECHO | `node pruebas/navegador/cierre.cjs` (Playwright, SwiftShader) |
-| Chromium real · regresión completa (29 guiones) | **28 verdes**; el rojo (`csi.cjs`, nombre viejo de una descarga) se corrigió y pasó **39 OK** por separado · HECHO; detalle en `docs/CIERRE-PRUEBAS.md` | `node pruebas/navegador/todas.cjs` |
+| Chromium real · regresión completa (29 guiones) | **29 verdes, 0 rojos** sobre el commit entregado 65ff2c3 · HECHO; detalle en `docs/CIERRE-PRUEBAS.md` | `node pruebas/navegador/todas.cjs` |
 | Intel UHD (cps reales en la MSI) | **61 cps** edificio sin brillo y con brillo ligero (mín. 61, peor cuadro 16.8 ms, GPU 1.9 ms) · HECHO en Edge sin ventana (headless) sobre la Intel UHD; falta la confirmación en ventana visible | `?medir=1` en la MSI, ver §7 |
 | Recorridos a mano en la MSI (inicio, caso suizo, investigación de prueba → expediente, borrador tras recargar, Nexus) | todos OK, 0 errores de JavaScript · HECHO (7-nov-2026, navegador de la app sobre la Intel UHD) | §7 |
 
@@ -104,6 +104,6 @@ Base de código: rama `claude/project-thread-fwbit2`, encima de PR #25 (`claude/
 | Aplicar o no el parche rev3 al Fiscal (verificado, no aplicado; usar `git -c core.autocrlf=false apply`) | sin cambios en el bot |
 | Sacar el respaldo `2026-11-06` de la rotación antes del 21-nov (decisión 1 del manifiesto) | la rotación puede borrar la base con la que se calcularon las cifras |
 | Importar o no lecciones de Tezcatlipoca a Nexus | siguen como propuestas fuera del almacén |
-| Autorizar instalar Node + Playwright en la MSI para la regresión Chromium completa | queda cubierta solo por los recorridos a mano en la MSI y la corrida del contenedor (28/29 + `csi.cjs` aparte) |
+| Autorizar instalar Node + Playwright en la MSI para la regresión Chromium completa | queda cubierta por los recorridos a mano en la MSI y la corrida completa del contenedor (29/29 sobre 65ff2c3, GPU por software) |
 | Confirmar los cps en ventana visible (`?medir=1`, 20 s sin tocar) | el valor de 61 cps queda medido sin ventana |
 | Extensiones de Nexus (aprobar en pantalla, autenticación) | siguen futuras, como estaba decidido |
