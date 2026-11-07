@@ -335,7 +335,7 @@ function fuentesPanel(csi) {
         f.extracto ? el("blockquote", { clase: "csi-extracto", "data-extracto": f.extracto_tipo ?? "" }, f.extracto) : null,
         el("p", { clase: "sala-nota" }, f.huella_contenido ? `Huella de la copia: ${f.huella_contenido.slice(0, 16)}… (${f.copia_local})` : "Sin huella: no hay copia verificable guardada."),
         L(f.limitaciones).length ? [el("h5", {}, L(f.cotejos).length ? "Limitaciones (anotadas al consultar; ver el cotejo)" : "Limitaciones"), lista(f.limitaciones)] : null,
-        L(f.cotejos).length ? [el("h5", {}, "Cotejo con el original"), el("ul", { "data-cotejos": f.id }, L(f.cotejos).map((c) => el("li", { "data-cotejo": c.resultado },
+        L(f.cotejos).length ? [el("h5", {}, "Cotejo con el original"), el("ul", { clase: "csi-lista", "data-cotejos": f.id }, L(f.cotejos).map((c) => el("li", { "data-cotejo": c.resultado },
           `${COTEJO_TXT[c.resultado] ?? c.resultado} · ${fecha(c.fecha)} · ${c.detalle}`)))] : null))),
       linea.length ? [el("h4", {}, "¿Qué se podía conocer en cada momento?"), el("div", { clase: "csi-tabla-envoltura" }, el("table", { clase: "csi-tabla", "data-linea": "" },
         el("thead", {}, el("tr", {}, ...["Momento", "Fuentes ya públicas", "Hechos y declaraciones ya sustentables", "Todavía no"].map((t) => el("th", { scope: "col" }, t)))),

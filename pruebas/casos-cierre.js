@@ -132,4 +132,19 @@ export function registrarCasosCierre(leerTexto) {
     igual(rangoComparaciones({ supuestos: ["costos desconocidos"] }), null);
     igual(rangoComparaciones({}), null);
   });
+  // Forma exacta de supuestos en tezcatlipoca-L6-compartible (entrega v0.2 rev3, revisada el 7-nov-2026): el rango de
+  // n_independiente va antes y NO debe confundirse con el de comparaciones.
+  prueba("Cierre · L6 compartible (rev3): el rango de comparaciones se lee del texto; con confianza baja R08 cumple, con media no cumple", () => {
+    const supuestos = [
+      "n_independiente (partidos únicos) entre 30 y 39; se deja nulo (v0.2 no define su versión en rango).",
+      "Candidatos de umbral por grupo (n_comparaciones): entre 3 y 8. Es un rango de divulgación, no el número real, que se conserva solo en el expediente local; n_comparaciones se deja en null porque v0.2 no define rango para ese campo.",
+      "Escenarios horarios alternativos: hipótesis de sensibilidad, no hechos.",
+    ];
+    igual(rangoComparaciones({ supuestos }), [3, 8]);
+    const l6 = (nivel) => con((l) => { l.muestra.n = null; l.muestra.n_rango = [30, 39]; l.muestra.n_comparaciones = null; l.muestra.seleccion_en_muestra = true; l.muestra.supuestos = supuestos; l.confianza.nivel = nivel; l.confianza.objeto = "metodo"; });
+    igual(validarLeccion(l6("baja")).errores, []);
+    igual(regla(l6("baja"), "R08").estado, "cumple");
+    const media = regla(l6("media"), "R08");
+    igual(media.estado, "no_cumple"); verdadero(/(Entre 3 y 8|misma muestra)/.test(media.motivo), media.motivo);
+  });
 }

@@ -26,7 +26,7 @@ Todo local y $0. No toca Compago, Ek Chuah, Tezcatlipoca ni el almacén real de 
 6. **Medir (lo único que no pude medir)**:
    - Anota los cps con `?medir=1` en el piso «Inteligencia Estratégica (CSI)» y en Compago, en 3D.
    - Con el laboratorio abierto, la 3D se pausa.
-7. **Pruebas**: abre `http://127.0.0.1:8765/pruebas.html`. Debe decir «394 pasaron, 0 fallaron».
+7. **Pruebas**: abre `http://127.0.0.1:8765/pruebas.html`. Debe decir «395 pasaron, 0 fallaron».
 
 Envíame:
 - los cps del paso 6;

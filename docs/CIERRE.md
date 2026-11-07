@@ -15,10 +15,11 @@ Base de código: rama `claude/project-thread-fwbit2`, encima de PR #25 (`claude/
 
 | Conjunto | Resultado | Cómo repetirlo |
 |---|---|---|
-| Node (motor, contratos, reglas, informe, casos publicados) | **394 pasaron, 0 fallaron** · HECHO | `node pruebas/ejecutar.mjs` o `pruebas.html` en el navegador |
+| Node (motor, contratos, reglas, informe, casos publicados) | **395 pasaron, 0 fallaron** · HECHO en la MSI (`pruebas.html`, Edge y navegador de la app) sobre el commit entregado; 394 en b52f6c9 + 1 nueva (L6 compartible) | `node pruebas/ejecutar.mjs` o `pruebas.html` en el navegador |
 | Chromium real · recorrido de cierre (6 recorridos + celular) | **42 OK, 0 FALLA** · HECHO | `node pruebas/navegador/cierre.cjs` (Playwright, SwiftShader) |
 | Chromium real · regresión completa (29 guiones) | **28 verdes**; el rojo (`csi.cjs`, nombre viejo de una descarga) se corrigió y pasó **39 OK** por separado · HECHO; detalle en `docs/CIERRE-PRUEBAS.md` | `node pruebas/navegador/todas.cjs` |
-| Intel UHD (cps reales en la MSI) | **SIN VERIFICAR** desde la fase G; SwiftShader no cuenta | `?medir=1` en la MSI, ver §7 |
+| Intel UHD (cps reales en la MSI) | **61 cps** edificio sin brillo y con brillo ligero (mín. 61, peor cuadro 16.8 ms, GPU 1.9 ms) · HECHO en Edge sin ventana (headless) sobre la Intel UHD; falta la confirmación en ventana visible | `?medir=1` en la MSI, ver §7 |
+| Recorridos a mano en la MSI (inicio, caso suizo, investigación de prueba → expediente, borrador tras recargar, Nexus) | todos OK, 0 errores de JavaScript · HECHO (7-nov-2026, navegador de la app sobre la Intel UHD) | §7 |
 
 ## 2. Oficina: navegación, proyectos y estados
 
@@ -63,16 +64,30 @@ Base de código: rama `claude/project-thread-fwbit2`, encima de PR #25 (`claude/
 
 ## 6. Tezcatlipoca («v0.2 rev3», parche de corte estricto, L6 compartible)
 
-- **SIN VERIFICAR · bloqueo**: los materiales citados en el encargo (entrega «v0.2 rev3», `parche_corte_estricto_rev3.patch`, los 12 + 26 resultados de prueba, el manifiesto con los 6 resultados faltantes y los 8 expedientes) **no están** en ningún lugar accesible: ni en `/mnt/project-files/tezcatlipoca/` (solo el Fiscal del 5-nov: bundle + docs), ni en el chat del proyecto, ni en el hilo de Tezcatlipoca, ni en las carpetas de la MSI a las que tengo acceso (`C:\Users\MSIGF\Cauce-AI-Center`, `D:\CSI`). El repositorio de Tezcatlipoca no está conectado. No se puede verificar SHA-256 ni pruebas de algo que no se tiene. **Decisión de Diego**: adjuntar esos archivos al hilo (o indicar la carpeta exacta) para hacer la verificación; no se inventa un resultado.
+- **HECHO (7-nov-2026, en la MSI)** — detalle en `docs/TEZCATLIPOCA-REV3.md`: la entrega `Tezcatlipoca-v0.2-rev3-verificada.zip` apareció en la MSI. Sus 19 archivos coinciden con el manifiesto; los 6 resultados que faltaban se reprodujeron en una copia aislada con su procedencia y huellas nuevas (carpeta privada en la MSI). El parche da el `fiscal.py` declarado, con las **12 pruebas directas OK** (contra el código actual: 7 FAIL + 1 ERROR, como se declara) y las **26 existentes OK** antes y después. Los 8 expedientes pasan el validador de Cauce y siguen como **propuestas**, sin importar a Nexus. La zona del PC es UTC−6 (`tzutil /g`).
 - **HECHO (lado Cauce)**: la contradicción «L6 compartible» se resolvió en el validador y las reglas de Cauce, que es la parte que sí está en este repositorio: `n_comparaciones: null` significa «no divulgado»; si en `supuestos[]` se declara el rango de divulgación (`{variable:"n_comparaciones_rango", valor:[min,max]}` o texto «entre a y b») con `min > 1`, R08 da **no cumple** con confianza alta sin `ajuste_comparaciones` (el mínimo basta para exigir el ajuste); si el rango admite 1 o no hay rango, **no evaluado**. Así una lección puede ser compartible y tener R08 pendiente, pero no presumir cumplimiento. `n_rango=[min,max]` queda definido contractualmente (enteros ≥ 0, `min ≤ max`, `n` dentro si existe).
+- **HECHO (L6 compartible real)**: el validador la acepta. El gerente lee el rango **[3, 8]** de su texto y no lo confunde con el «entre 30 y 39» de `n_independiente`. Con su confianza baja sobre el método, **R08 cumple** y el dictamen es «incompleto», sin ningún «no cumple». Con confianza media daría «no cumple». Una prueba nueva fija esa forma exacta.
 - **Decisión de Diego (reservada)**: aplicar o no el parche al bot. No se hizo nada sobre el bot.
 
 ## 7. Abrir en la MSI (lo que sí está verificado y lo que no)
 
 - **HECHO**: la MSI tiene Git 2.56 y Python 3.13; el clon `C:\Users\MSIGF\Cauce-AI-Center` apunta a `origin = github.com/dass-666/Cauce-AI-Center` y está en la rama de la fase G. No hay Node (solo el de Electron), así que la validación en la MSI es con `pruebas.html`, no con `probar.bat`.
-- **Pasos** (`ABRIR-CIERRE.bat`, entregado en los archivos del proyecto y en la raíz de la rama): abre Git Bash o cmd en ese clon y ejecuta el .bat. Hace `git fetch origin claude/project-thread-fwbit2`, `git checkout -B claude/project-thread-fwbit2 origin/claude/project-thread-fwbit2` y arranca `iniciar.bat`. Si el clon tiene cambios locales, se detiene y lo dice; no borra nada.
-- Luego: `http://127.0.0.1:8765/?csi=historico&medir=1` y `http://127.0.0.1:8765/pruebas.html` (debe decir 394 pasaron).
-- **SIN VERIFICAR**: no he ejecutado nada en la MSI en este cierre; los cps en Intel UHD siguen sin medir desde la fase G. Lo valida Diego con los pasos de arriba (o con una sesión de Remote Control aprobada por él).
+- **Pasos** (`ABRIR-CIERRE.bat`, en la raíz de la rama): doble clic en el .bat del clon. Hace `git fetch origin claude/project-thread-fwbit2` y `git checkout -B claude/project-thread-fwbit2 origin/claude/project-thread-fwbit2`, y luego arranca `iniciar.bat`. Si el clon tiene cambios locales, se detiene y lo dice; no borra nada.
+- **Corregido el 7-nov-2026 (HECHO en la MSI, en un clon de prueba)**: copiado a mano en un clon de otra rama, el .bat se detectaba **a sí mismo** como cambio local (`?? ABRIR-CIERRE.bat`) y no avanzaba. Ahora:
+  - se excluye de esa revisión;
+  - se ejecuta desde una copia en `%TEMP%`, para que el cambio de rama pueda reemplazarlo;
+  - guarda la copia sin seguimiento en `%TEMP%\ABRIR-CIERRE.respaldo.bat` antes de cambiar de rama;
+  - llama a `iniciar.bat` con su ruta completa.
+
+  Comprobado: con un cambio real se detiene y lo muestra; sin cambios cambia de rama y el servidor responde 200.
+- Luego: `http://127.0.0.1:8765/?csi=historico&medir=1` y `http://127.0.0.1:8765/pruebas.html` (debe decir 395 pasaron).
+- **HECHO en la MSI (7-nov-2026)**:
+  - `pruebas.html` da 395/395 en el navegador de la app y en Edge.
+  - Los cps se midieron en Edge sin ventana (headless) sobre la Intel UHD (`ANGLE Intel UHD Graphics 0x9A68, D3D11`). Edificio: **61 cps** sin brillo y **61** con brillo ligero, a 1367×596 px de lienzo y escala 1.
+  - Recorridos a mano: inicio, caso suizo (13 registros = 12 cotejados + 1 pendiente, y las 12 huellas iguales en informe, JSON publicado y expediente .md), investigación de prueba hasta el expediente .md, borrador recuperado tras recargar, y Nexus con la propuesta «decisión: pendiente» y sin botón de aprobar.
+- **SIN VERIFICAR**:
+  - La medición en una **ventana visible** (la ventana de Edge que abrí se cerró a mano antes de medir y no la volví a abrir).
+  - La regresión Chromium completa de 29 guiones: necesita Node y Playwright, que la MSI no tiene. Se cubrió con los recorridos a mano de arriba.
 
 ## 8. Decisiones registradas en este cierre (reversibles, tomadas por mí)
 
@@ -86,8 +101,9 @@ Base de código: rama `claude/project-thread-fwbit2`, encima de PR #25 (`claude/
 | Decisión | Efecto si no se toma |
 |---|---|
 | Fusionar la cadena de PR (#14 → … → #25 → cierre) | el producto sigue en ramas; `main` queda vacío |
-| Entregar los materiales de Tezcatlipoca rev3 | la verificación del parche, hashes y pruebas no puede hacerse |
-| Aplicar o no el parche al bot | sin cambios en el bot |
-| Confirmar el tratamiento de `n_comparaciones=null` / `n_rango` con quien mantiene Tezcatlipoca | queda como definición de Cauce, documentada en el contrato |
-| Medir cps en la MSI (`?medir=1`) | el rendimiento en Intel UHD sigue como inferencia |
+| Aplicar o no el parche rev3 al Fiscal (verificado, no aplicado; usar `git -c core.autocrlf=false apply`) | sin cambios en el bot |
+| Sacar el respaldo `2026-11-06` de la rotación antes del 21-nov (decisión 1 del manifiesto) | la rotación puede borrar la base con la que se calcularon las cifras |
+| Importar o no lecciones de Tezcatlipoca a Nexus | siguen como propuestas fuera del almacén |
+| Autorizar instalar Node + Playwright en la MSI para la regresión Chromium completa | queda cubierta solo por los recorridos a mano en la MSI y la corrida del contenedor (28/29 + `csi.cjs` aparte) |
+| Confirmar los cps en ventana visible (`?medir=1`, 20 s sin tocar) | el valor de 61 cps queda medido sin ventana |
 | Extensiones de Nexus (aprobar en pantalla, autenticación) | siguen futuras, como estaba decidido |

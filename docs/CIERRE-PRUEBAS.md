@@ -1,6 +1,10 @@
 # Resultado de pruebas del cierre (7-nov-2026, Linux, Chromium real con GPU por software)
 
 - Node: `node pruebas/ejecutar.mjs` → **394 pasaron, 0 fallaron** (igual en `pruebas.html` dentro de Chromium, comprobado por `csi.cjs`).
+- **Actualización 7-nov-2026, en la MSI (Windows 11, Intel UHD)**:
+  - `pruebas.html` → **394/394 en b52f6c9**. En el commit entregado, **395/395**: 1 prueba nueva para la forma exacta de L6 compartible, comprobada en el navegador de la app y en Edge.
+  - La MSI no tiene Node ni Playwright, así que la regresión Chromium completa no se repitió aquí. La sustituyen los recorridos a mano de `docs/CIERRE.md` §7: inicio, caso suizo, investigación → expediente, borrador tras recargar y Nexus, todos OK y sin errores de JavaScript.
+  - Los dos cambios de código de este paso son el estilo de la lista «Cotejo con el original» (clase `csi-lista`) y la prueba nueva. Los selectores que usan los guiones (`[data-cotejos]`, `[data-fuente-id]`) no cambian.
 - Regresión Chromium completa `node pruebas/navegador/todas.cjs` (29 guiones, Playwright + SwiftShader): **28 verdes y 1 rojo** en la corrida completa.
   El rojo fue `csi.cjs`, una aserción antigua que buscaba la descarga `investigacion.json`, renombrada en este cierre a
   `investigaciones.json` (ahora es una colección). Se actualizó la aserción (y pide también el expediente .md) y
