@@ -1,0 +1,14 @@
+{
+  "contrato": "cauce.lab.banco-defectos",
+  "version_contrato": "0.1",
+  "id": "banco-prueba-v1",
+  "descripcion": "SOLO PARA PRUEBAS AUTOMÁTICAS: dos defectos públicos que no forman parte del banco real (el banco real y su clave son privados y no están en el repositorio).",
+  "defectos": [
+    { "id": "D01", "categoria": "dato_alterado", "descripcion": "Prueba: el tipo de referencia del 15-ene-2015 cambia de 1.0280 a 1.0820.",
+      "objetivo": { "accion": "agregar_enunciado", "entidad_id": "e02" },
+      "cambios": [ { "campo": "texto", "operacion": "reemplazar_texto", "buscar": "1.0280 francos", "reemplazo": "1.0820 francos" } ] },
+    { "id": "D02", "categoria": "sin_condicion_refutacion", "descripcion": "Prueba: H-D pierde su condición de refutación.",
+      "objetivo": { "accion": "agregar_hipotesis", "entidad_id": "H-D" },
+      "cambios": [ { "campo": "condiciones_refutacion", "operacion": "fijar_valor", "valor": [] } ] }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "contrato": "cauce.lab.encargo",
+  "version_contrato": "0.1",
+  "id": "demo-lab-enc-001",
+  "es_demo": true,
+  "rol": "critico",
+  "pregunta": "[DEMO] ¿Qué afirmaciones del informe ficticio están respaldadas por las fuentes disponibles antes del 15-mar-2030?",
+  "insumos": [
+    {
+      "tipo": "csi_investigacion",
+      "ref": "demo-inv-instituto",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "fuentes_permitidas": [
+    {
+      "fuente_id": "demo-f-a",
+      "estado": "consultada",
+      "origen": "primaria",
+      "sha256": "80ff612af78b29b806b8f64f3710af1130db9ab088e9a2c25d9e7107c7990164",
+      "texto_sha256": "80ff612af78b29b806b8f64f3710af1130db9ab088e9a2c25d9e7107c7990164",
+      "publicada_en": "2030-03-10",
+      "conocida_en": null
+    },
+    {
+      "fuente_id": "demo-f-b",
+      "estado": "consultada",
+      "origen": "primaria",
+      "sha256": "feca52f7eb3c08757fb73acce33e029bad820beb483ebfdc5fd3633fbdee2774",
+      "texto_sha256": "feca52f7eb3c08757fb73acce33e029bad820beb483ebfdc5fd3633fbdee2774",
+      "publicada_en": "2030-03-20",
+      "conocida_en": null
+    }
+  ],
+  "corte_temporal": {
+    "conocido_antes_de": "2030-03-15T00:00:00Z"
+  },
+  "herramientas": {
+    "red": "ninguna",
+    "dominios_permitidos": [],
+    "ejecutar_comandos": false
+  },
+  "limites": {
+    "max_minutos": 10,
+    "max_tokens_salida": 8000,
+    "max_consultas_web": 0
+  },
+  "modelo_solicitado": {
+    "adaptador": "ninguno",
+    "nombre": "respuesta sintética de prueba"
+  },
+  "creado_por": {
+    "tipo": "humano",
+    "identificador": "diego"
+  },
+  "creado_en": "2030-03-31T10:00:00Z",
+  "nota": "[DEMO] Ejemplo didáctico con fuentes ficticias. No es un caso real."
+}
