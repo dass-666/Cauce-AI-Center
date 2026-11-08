@@ -5,7 +5,7 @@
 
 import { prueba, igual, verdadero } from "./mini.js";
 import { fichaDesdeEstado } from "../app/laboratorio/motores.js";
-import { nuevoTrabajo } from "../app/laboratorio/trabajo.js";
+import { nuevoTrabajo, validarTrabajo } from "../app/laboratorio/trabajo.js";
 import { nuevoExpediente, avanzar, relojDesde } from "../app/laboratorio/coordinador.js";
 import { crearAdaptadorManual } from "../app/laboratorio/adaptadores.js";
 import { solicitudManual, continuarConRespuesta } from "../app/laboratorio/manual.js";
@@ -104,5 +104,19 @@ export function registrarCasosAuditoria(leer) {
       const r2 = await pegar(x, reloj, { afirmaciones: [{ id: "b1", texto: "Si el Revisor está en error, el flujo de revisión está detenido.", clase: "inferencia", citas: [], se_basa_en: [`${r1.verificacion.ejecucion_id}#a1`] }], recomendaciones: [{ id: "r1", texto: "Revisar el registro del Revisor.", se_basa_en: ["b1"] }] });
       verdadero(r2.ok && !r2.verificacion.alertas.some((a) => a.codigo === "base_sin_respaldo"), JSON.stringify(r2.verificacion?.alertas ?? r2.errores));
     }
+  });
+
+  prueba("Auditoría A-03 · un guardado que quedó «en_analisis» (cierre a mitad del análisis o archivo recortado) se reanuda a pendiente, vuelve a esperar al rol que toca y conserva el paso verificado", async () => {
+    const { e } = await conInvestigador("a03");
+    const o = clon(e); const idx = o.documentos.map((d, k) => (d.tipo === "trabajo" ? k : -1)).filter((k) => k >= 0);
+    igual(o.documentos[idx.at(-2)].documento.estado, "en_analisis", "la penúltima versión del trabajo es la transitoria");
+    o.documentos.splice(idx.at(-1), 1);
+    const r = await restaurarExpediente(o);
+    verdadero(r.ok, r.errores.join(" "));
+    igual(r.expediente.trabajo.estado, "pendiente"); igual(r.expediente.trabajo.espera?.rol, "analista");
+    verdadero(r.expediente.trabajo.historial.some((h) => /mitad del análisis/.test(h.motivo)), "queda constancia en el historial");
+    igual(r.expediente.trabajo.pasos[0].resultado_verificacion, "apta_para_revision_humana", "el paso del Investigador se reutiliza");
+    verdadero(validarTrabajo(r.expediente.trabajo).ok, "el trabajo reanudado cumple su contrato");
+    verdadero((await restaurarExpediente(exportarExpediente(r.expediente, { exportado_en: T0 }))).ok, "y se puede volver a guardar y reanudar");
   });
 }

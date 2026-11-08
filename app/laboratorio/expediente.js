@@ -14,10 +14,11 @@
 
 import { L, esObj, sha256, jsonCanonico, esHuella, ROLES } from "./base.js";
 import { validarEncargo, validarEjecucion, validarVerificacion } from "./contratos.js";
-import { validarTrabajo, extiendeA } from "./trabajo.js";
+import { validarTrabajo, extiendeA, transitar, COORDINADOR } from "./trabajo.js";
 import { validarInforme } from "./informe.js";
 import { huellaDoc, verificar } from "./verificador.js";
-import { nuevoExpediente } from "./coordinador.js";
+import { nuevoExpediente, avanzar, relojDesde } from "./coordinador.js";
+import { crearAdaptadorManual } from "./adaptadores.js";
 
 export const FORMATO_EXPEDIENTE = "cauce.lab.expediente-local";
 export const VERSION_EXPEDIENTE = "0.1";
@@ -76,6 +77,16 @@ export async function restaurarExpediente(o) {
   if (trabajo.espera?.encargo_id && !x.encargos.has(trabajo.espera.encargo_id)) return { ok: false, errores: ["Falta el encargo que el trabajo está esperando."] };
   const cruce = await cruzarHuellas(x, docs, o);
   if (cruce.length) return { ok: false, errores: cruce.slice(0, 12) };
+  // (auditoría) «en_analisis» es un estado transitorio del Coordinador: un guardado que quedó ahí (cierre a mitad del
+  // análisis o archivo recortado) no tendría salida. Se devuelve a pendiente con constancia en el historial; nada se
+  // pierde (los pasos ya verificados se conservan y se reutilizan).
+  if (x.trabajo.estado === "en_analisis") {
+    const en = new Date(Math.max(Date.now(), Date.parse(x.trabajo.historial.at(-1).en) + 1000)).toISOString().replace(/\.\d{3}Z$/, "Z");
+    x.trabajo = transitar(x.trabajo, "pendiente", { por: COORDINADOR, motivo: "Reanudación: el guardado quedó a mitad del análisis; vuelve a pendiente para poder continuar.", en });
+    x.documentos.push({ tipo: "trabajo", documento: x.trabajo });
+    // Un trabajo manual vuelve a ESPERAR la respuesta del rol que toque (los pasos verificados se reutilizan).
+    if (x.trabajo.adaptador.id === "manual-claude") await avanzar(x, { adaptador: crearAdaptadorManual(new Map()), reloj: relojDesde(en) });
+  }
   x.importaciones = L(o.importaciones).filter((i) => esObj(i)).slice(0, 200);
   return { ok: true, errores: [], expediente: x };
 }
