@@ -112,12 +112,18 @@ de prueba en `pruebas/casos-laboratorio-fase2.js`).
   llamada; cada intento queda registrado.
 - Sin credenciales nuevas, sin costo (`costo_mxn = 0`; lab-V alerta si no lo es).
 
-## 6. Pruebas (resultados en `docs/LABORATORIO-FASE-2-PRUEBAS.md`)
+## 6. Pruebas (detalle en `docs/LABORATORIO-FASE-2-PRUEBAS.md`)
+
+- `node pruebas/ejecutar.mjs`: **458 / 0** (17 casos nuevos); `pruebas.html` en Chromium: 458 / 0.
+- `pruebas/laboratorio-node.mjs` 9/9 · `pruebas/piloto-node.mjs` 6/6 · `pruebas/navegador/laboratorio.cjs` 33/33.
+- Regresión de la oficina: 30/30 guiones de navegador en verde. CI de GitHub (Node) en verde.
 
 ## 7. Rendimiento
 
 - La vista del Laboratorio se carga **solo al abrirla** (importación diferida): al arrancar la oficina no se descarga
   ni se ejecuta nada nuevo.
+- A/B en SwiftShader con el Laboratorio cerrado: llamadas, triángulos y pasadas **idénticos** en los 10 escenarios;
+  cps dentro del ruido del simulador (tabla en `docs/LABORATORIO-FASE-2-PRUEBAS.md`).
 - Mientras está abierta, la 3D **se pausa** (como Nexus y CSI): prueba «114 → 114 cuadros» en 1.5 s.
 - El plano del departamento es un SVG estático; el único efecto es un resaltado de 0.9 s en la estación que trabaja,
   desactivado con «reducir movimiento». Sin bucles ni temporizadores permanentes.
