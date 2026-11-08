@@ -158,6 +158,7 @@ export const ETIQUETA_CORRECCION = Object.freeze({
   prefijo_linea_quitado: "un extracto traía el prefijo [Ln] de la solicitud, que no forma parte de la ficha: se quitó",
   comillas_envolventes_quitadas: "un extracto venía entre comillas: se quitaron las comillas externas",
   ubicacion_convertida_a_texto: "una ubicación venía como número: se guardó como texto",
+  alternativa_desenvuelta: "alternativa_a venía como lista de un elemento: se guardó ese id",
 });
 const PLACEHOLDER = /^[\s…<>.]*$|^<[^>]{0,80}>$/u;
 const esPlaceholder = (v) => typeof v === "string" && (PLACEHOLDER.test(v) || /^(…|\.\.\.)$/.test(v.trim()));
@@ -351,7 +352,20 @@ export function analizarRespuesta(texto, { encargo, encargo_sha256 }) {
     b.citas = Array.isArray(b.citas) ? b.citas.map((c) => (esObj(c) ? limpiarCita(c, correcciones) : c)) : b.citas;
     return b;
   });
-  contenido.hipotesis = contenido.hipotesis.map((h) => (esObj(h) && !("alternativa_a" in h) ? (completados.push("alternativa_a"), { ...h, alternativa_a: null }) : h));
+  contenido.hipotesis = contenido.hipotesis.map((h, i) => {
+    if (!esObj(h)) return h;
+    const b = { ...h };
+    if (!("alternativa_a" in b)) { b.alternativa_a = null; completados.push("alternativa_a"); }
+    // (auditoría) La solicitud habla de «enlazar alternativas» y el contrato pide UN id o null: una lista vacía es null y
+    // una lista de un elemento es ese elemento (forma, no significado). Con varios, se pide elegir: no se descarta nada.
+    if (Array.isArray(b.alternativa_a)) {
+      if (b.alternativa_a.length === 0) { b.alternativa_a = null; correcciones.push("lista_nula_vaciada"); }
+      else if (b.alternativa_a.length === 1) { b.alternativa_a = b.alternativa_a[0]; correcciones.push("alternativa_desenvuelta"); }
+      else err("alternativa_multiple", "contrato", `hipotesis[${i}].alternativa_a trae ${b.alternativa_a.length} ids y el contrato admite uno (la hipótesis rival principal) o null: elige uno o reparte en varias hipótesis.`);
+    }
+    return b;
+  });
+  if (errores.length) return fin();
   if (completados.length) avisos.push(`Campos opcionales ausentes que se dejaron vacíos: ${[...new Set(completados)].join(", ")}.`);
   const unicas = [...new Set(correcciones)];
   if (unicas.length) avisos.push(`Correcciones de forma aplicadas (no cambian el significado y quedan registradas): ${unicas.map((c) => ETIQUETA_CORRECCION[c] ?? c).join("; ")}.`);

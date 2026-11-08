@@ -8,7 +8,8 @@ import { fichaDesdeEstado } from "../app/laboratorio/motores.js";
 import { nuevoTrabajo, validarTrabajo } from "../app/laboratorio/trabajo.js";
 import { nuevoExpediente, avanzar, relojDesde } from "../app/laboratorio/coordinador.js";
 import { crearAdaptadorManual } from "../app/laboratorio/adaptadores.js";
-import { solicitudManual, continuarConRespuesta } from "../app/laboratorio/manual.js";
+import { solicitudManual, continuarConRespuesta, importarRespuesta } from "../app/laboratorio/manual.js";
+import { encargoEnEspera } from "../app/laboratorio/manual.js";
 import { exportarExpediente, restaurarExpediente } from "../app/laboratorio/expediente.js";
 import { decidir } from "../app/laboratorio/coordinador.js";
 import { escenariosDemo } from "../app/laboratorio/escenarios-demo.js";
@@ -139,5 +140,35 @@ export function registrarCasosAuditoria(leer) {
     const forzada = clon(p.propuesta.borrador_leccion); forzada.id = forzada.id.replace(/^demo-/, ""); for (const e of forzada.evidencia) e.sha256 = "a".repeat(64);
     const adm = admisionReal(forzada, { ahora: Date.parse("2026-11-08T09:02:00Z"), registrado_por: HUMANO });
     verdadero(!adm.admisible && adm.motivos.some((m) => /naturaleza «demo»/.test(m)), "con huellas añadidas y sin prefijo, la naturaleza demo la sigue frenando: " + adm.motivos.join(" "));
+  });
+
+  prueba("Auditoría A-05 · «alternativa_a» como lista (la solicitud hablaba de «enlazar alternativas»): [] → null y [id] → id se declaran; con varios ids se pide elegir, sin descartar nada", async () => {
+    const ficha = await fichaDesdeEstado(await doc(), { leido_en: T0 });
+    const t = nuevoTrabajo({ id: "demo-lab-trb-a05", es_demo: true, titulo: "A", pregunta: "¿Qué problemas muestra la lectura?", origen: ficha.origen, solicitado_por: HUMANO, creado_en: T0, adaptador: { id: "manual-claude", modelo: null } });
+    const x = nuevoExpediente(t, ficha), reloj = relojDesde(T0); await avanzar(x, { adaptador: crearAdaptadorManual(new Map()), reloj });
+    const s = await solicitudManual(x), enc = encargoEnEspera(x);
+    const con = (alt) => importarRespuesta(JSON.stringify({ formato: "cauce.lab.respuesta-manual", version: "0.1", encargo_id: s.encargo_id, encargo_sha256: s.encargo_sha256, rol: "investigador", modelo_declarado: "sintético",
+      hipotesis: [{ id: "h1", enunciado: "Falla de red del Revisor.", se_refuta_si: "El registro muestra otra causa.", experimento: "Leer el registro.", alternativa_a: alt }, { id: "h2", enunciado: "Credenciales vencidas del Revisor.", se_refuta_si: "La credencial sigue vigente.", experimento: "Comprobar la credencial.", alternativa_a: null }] }),
+      { encargo: enc, encargo_sha256: s.encargo_sha256, solicitud_sha256: s.solicitud_sha256, declarado_por: "diego", ahora: T0 });
+    const r0 = await con([]); verdadero(r0.ok && r0.respuesta.contenido.hipotesis[0].alternativa_a === null && r0.correcciones.includes("lista_nula_vaciada"), JSON.stringify(r0.errores));
+    const r1 = await con(["h2"]); verdadero(r1.ok && r1.respuesta.contenido.hipotesis[0].alternativa_a === "h2" && r1.correcciones.includes("alternativa_desenvuelta"), JSON.stringify(r1.errores));
+    const r2 = await con(["h2", "h3"]); verdadero(!r2.ok && r2.detalles.some((d) => d.codigo === "alternativa_multiple" && d.categoria === "contrato"), JSON.stringify(r2.errores));
+    const r3 = await con("h2"); verdadero(r3.ok && !r3.correcciones.length, "la forma correcta no declara correcciones");
+  });
+
+  prueba("Auditoría A-06 · compatibilidad: una verificación guardada por lab-V 0.1 (sin la alerta nueva) se reanuda si lo literal coincide y lab-V 0.2 solo añade alertas; si lo literal cambió, no", async () => {
+    const { e } = await conInvestigador("a06");
+    const v = tipo(e, "verificacion");
+    igual(v.autor.version, "lab-V 0.2");
+    // Se finge una verificación 0.1: misma salida literal, versión anterior (lab-V 0.1 no tenía más reglas aplicables aquí).
+    const viejo = clon(e); const vv = tipo(viejo, "verificacion"); vv.autor.version = "lab-V 0.1";
+    const r = await restaurarExpediente(viejo); verdadero(r.ok, r.errores.join(" "));
+    // Una 0.1 «más benévola» con lo literal alterado no pasa.
+    const malo = clon(viejo); const vm = tipo(malo, "verificacion"); vm.citas[0].coincidencia = "normalizada"; vm.citas[0].apariciones = 3;
+    verdadero(!(await restaurarExpediente(malo)).ok, "lo literal cambiado se detecta aunque la versión sea anterior");
+    // Una 0.1 que dijera «apta» donde lab-V 0.2 ve fallas: se recalcula y se exige que el nuevo no sea más benévolo (aquí coinciden), y la forma 0.1 sigue cumpliendo el contrato.
+    const { validarVerificacion } = await import("../app/laboratorio/contratos.js");
+    verdadero(validarVerificacion(vv).ok, "el contrato acepta lab-V 0.1 guardado");
+    const otra = clon(vv); otra.autor.version = "lab-V 0.3"; verdadero(!validarVerificacion(otra).ok, "una versión desconocida no se acepta");
   });
 }

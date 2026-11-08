@@ -6,7 +6,9 @@
 export { esFechaConZona, esFechaODia, intervalo, texto, buscarDatosPrivados, jsonCanonico, sha256, esHuella } from "../nexus/comun.js";
 
 export const VERSION_LAB = "0.1";
-export const VERSION_VERIFICADOR = "lab-V 0.1";
+/** lab-V 0.2 (auditoría 2026-11-08) = 0.1 + alerta `base_sin_respaldo`. Las verificaciones 0.1 guardadas siguen valiendo. */
+export const VERSION_VERIFICADOR = "lab-V 0.2";
+export const VERSIONES_VERIFICADOR = Object.freeze(["lab-V 0.1", "lab-V 0.2"]);
 export const AUTOR_VERIFICADOR = Object.freeze({ tipo: "codigo", identificador: "lab-V", version: VERSION_VERIFICADOR });
 
 export const CONTRATO_ENCARGO = "cauce.lab.encargo";

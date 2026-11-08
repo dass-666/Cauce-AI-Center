@@ -91,6 +91,22 @@ export async function restaurarExpediente(o) {
   return { ok: true, errores: [], expediente: x };
 }
 
+/**
+ * ¿La verificación guardada es la que lab-V produce hoy? Misma versión de lab-V: idéntica byte a byte. Versión anterior
+ * guardada: una versión nueva de lab-V solo puede AÑADIR alertas (nunca quitar ni cambiar lo literal), así que citas,
+ * afirmaciones (salvo sus listas de alertas), errores y fuentes deben coincidir, y cada alerta guardada debe seguir
+ * saliendo. Si lab-V nuevo encuentra alertas que la guardada no tiene, la persona lo ve al reanudar (no se oculta).
+ */
+function mismaVerificacion(guardada, actual) {
+  if (guardada.autor?.version === actual.autor?.version) return jsonCanonico(guardada) === jsonCanonico(actual);
+  const sinAlertas = (v) => jsonCanonico({ ...v, autor: null, alertas: null, resumen: { ...v.resumen, n_alertas: 0 }, resultado: null, afirmaciones: L(v.afirmaciones).map((a) => ({ ...a, alertas: null })), revision_humana: null });
+  if (sinAlertas(guardada) !== sinAlertas(actual)) return false;
+  const nuevas = new Set(L(actual.alertas).map((a) => jsonCanonico(a)));
+  if (!L(guardada.alertas).every((a) => nuevas.has(jsonCanonico(a)))) return false;
+  const orden = ["sin_salida", "rechazada", "con_fallas", "apta_para_revision_humana"];
+  return orden.indexOf(actual.resultado) <= orden.indexOf(guardada.resultado); // el nuevo nunca es más benévolo
+}
+
 const C_IMPORTACION = ["en", "rol", "encargo_id", "respuesta_sha256", "aceptada", "errores", "avisos", "declarado_por", "fallos", "correcciones"];
 
 /**
@@ -135,7 +151,7 @@ async function cruzarHuellas(x, docs, o) {
       if (!ej || !enc) { err.push(`${r}: cita una ejecución o un encargo que no están guardados antes.`); continue; }
       let otra = null;
       try { otra = (await verificar({ encargo: enc, ejecucion: ej, copias: new Map([[f.fuente.fuente_id, f.copia]]), registro, ahora: doc.verificado_en })).verificacion; } catch (e) { err.push(`${r}: no se pudo recalcular con lab-V (${String(e?.message ?? e).slice(0, 120)}).`); continue; }
-      if (jsonCanonico(otra) !== jsonCanonico(doc)) err.push(`${r}: lab-V no reproduce esta verificación con la ejecución y el encargo guardados: alguno de los tres se modificó.`);
+      if (!mismaVerificacion(doc, otra)) err.push(`${r}: lab-V no reproduce esta verificación con la ejecución y el encargo guardados: alguno de los tres se modificó.`);
       registro.verificaciones.set(doc.ejecucion_id, doc);
       porId.set(doc.id, doc);
     }

@@ -72,7 +72,7 @@ Estados:
 
 ## `cauce.lab.verificacion`
 
-- `autor` debe ser exactamente `{tipo:"codigo", identificador:"lab-V", version:"lab-V 0.1"}`.
+- `autor` debe ser `{tipo:"codigo", identificador:"lab-V", version:"lab-V 0.1" | "lab-V 0.2"}`. lab-V 0.2 (auditoría 2026-11-08) añade la alerta `base_sin_respaldo` (una referencia `<ejecución>#<id>` a una afirmación que lab-V dejó sin respaldo). Al reanudar un expediente, cada verificación se recalcula: con la misma versión debe salir idéntica; una 0.1 guardada vale si lo literal coincide y lab-V 0.2 solo añade alertas.
 - `resultado`: `apta_para_revision_humana | con_fallas | rechazada | sin_salida`.
 - Por cada cita, se evalúan **por separado** cuatro cosas que no se mezclan:
 
