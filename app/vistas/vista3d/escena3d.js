@@ -31,6 +31,8 @@ import { crearHistorialCamara, claveSeleccion } from "./camara-historial.js";
 import { texturaDuela as duelaM, texturaAlfombra, texturaConcreto, texturaVinil, texturaAtlasPantallas, texturaResplandor } from "./texturas.js";
 import { intensidadAmbiente } from "./estilo-visual.js";
 import { duracionViaje, suavizarViaje, anguloEncuadre } from "./viaje-camara.js";
+import { crearBurbujasEstacion } from "./estacion3d.js";
+import { firmaEstaciones } from "../../nucleo/estaciones.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
 const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométrica clásica)
@@ -195,6 +197,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     geoToque: compartidos.agregar(new THREE.BoxGeometry(1.4, 1.1, 1.9)),
     matToque: compartidos.agregar(new THREE.MeshBasicMaterial({ visible: false })),
     quieto: () => menosMovimiento.matches,
+    // Estaciones de trabajo (estacion3d.js): iconos por estado de estación y un material (color de vértice)
+    // para las pantallas de todas las estaciones: cambiar de estado no crea materiales nuevos.
+    burbujasEstacion: crearBurbujasEstacion(compartidos),
+    matPantallasEstacion: compartidos.agregar(new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })),
   };
   compartido.matPiso = compartido.pisos.duela; // el piso de siempre (cuartos sin tipo de piso)
   // Fase M: resplandor de la pantalla sobre el escritorio, solo cuando la pantalla está encendida por evidencia
@@ -216,6 +222,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let animCam = null;      // movimiento suave de la cámara al enfocar
   let ultimoAnimados = 0;
   let ultimoAgente = null;
+  let ultimaEstacion = null; // estación elegida la última vez (la cámara se acerca una vez por elección)
   let recienConstruido = false;
   let ultimoMinimapa = 0;
   let claveCargando = null;
@@ -428,6 +435,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       zoomHacia: THREE.MathUtils.clamp(mitadAlto / 3.6, 1, controles.maxZoom),
     };
     animCam.hacia = centrarEnZona(new THREE.Vector3(p.x, 0.6, p.z), animCam.zoomHacia);
+  }
+  function acercarEstacion(id) {
+    const r = escenario?.estaciones().find((x) => x.e.id === id);
+    if (!r) return;
+    animCam = { t: 0, desde: controles.target.clone(), zoomDesde: camara.zoom, zoomHacia: THREE.MathUtils.clamp(mitadAlto / 4.6, 1, controles.maxZoom) };
+    animCam.hacia = centrarEnZona(new THREE.Vector3(r.x, 0.6, r.z), animCam.zoomHacia);
   }
   function volverAlPiso() {
     recordar();
@@ -856,7 +869,23 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     }
     return { izq: x0, der: x1, arriba: y0, abajo: y1 };
   }
-  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara };
+  // Solo con ?medir=1: estado de cada estación (lo que dibujó) y su punto en pantalla para tocarla.
+  const estacionesAhora = () => (escenario?.estaciones() ?? []).map((x) => ({ departamento: x.dep, ...x.e.resumen() }));
+  function proyectarEstacion(id, puesto = null) {
+    const x = escenario?.estaciones().find((r) => r.e.id === id);
+    if (!x) return null;
+    let v;
+    if (puesto) {
+      const per = x.e.personajes.find((p) => p.puestoEstacion === puesto);
+      if (!per) return null;
+      v = per.raiz.getWorldPosition(new THREE.Vector3());
+      v.y += 0.6;
+    } else v = new THREE.Vector3(x.x, 1.75, x.z - 0.85);
+    v.project(camara);
+    const r = lienzo.getBoundingClientRect();
+    return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
+  }
+  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara, estaciones: estacionesAhora, proyectarEstacion };
 
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {
@@ -898,6 +927,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     let objetivo = null;
     if (sel?.tipo === "departamento") objetivo = sel.id;
     if (sel?.tipo === "agente") objetivo = deps.find((d) => d.agentes.some((a) => a.id === sel.id))?.id ?? null;
+    if (sel?.tipo === "estacion") objetivo = deps.find((d) => (d.estaciones ?? []).some((e) => e.id === sel.id))?.id ?? null;
     const recordado = depMostrado ?? leer(`cauce.depto3d.${m.proyecto.id}`);
     const dep = deps.find((d) => d.id === (objetivo ?? recordado)) ?? deps[0];
     depMostrado = dep.id;
@@ -916,8 +946,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const visibles = modo === "edificio" ? deps : [dep];
     // es_demo en la clave: al pasar de DEMO a REAL la escena se reconstruye y nadie "reacciona" a la diferencia.
     const clave = `${modo}/${m.proyecto.id}/${m.es_demo ? "demo" : "real"}/${m.cuadricula.metros_por_celda}/` +
-      visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => `${a.id}/${a.naturaleza ?? ""}`).join(",")}`).join("|");
-    const ids = visibles.flatMap((d) => d.agentes.map((a) => a.id));
+      visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => `${a.id}/${a.naturaleza ?? ""}`).join(",")}:${firmaEstaciones(d.estaciones)}`).join("|");
+    // Personajes que hay que descargar: agentes del contrato y funciones de las estaciones del cuarto.
+    const ids = visibles.flatMap((d) => [...d.agentes.map((a) => a.id), ...(d.estaciones ?? []).flatMap((e) => e.puestos.map((p) => p.clave))]);
     if (clave !== claveOficina) {
       if (escenario) quitarOficina();
       if (compartido.catalogo.listos(ids)) {
@@ -961,6 +992,13 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       acercarAgente(agenteElegido);
     }
     ultimoAgente = agenteElegido;
+    // Al elegir una estación, la cámara se acerca a ella (una vez por elección; no al refrescar los datos).
+    const estacionElegida = escenario && sel?.tipo === "estacion" ? `${sel.id}/${sel.puesto ?? ""}` : null;
+    if (estacionElegida && estacionElegida !== ultimaEstacion && !restaurando) {
+      if (!guardada) recordar(selAntes, enfocado);
+      acercarEstacion(sel.id);
+    }
+    ultimaEstacion = estacionElegida;
     volverPiso.hidden = !(modo === "edificio" && enfocado);
     irRecepcion.hidden = !(modo === "edificio" && escenario?.recepcion);
     const hayAtencion = Boolean(siguienteConAtencion(deps, null));

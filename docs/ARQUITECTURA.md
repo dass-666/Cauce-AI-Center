@@ -19,6 +19,7 @@ Compago   ──adaptador (solo lectura)──►  datos/reales/compago.json   �
 - **Las reglas viven en el núcleo, no en las vistas.** `modelo.js` decide si un dato es confiable y qué estado mostrar. La vista 2D y la futura 3D solo dibujan. Así la 3D no puede "olvidar" una regla.
 - **Costo cero:** sin servicios externos, sin bibliotecas en tiempo de ejecución, sin IA. `servir.py` usa solo la biblioteca estándar de Python y escucha únicamente en `127.0.0.1`.
 - **Un piso por proyecto:** cada proyecto es un piso del edificio; cada departamento, un cuarto. Agregar Tezcatlipoca o trading = un adaptador + una escena + una línea en `datos/proyectos.json`.
+- **Una función nueva = una estación dentro de un cuarto que ya existe** (2026-11-08), no un piso ni un departamento: `escena/<proyecto>.json` › `estaciones` dice dónde va y qué funciones tiene; su estado viaja en un contrato aparte, `cauce.estaciones` 0.1 (el v1 no cambia). Solo una función transversal a varios proyectos justificaría un espacio propio, previa evaluación. Ver `docs/ESTACIONES.md`.
 
 ## Vista 3D (`app/vistas/vista3d/`)
 
@@ -50,6 +51,8 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | `etiquetas-dom.js` | Capa HTML de etiquetas sobre el lienzo: crea, actualiza y coloca las etiquetas usando las reglas de `etiquetas.js` (fase D2) | Usa la cámara |
 | `../../nucleo/sala.js` (fase K) | Sala de control: resumen de cada piso y de la empresa (DEMO y REAL por separado), bitácora de cambios de la sesión (todos los pisos), categorías del historial y «siguiente departamento con atención» | No (se prueba en Node) |
 | `../sala.js` (fase K) | Interfaz HTML de la sala de control (funciona en 3D, en el plano y sin WebGL; con la sala abierta la 3D no dibuja) | No (DOM) |
+| `estacion3d.js` (2026-11-08) | Estación de trabajo dentro de un cuarto: mesa larga, panel con pantallas ambientales, tablero con el estado de cada función, luz del enlace y un personaje por función (postura de `ESTADOS_ESTACION`). Lo estático se fusiona con el cuarto | Sí |
+| `../../nucleo/estaciones.js` (2026-11-08) | Disposición de estaciones (escena), contrato `cauce.estaciones` 0.1, estados por puesto, enlace confirmado solo con las dos partes | No (se prueba en Node) |
 | `escena3d.js` | Renderizador, cámara isométrica ortográfica, controles, selección, zona libre, ciclo de dibujo. Coordina los módulos anteriores | Sí |
 
 Reglas:

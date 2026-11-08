@@ -3,7 +3,8 @@
 
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { tamanoCuarto, puestos, puerta } from "./disposicion.js";
+import { tamanoCuarto, puestos, puerta, lugaresEstaciones } from "./disposicion.js";
+import { crearEstacion3D } from "./estacion3d.js";
 import { COLOR_ESTADO, OFICINA } from "./paleta.js";
 import { Personaje } from "./personaje.js";
 import { Recursos } from "./recursos.js";
@@ -29,8 +30,13 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
   const recursos = new Recursos();
   const grupo = new THREE.Group();
   grupo.userData.seleccion = { tipo: "departamento", id: dep.id };
-  const cuarto = opciones.cuarto ?? tamanoCuarto(dep.posicion, modelo.cuadricula.metros_por_celda, Math.max(1, dep.agentes.length));
+  // Estaciones de trabajo que hospeda este departamento (estaciones.js): una fila más, delante de sus escritorios.
+  const estacionesDep = dep.estaciones ?? [];
+  const cuarto = opciones.cuarto ?? tamanoCuarto(dep.posicion, modelo.cuadricula.metros_por_celda, Math.max(1, dep.agentes.length), estacionesDep.length);
   const lugares = puestos(Math.max(1, dep.agentes.length), cuarto);
+  const lugaresEst = lugaresEstaciones(cuarto, Math.max(1, dep.agentes.length), estacionesDep);
+  // Escritorios + asientos de las estaciones: los caminos y la decoración rodean a todos.
+  const todos = [...lugares, ...lugaresEst.flatMap((l) => [...l.asientos, l.extremo])];
   // Un material por color (los opacos se reutilizan): menos materiales = menos llamadas al fusionar.
   const cacheMat = new Map();
   const mat = (color, extra = {}) => {
@@ -242,7 +248,8 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
   // fondo (estantería, credenza o cocineta), elegido por el id: los cuartos ya no son todos iguales.
   // Fase M: interiores con identidad por tipo de trabajo (interiores.js): una familia de muebles y pantallas
   // ambientales que se acomodan donde no estorban (ni escritorios, ni pasillo, ni caminos de los personajes).
-  amueblarCuarto(grupo, mob, m, tema, cuarto, lugares, { estilo, altoMuro: ALTO_MURO });
+  const estaciones3d = estacionesDep.map((est, k) => crearEstacion3D(grupo, est, lugaresEst[k], { mob, m, recursos, compartido, cuarto, todos }));
+  amueblarCuarto(grupo, mob, m, tema, cuarto, todos, { estilo, altoMuro: ALTO_MURO });
   agregarPuertaYZocalo(grupo, mob, m, W, F, ALTO_MURO, puerta(cuarto), huella(dep.id) % 2 === 0);
 
   // Letrero en el muro del fondo (en el edificio, con muros bajos, se apoya encima del muro).
@@ -264,12 +271,14 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
   // Personajes: solo donde alguna vez puede haber alguien (no en módulos, puestos humanos ni futuros).
   const puedeTenerPersonaje = (a) => !a.naturaleza || NATURALEZAS[a.naturaleza]?.personaje;
   const personajes = dep.agentes.map((agente, i) => puedeTenerPersonaje(agente) && new Personaje({
-    agente, puesto: lugares[i], cuarto, retraso: i * 0.9, todos: lugares, quieto: compartido.quieto,
+    agente, puesto: lugares[i], cuarto, retraso: i * 0.9, todos, quieto: compartido.quieto,
     fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(id, recursos) : null,
     geo: compartido.geoPersonaje, recursos, texturaSombra: compartido.texturaSombra, burbujas: compartido.burbujas,
     anillosEstado: compartido.anillosEstado ?? null,
   })).filter(Boolean);
   for (const per of personajes) grupo.add(per.raiz);
+  for (const e of estaciones3d) e.agregarPersonajes(grupo);
+  const personajesEstacion = estaciones3d.flatMap((e) => e.personajes);
 
   let primeraLectura = true;
   const quieto = compartido.quieto ?? (() => false);
@@ -302,6 +311,7 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
       }
     }
     primeraLectura = false;
+    for (const e of estaciones3d) { const n = depNuevo.estaciones?.find((x) => x.id === e.id); if (n) e.actualizar(n); }
     letrero.dibujar(depNuevo, modeloNuevo);
     torreta.mostrar(depNuevo.alertas, modeloNuevo.conexion === "en_linea");
   }
@@ -311,22 +321,28 @@ export function crearOficina(dep, modelo, compartido, opciones = {}) {
     grupo,
     cuarto,
     personajes,
+    /** Estaciones de trabajo del cuarto (estacion3d.js) y sus personajes (funciones, no agentes del contrato v1). */
+    estaciones: estaciones3d,
+    personajesEstacion,
     /** Posición (en el cuarto) del escritorio de un agente, aunque no tenga personaje. */
     lugarDe: (id) => lugarDe.get(id) ?? null,
     actualizar,
     paso(dt, reloj) {
       for (const per of personajes) per.paso(dt, reloj);
+      for (const per of personajesEstacion) per.paso(dt, reloj);
       torreta.paso(reloj);
       pasoPantallas(dt);
     },
     /** Rendimiento UHD: ¿algo del cuarto se mueve? (personaje a la vista, entrando o saliendo, torreta que parpadea
      *  o, fase M, una pantalla que cambia de color tras un cambio observado) */
     enMovimiento() {
-      return torreta.parpadea || pantallas.some((p) => p.t < 1) || personajes.some((p) => p.raiz.visible || p.accion === "entrar" || p.accion === "salir");
+      const mueve = (p) => p.raiz.visible || p.accion === "entrar" || p.accion === "salir";
+      return torreta.parpadea || pantallas.some((p) => p.t < 1) || personajes.some(mueve) || personajesEstacion.some(mueve);
     },
     seleccionar(sel) {
       for (const per of personajes) per.seleccionar(sel?.tipo === "agente" && sel.id === per.id);
       letrero.resaltar(sel?.tipo === "departamento" && sel.id === dep.id);
+      for (const e of estaciones3d) e.seleccionar(sel);
     },
     liberar() {
       grupo.removeFromParent();

@@ -1,0 +1,36 @@
+{
+  "contrato": "cauce.estaciones",
+  "version": "0.1.0",
+  "proyecto": { "id": "compago" },
+  "generado_en": "2026-11-03T16:29:00Z",
+  "vigencia_segundos": 600,
+  "es_demo": true,
+  "demo": { "ahora_simulado": "2026-11-03T16:30:00Z" },
+  "fuente": { "tipo": "demo", "nombre": "Demostración sintética escrita a mano en Cauce (no viene de Compago ni de ningún proveedor real)" },
+  "estaciones": [
+    {
+      "id": "internacional",
+      "contrato_origen": "compago.senal-internacional 0.1.0 (provisional; datos inventados)",
+      "nota": "[DEMO] Sin cotizaciones reales: ninguna investigación de esta demostración es una oportunidad confirmada.",
+      "puestos": [
+        { "id": "investigador", "estado": "investigacion_pendiente", "nota": "[DEMO] Investigación abierta desde la señal SEN-DEMO-ARANCEL-01: país y categoría por confirmar.",
+          "evidencia": { "origen": "demo", "referencia": "investigación sintética #1" } },
+        { "id": "importacion", "estado": "datos_insuficientes", "nota": "[DEMO] Falta la regla de arancel (pendiente) y la logística nacional: no se calcula costo puesto.",
+          "evidencia": { "origen": "demo", "referencia": "datos_faltantes de la investigación sintética #1" } },
+        { "id": "evaluador", "estado": "sin_actividad", "nota": "[DEMO] Sin evaluación: con datos incompletos no se guarda ningún número." }
+      ],
+      "conteos": [
+        { "etiqueta": "Señales recibidas", "valor": 1, "nota": "sintética" },
+        { "etiqueta": "Investigaciones pendientes", "valor": 1 },
+        { "etiqueta": "Incompletas (faltan datos)", "valor": 1 },
+        { "etiqueta": "Evaluadas", "valor": 0 },
+        { "etiqueta": "Descartadas", "valor": 0 }
+      ],
+      "datos_faltantes": ["arancel (regla pendiente)", "logística nacional", "cotización confirmada del proveedor"],
+      "enlaces": [
+        { "senal_id": "SEN-DEMO-ARANCEL-01", "sentido": "recibida", "contraparte": "ek-chuah", "registrado_en": "2026-11-03T16:25:00Z",
+          "evidencia": { "origen": "demo", "referencia": "cargar_senales sintético" } }
+      ]
+    }
+  ]
+}

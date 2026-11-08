@@ -4,6 +4,9 @@
 //   demo          → datos/demo/<archivo>.json    (opcional; debe venir marcado es_demo: true)
 //   distribucion  → escena/<archivo>.json        (opcional)
 //   naturalezas   → escena/<archivo>.json        (opcional; por omisión escena/<id>-naturaleza.json, si existe)
+//   estaciones_estado / estaciones_demo → estado de las estaciones (contrato cauce.estaciones 0.1; opcionales;
+//                   por omisión datos/reales/<id>-estaciones.json y datos/demo/<id>-estaciones.json). Solo se leen si
+//                   la escena del piso declara "estaciones".
 // Así un registro mal escrito no puede leer otro sitio ni mezclar una demostración con datos reales.
 
 /** Estilos visuales de piso que entiende la vista 3D (fase L). Solo cambian decoración, nunca datos. */
@@ -11,7 +14,8 @@ export const ESTILOS_PISO = Object.freeze(["comercial", "financiero", "alimentos
 
 const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const ARCHIVO = (carpeta) => new RegExp(`^${carpeta}/[a-z0-9][a-z0-9._-]{0,80}\\.json$`);
-const RUTAS = { estado: ARCHIVO("datos/reales"), demo: ARCHIVO("datos/demo"), distribucion: ARCHIVO("escena"), naturalezas: ARCHIVO("escena") };
+const RUTAS = { estado: ARCHIVO("datos/reales"), demo: ARCHIVO("datos/demo"), distribucion: ARCHIVO("escena"), naturalezas: ARCHIVO("escena"),
+  estaciones_estado: ARCHIVO("datos/reales"), estaciones_demo: ARCHIVO("datos/demo") };
 
 /**
  * @param {any} datos  contenido del registro ({ proyectos: [...] })
@@ -35,12 +39,15 @@ export function validarRegistro(datos) {
     const opcional = (campo) => {
       if (p[campo] === undefined || p[campo] === null) return null;
       if (typeof p[campo] === "string" && RUTAS[campo].test(p[campo])) return p[campo];
-      avisos.push(`${p.id}: "${campo}" no permitido (${campo === "demo" ? "datos/demo/" : "escena/"}<archivo>.json); se ignora.`);
+      const carpeta = { demo: "datos/demo/", estaciones_demo: "datos/demo/", estaciones_estado: "datos/reales/" }[campo] ?? "escena/";
+      avisos.push(`${p.id}: "${campo}" no permitido (${carpeta}<archivo>.json); se ignora.`);
       return null;
     };
     vistos.add(p.id);
     const entrada = { id: p.id, nombre: p.nombre.trim(), estado: p.estado, demo: opcional("demo"), distribucion: opcional("distribucion"),
-      naturalezas: opcional("naturalezas") ?? `escena/${p.id}-naturaleza.json` };
+      naturalezas: opcional("naturalezas") ?? `escena/${p.id}-naturaleza.json`,
+      // Estaciones de trabajo dentro del piso (fuera del contrato v1; ver app/nucleo/estaciones.js).
+      estaciones: { estado: opcional("estaciones_estado") ?? `datos/reales/${p.id}-estaciones.json`, demo: opcional("estaciones_demo") ?? `datos/demo/${p.id}-estaciones.json` } };
     // Fase K (opcionales, fuera del contrato v1): proyecto pendiente de localizar y color de identidad del piso.
     if (p.pendiente !== undefined && p.pendiente !== null) {
       if (typeof p.pendiente === "string" && p.pendiente.trim() && p.pendiente.length <= 200) entrada.pendiente = p.pendiente.trim();

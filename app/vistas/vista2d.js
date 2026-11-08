@@ -56,7 +56,21 @@ export function crearVista2D(contenedor, { alSeleccionar }) {
         dep.agentes.length === 0 ? el("p", { clase: "puestos-vacio" }, "Sin personajes") : null,
         dep.agentes.map((a) => personaje(a, seleccion, alSeleccionar)));
 
-      cuarto.append(letrero, indicadores, puestos);
+      // Estaciones de trabajo que hospeda el departamento (estaciones.js): un botón por estación, con su estado.
+      const estaciones = (dep.estaciones ?? []).map((e) => {
+        const elegida = seleccion?.tipo === "estacion" && seleccion.id === e.id;
+        return el("button", {
+          clase: `estacion-2d${elegida ? " elegido" : ""}`, type: "button", "aria-pressed": elegida ? "true" : "false",
+          style: `--color-estado:#${e.apariencia.color.toString(16).padStart(6, "0")}`,
+          title: `${e.nombre}: ${e.apariencia.etiqueta}${e.es_demo ? " (DEMO)" : ""}`,
+          onclick: (ev) => { ev.stopPropagation(); alSeleccionar({ tipo: "estacion", id: e.id }); },
+        },
+          el("span", { clase: "estacion-2d-luz", "aria-hidden": "true" }),
+          el("span", { clase: "estacion-2d-nombre" }, e.nombre),
+          el("span", { clase: "estacion-2d-estado" }, `${e.apariencia.etiqueta} · ${e.puestos.length} funciones`));
+      });
+
+      cuarto.append(letrero, indicadores, puestos, ...estaciones);
       raiz.append(cuarto);
     }
   }

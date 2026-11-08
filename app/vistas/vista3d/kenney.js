@@ -210,6 +210,15 @@ function crearCuerpoKenney(gltf, recursos) {
       h.cabeza.rotation.y += Math.sin(r * 5) * 0.22 * o;
     } else if (gesto === "reaccion_error") {
       h.brazoD.rotation.set(-2.5 * Math.min(1, t / 0.4), 0, 0.6);
+    } else if (gesto === "consultar") {
+      // Estaciones: inclinado sobre el escritorio, la vista baja a un documento y vuelve a la pantalla; de vez en
+      // cuando pasa una hoja. Sin golpeteo de teclado: representa consultar un registro guardado, no un proceso.
+      const leer = quieto ? 0.5 : 0.5 + 0.5 * Math.sin(r * 0.45);
+      h.torso.rotation.x += 0.1;
+      h.cabeza.rotation.x += 0.08 + 0.2 * leer;
+      h.cabeza.rotation.y += quieto ? 0 : Math.sin(r * 0.2) * 0.08;
+      h.brazoI.rotation.set(-0.95, 0, -0.2);
+      h.brazoD.rotation.set(-0.95 - 0.35 * o, 0, 0.2 + 0.15 * o); // pasa la hoja (gesto ocasional)
     } else if (gesto === "atencion") {
       // Fase L: sentado con la mano levantada mientras pida revisión (no la baja hasta que cambie la evidencia);
       // de vez en cuando la sube del todo.

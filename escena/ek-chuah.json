@@ -9,5 +9,37 @@
     "simulaciones":  { "x": 0, "y": 1, "ancho": 1, "alto": 1, "tema": "oportunidades" },
     "riesgo":        { "x": 1, "y": 1, "ancho": 1, "alto": 1, "tema": "margenes" },
     "auditoria":     { "x": 2, "y": 1, "ancho": 1, "alto": 1 }
+  },
+  "estaciones": {
+    "observatorio": {
+      "nombre": "Observatorio Geopolítico y Macroeconómico",
+      "departamento": "riesgo",
+      "equipo": "observatorio",
+      "funcion": "Registra acontecimientos y fuentes, separa hechos, hipótesis e inferencias y clasifica su verificación. No recomienda comprar ni vender.",
+      "origen": "Ek Chuah PR #4 (borrador, sin fusionar): src/ek_chuah/observatorio, contratos ek-chuah.observatorio 0.1.0 y ek-chuah.senales-economicas 0.1.0. Sin exportador hacia Cauce todavía.",
+      "puestos": [
+        {
+          "id": "macro",
+          "funcion": "Analista macroeconómico",
+          "detalle": "Divisas, inflación y mercados"
+        },
+        {
+          "id": "geopolitico",
+          "funcion": "Analista geopolítico",
+          "detalle": "Noticias, regulaciones y acontecimientos"
+        },
+        {
+          "id": "riesgos",
+          "funcion": "Analista de riesgos",
+          "detalle": "Verificación, alertas e implicaciones"
+        }
+      ],
+      "enlace": {
+        "proyecto": "compago",
+        "estacion": "internacional",
+        "sentido": "salida",
+        "nombre": "Oportunidades Internacionales (Compago)"
+      }
+    }
   }
 }

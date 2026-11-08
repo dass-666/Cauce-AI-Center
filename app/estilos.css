@@ -781,3 +781,13 @@ html.csi-abierto .principal { grid-template-columns: 1fr !important; }
 .csi-mapa-nombre { fill: var(--texto); font-size: 12px; }
 .csi-mapa-rel { fill: var(--texto-suave); font-size: 10.5px; }
 .csi a[data-original] { color: #8fd0ff; }
+
+/* Estaciones de trabajo dentro de un departamento (estaciones.js) */
+.estacion-2d { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; width: 100%; margin-top: 8px; padding: 6px 10px; border: 1px solid #3b4a6b; border-left: 4px solid var(--color-estado); border-radius: 8px; background: #141c31; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.estacion-2d.elegido { outline: 2px solid #fff; }
+.estacion-2d-luz { grid-row: span 2; width: 10px; height: 10px; border-radius: 50%; background: var(--color-estado); }
+.estacion-2d-nombre { font-weight: 700; font-size: 13px; }
+.estacion-2d-estado { font-size: 12px; color: #a3adc4; }
+.enlace-estacion { padding: 0; border: 0; background: none; color: #9fc4e8; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.lista-puestos-estacion .puesto-elegido { outline: 1px solid #ffd89a; border-radius: 6px; }
+.enlace-confirmado { color: #5fd0e0; }

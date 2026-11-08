@@ -20,6 +20,7 @@ import { evaluarLeccion } from "./nexus/gerente.js";
 import { dibujarNexus } from "./vistas/nexus.js";
 import { dibujarCSI, olvidarCalculosCSI } from "./vistas/csi.js";
 import { leerCSI } from "./csi/registro.js";
+import { leerDisposicionEstaciones, construirEstaciones, cruzarEnlace, aplicarEstaciones } from "./nucleo/estaciones.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
@@ -476,8 +477,10 @@ async function actualizar() {
   // La demostración solo se pide si no existe el archivo real.
   const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
   const clasificacion = await clasificacionDe(p);
-  if (p !== estado.actual || numero !== lecturaNumero) return; // cambió de piso o llegó una lectura más nueva
   const eleccion = elegirCarga(real, demo);
+  const esDemoPiso = eleccion.carga.tipo === "ok" && eleccion.carga.datos?.es_demo === true;
+  const estaciones = await estacionesDe(p, dist.tipo === "ok" ? dist.datos : null, eleccion.origen, esDemoPiso);
+  if (p !== estado.actual || numero !== lecturaNumero) return; // cambió de piso o llegó una lectura más nueva
   estado.modelo = construirModeloVista({
     proyecto: p,
     carga: eleccion.carga,
@@ -486,6 +489,11 @@ async function actualizar() {
     distribucion: dist.tipo === "ok" ? dist.datos : null,
     ahora: new Date(),
   });
+  // Estaciones de trabajo dentro de las oficinas existentes (contrato aparte cauce.estaciones; el v1 no cambia).
+  if (estaciones) {
+    aplicarEstaciones(estado.modelo, estaciones.estaciones.map((e) => ({ ...e })));
+    for (const t of [...estaciones.errores, ...estaciones.avisos]) console.warn(`estaciones de ${p.id}: ${t}`);
+  }
   registroCambios.leer(estado.modelo); // solo compara con la lectura anterior de esta página
   modelosPisos.set(p.id, estado.modelo);
   bitacora.leer(estado.modelo);
@@ -496,6 +504,42 @@ async function actualizar() {
   dibujarSalaSiAbierta();
   if (nexusAbierto()) leerYDibujarNexus();
   revisarOtrosPisos();
+}
+
+// Escenas de otros pisos (solo para saber qué estación está al otro lado de un enlace). Son estructura: se leen una vez.
+const escenasOtros = new Map();
+async function escenaDe(p) {
+  if (!p?.distribucion) return null;
+  if (!escenasOtros.has(p.id)) { const r = await cargarJSON(p.distribucion); escenasOtros.set(p.id, r.tipo === "ok" ? r.datos : null); }
+  return escenasOtros.get(p.id);
+}
+
+/**
+ * Estado de las estaciones del piso (y del otro lado de su enlace, para confirmar transferencias). Lee de la
+ * misma carpeta que el piso: si el piso muestra la demostración, datos/demo/; si no, datos/reales/. Nunca cae
+ * a la demostración en silencio cuando el piso es REAL. Sin "estaciones" en la escena no se pide nada.
+ */
+async function estacionesDe(p, dist, origen, esDemo) {
+  if (!leerConfiguracion(location.href).estaciones) return null; // ?estaciones=0: medición A/B sin estaciones
+  const disposicion = leerDisposicionEstaciones(dist);
+  if (disposicion.length === 0) return null;
+  const ruta = (q) => (origen === "demo" ? q.estaciones?.demo : q.estaciones?.estado);
+  const ahora = new Date();
+  const carga = ruta(p) ? await cargarJSON(ruta(p)) : { tipo: "no_encontrado" };
+  const r = construirEstaciones({ disposicion, carga, origen, esDemo, ahora, proyectoId: p.id });
+  // Enlaces con estaciones de otros pisos: se lee la estación del otro lado con la misma regla (DEMO con DEMO).
+  for (const est of r.estaciones) {
+    if (!est.enlace) continue;
+    const otro = estado.proyectos.find((q) => q.id === est.enlace.proyecto);
+    const dispOtro = otro ? leerDisposicionEstaciones(await escenaDe(otro)).filter((e) => e.id === est.enlace.estacion) : [];
+    let otra = null;
+    if (otro && dispOtro.length && ruta(otro)) {
+      const c = await cargarJSON(ruta(otro));
+      otra = construirEstaciones({ disposicion: dispOtro, carga: c, origen, esDemo, ahora, proyectoId: otro.id }).estaciones[0] ?? null;
+    }
+    cruzarEnlace(est, p.id, otra, otro?.id ?? null);
+  }
+  return r;
 }
 
 async function clasificacionDe(p) {
@@ -526,7 +570,7 @@ function dibujar() {
   if (!m || !vista) return;
   // Primero el panel: así la vista 3D ya sabe cuánto tapa (en celular se abre encima del edificio).
   dibujarPanel($("#panel"), m, estado.seleccion, () => { estado.seleccion = null; dibujar(); },
-    { historial: bitacora.eventos({ proyecto_id: m.proyecto.id }), ahoraMs: Date.now() });
+    { historial: bitacora.eventos({ proyecto_id: m.proyecto.id }), ahoraMs: Date.now(), alSeleccionar: (sel) => { estado.seleccion = sel; dibujar(); } });
   vista.dibujar(m, estado.seleccion);
   dibujarEstado(m);
 }

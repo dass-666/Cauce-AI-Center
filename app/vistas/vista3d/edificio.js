@@ -27,7 +27,7 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
     cuartos.set(dep.id, { oficina, x: 0, z: 0, ancho: oficina.cuarto.ancho, fondo: oficina.cuarto.fondo, acumulado: 0 });
     limites = calcularLimites([...cuartos.values()]);
   } else {
-    const plano = distribuirEdificio(deps.map((d) => ({ id: d.id, posicion: d.posicion, puestos: Math.max(1, d.agentes.length) })));
+    const plano = distribuirEdificio(deps.map((d) => ({ id: d.id, posicion: d.posicion, puestos: Math.max(1, d.agentes.length), filasExtra: d.estaciones?.length ?? 0 })));
     const info = plano.cuartos.map((c, i) => ({ ...c, nombre: deps[i].nombre, tema: temaDe(deps[i]), acento: acentoDe(deps[i]) }));
     arquitectura = crearArquitectura(plano, info, recursos, { mob: compartido.mobiliario, proyecto: modelo.proyecto });
     grupo.add(arquitectura.grupo);
@@ -85,7 +85,7 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
         const hz = modo === "individual" ? 0 : hzDe(id);
         if (hz > 0 && c.acumulado < 1 / hz) continue;
         c.oficina.paso(Math.min(c.acumulado, 0.5), reloj);
-        animados += c.oficina.personajes.length;
+        animados += c.oficina.personajes.length + (c.oficina.personajesEstacion?.length ?? 0);
         c.acumulado = 0;
       }
       arquitectura?.paso();
@@ -104,6 +104,12 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
       }
       return null;
     },
+    /** Estaciones de trabajo de todos los cuartos, con su posición en la escena. */
+    estaciones() {
+      return [...cuartos.entries()].flatMap(([dep, c]) => (c.oficina.estaciones ?? []).map((e) => ({ dep, e, x: c.x + e.lugar.x, z: c.z + e.lugar.z, ancho: e.lugar.ancho, fondo: e.lugar.fondo })));
+    },
+    /** Personajes de estación (funciones), aparte de los agentes del contrato v1. */
+    personajesEstacion: () => [...cuartos.values()].flatMap((c) => c.oficina.personajesEstacion ?? []),
     /** Rectángulo de un departamento en coordenadas de la escena (para acercar la cámara). */
     rectangulo(id) {
       const c = cuartos.get(id);

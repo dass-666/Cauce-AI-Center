@@ -25,6 +25,7 @@ export const BUCLES = Object.freeze([
   "relajado",  // finalizado: recargado, brazos sueltos
   "alerta",    // error: de pie junto al escritorio, mano en la cabeza, mira la pantalla
   "atencion",  // requiere revisión: sentado, de vez en cuando levanta un poco la mano
+  "consultar", // estaciones: sentado, inclinado sobre un documento o la pantalla; sin teclear (un registro guardado, no un proceso)
 ]);
 
 // Postura final (en bucle) y gesto de transición (solo si se observó el cambio).
@@ -34,6 +35,7 @@ const FINAL = Object.freeze({
   estirarse: { postura: "sentado", bucle: "relajado", reaccion: "celebrar" },
   de_pie_alerta: { postura: "de_pie", bucle: "alerta", reaccion: "reaccion_error" },
   levantar_mano: { postura: "sentado", bucle: "atencion", reaccion: "llamar_atencion" },
+  sentado_consultando: { postura: "sentado", bucle: "consultar" }, // estaciones (estaciones.js): consulta, no trabajo en curso
   ausente: { postura: "fuera", bucle: null },
 });
 

@@ -116,6 +116,7 @@ function aplicarProvisional(c, { base, s, gesto, t, r, o = 0, fase = "teclear", 
   else if (gesto === "alerta") alerta(c, r, o);
   else if (gesto === "reaccion_error") { alerta(c, r, 1); c.cabeza.rotation.y = Math.sin(t * 12) * 0.4 * Math.max(0, 1 - t / 1.4); }
   else if (gesto === "llamar_atencion") levantarMano(c, t);
+  else if (gesto === "consultar") { c.torso.rotation.x = 0.1; c.brazoI.rotation.x = -0.95; c.brazoD.rotation.x = -0.95 - 0.35 * o; c.cabeza.rotation.x = 0.08 + (quieto ? 0.1 : 0.1 + 0.1 * Math.sin(r * 0.45)); } // estaciones: lee, no teclea
   else if (gesto === "atencion") { c.brazoD.rotation.x = -1.6 - 1.2 * o; c.brazoD.rotation.z = 0.15 + 0.1 * o; c.cabeza.rotation.x = -0.1; } // fase L: la mano queda arriba mientras pida revisión
 }
 
