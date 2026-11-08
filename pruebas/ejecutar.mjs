@@ -21,6 +21,7 @@ import { registrarCasosLaboratorio } from "./casos-laboratorio.js";
 import { registrarCasosLaboratorioFase2 } from "./casos-laboratorio-fase2.js";
 import { registrarCasosLaboratorioFase3 } from "./casos-laboratorio-fase3.js";
 import { registrarCasosLaboratorioFase31 } from "./casos-laboratorio-fase3-1.js";
+import { registrarCasosAuditoria } from "./casos-auditoria.js";
 import { ejecutar } from "./mini.js";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,6 +44,7 @@ registrarCasosLaboratorio(leer);
 registrarCasosLaboratorioFase2(leer);
 registrarCasosLaboratorioFase3(leer);
 registrarCasosLaboratorioFase31(leer);
+registrarCasosAuditoria(leer);
 
 const r = await ejecutar();
 for (const p of r.resultados) console.log(`${p.ok ? "OK   " : "FALLA"} ${p.nombre}${p.ok ? "" : "\n      " + p.error}`);
