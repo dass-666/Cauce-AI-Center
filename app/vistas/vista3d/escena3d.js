@@ -246,6 +246,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   // Bloque D: corrimiento vertical de la proyección (unidades de la escena) durante el viaje del ascensor.
   let desplazaVista = 0;
   const ascensor = crearAscensor();
+  let prepararSombreadores = false; // bloque D: compilar todos los sombreadores del piso nuevo antes de su primer dibujo
+  let recienArmado = false; // bloque D: el piso nuevo se acaba de construir dentro del ciclo de dibujo
   let pendientePiso = null; // modelo del piso de destino que llegó mientras la cámara salía del piso actual
   let destruida = false;
   const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0";
@@ -604,14 +606,23 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     return true;
   }
   function moverAscensor(dt) {
-    if (!ascensor.activo) return;
+    if (!ascensor.activo) return false;
     const evento = ascensor.paso(dt);
     if (evento === "salida_terminada" && pendientePiso) {
       const p = pendientePiso;
       pendientePiso = null;
       dibujar(p.m, p.sel); // cambia la escena con el velo puesto; ahí empieza la llegada
+      aplicarAscensor();
+      // Construir el piso y dibujarlo por primera vez (sombreadores, texturas) en el mismo cuadro haría una pausa
+      // larga; el velo está opaco, así que el primer dibujo se deja para el cuadro siguiente.
+      recienArmado = true;
+      // Con la vista corrida, parte del piso nuevo queda fuera de cuadro y three.js prepararía sus sombreadores
+      // después, al aparecer (una pausa a destiempo). Se preparan todos ahora, con el velo opaco.
+      prepararSombreadores = true;
+      return true;
     }
     aplicarAscensor();
+    return false;
   }
   function aplicarAscensor() {
     const d = ascensor.activo ? ascensor.desplazamiento * 1.15 * mitadAlto / Math.max(0.1, camara.zoom) : 0;
@@ -725,11 +736,17 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     idCuadro = requestAnimationFrame(cuadro);
     if (t - ultimoDibujo < intervalo - 1) return;
     ultimoDibujo = t;
-    const dt = anterior ? Math.min(0.1, (t - anterior) / 1000) : 0;
+    // Bloque D: el cuadro que sigue a construir un piso nuevo no cuenta el tiempo de la construcción (si no, la
+    // llegada del ascensor daría un salto).
+    const dt = recienArmado ? 1 / 60 : anterior ? Math.min(0.1, (t - anterior) / 1000) : 0;
+    recienArmado = false;
     anterior = t;
     reloj += dt;
     const camaraAnimada = Boolean(animCam || siguiendo || ascensor.activo);
-    moverAscensor(dt);
+    if (moverAscensor(dt)) { redibujar = true; return; } // se armó el piso nuevo: se dibuja en el cuadro siguiente
+    // Con el velo del ascensor opaco no se ve nada de la escena: no se dibuja (la tarjeta gráfica descansa justo
+    // antes de recibir el piso nuevo).
+    if (ascensor.velo >= 0.999) { redibujar = true; cuadrosOmitidos++; medidor.pausa(); return; }
     moverCamara(dt);
     seguirCamara(dt);
     const camaraCambio = controles.update() || camaraAnimada;
@@ -760,6 +777,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
         if (t - ultimoMinimapa > 250) { ultimoMinimapa = t; dibujarMinimapa(); }
       }
     }
+    if (prepararSombreadores && escenario) { prepararSombreadores = false; renderer.compile(escena, camara); }
     renderer.info.reset();
     tiempoGpu?.empezar();
     if (!brilloFx.render(dt)) renderer.render(escena, camara);
@@ -1007,7 +1025,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
         crearEtiquetas(visibles);
         historial.vaciar(); // escena nueva (otro piso, modo o datos): las vistas guardadas ya no aplican
         irAnterior.hidden = true;
-        if (ascensor.fase === "espera") { ascensor.llegar(); aplicarAscensor(); } // bloque D: el ascensor llega; su velo hace de fundido
+        if (ascensor.fase === "espera") { // bloque D: el ascensor llega; su velo hace de fundido
+          ascensor.llegar(); aplicarAscensor(); recienArmado = true;
+          prepararSombreadores = true; // ver moverAscensor: con la vista corrida three.js los prepararía a destiempo
+        }
         else {
           lienzo.style.opacity = "0"; // fase L: el piso nuevo aparece con un fundido corto (sin él con «reducir movimiento»)
           requestAnimationFrame(() => { lienzo.style.opacity = ""; });

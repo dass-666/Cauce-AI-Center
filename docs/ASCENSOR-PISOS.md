@@ -54,8 +54,25 @@ Sin dependencias, sin sombras, sin pasadas de dibujo nuevas. El velo es un `div`
 navegador, no WebGL). Durante el viaje se dibuja cada cuadro, igual que en cualquier movimiento de cámara; el resto
 del tiempo, el ahorro por escena quieta sigue igual. La construcción del piso nuevo es la misma de antes.
 
-**No hay medición en Intel UHD.** Lo medido en este contenedor (SwiftShader, CPU) está en el informe de la
-jornada y solo sirve para comparar trabajo (llamadas de dibujo), no cuadros por segundo reales.
+Dos ajustes para que el cambio de escena no cueste más que antes: con el velo opaco no se dibuja (no se ve nada),
+y el piso nuevo se arma en un cuadro y se dibuja en el siguiente, con todos sus sombreadores preparados de una vez
+(`renderer.compile`), porque con la vista corrida three.js los prepararía a destiempo, cuando cada mueble entra en
+cuadro.
+
+**No hay medición en Intel UHD.** Lo medido en este contenedor es Chromium con SwiftShader (la CPU hace de tarjeta
+gráfica); sirve para comparar trabajo, no cuadros por segundo reales:
+
+| Medida (SwiftShader, 1366×768, DEMO) | main | esta rama |
+|---|---|---|
+| Llamadas de dibujo, edificio Compago quieto | 97 | 97 (igual durante el viaje) |
+| Tiempo de JavaScript al llegar a Compago (perfil de 3.5 s) | ~0.19 s | ~0.18 s |
+| Peor cuadro al cambiar Ek Chuah ↔ Compago | 100–217 ms | 133–217 ms al llegar a Ek Chuah; **300–600 ms al llegar a Compago** |
+
+**Riesgo abierto:** al llegar a Compago, SwiftShader muestra un cuadro lento (300–600 ms) unos 3 cuadros después
+de terminar el viaje, que en `main` es de ≤ 217 ms. El perfil de JavaScript es igual en las dos versiones, así que
+el tiempo se va en el proceso gráfico de SwiftShader; no se encontró la causa en este contenedor y no se puede saber
+si ocurre en la Intel UHD. Hay que medirlo en la MSI (paso 7 de abajo); si se nota un tirón al llegar, el arreglo
+más simple es la opción «Cámara instantánea» mientras se investiga.
 
 ## Pruebas
 
