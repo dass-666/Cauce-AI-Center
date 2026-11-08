@@ -16,7 +16,7 @@ Si está limpio (o solo aparece `ABRIR-CIERRE.bat` sin seguimiento):
 
 ```
 git fetch origin
-git checkout claude/laboratorio-fase-3-1
+git checkout claude/auditoria-maestra
 git log --oneline -1
 ```
 
@@ -61,7 +61,7 @@ Abre `http://127.0.0.1:8765/?medir=1`, tecla 0, espera 20 s y «Copiar medición
 
 ## 5. Pruebas sin Node (1 min)
 
-`http://127.0.0.1:8765/pruebas.html` → debe decir **499 pasaron, 0 fallaron**.
+`http://127.0.0.1:8765/pruebas.html` → debe decir **510 pasaron, 0 fallaron**.
 
 ## Qué me envías
 

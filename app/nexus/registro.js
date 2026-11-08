@@ -140,6 +140,7 @@ export function admisionReal(leccion, { ahora = Date.now(), lecciones = new Map(
   else cumple.push("Cumple el contrato cauce.leccion 0.2.");
   if (String(leccion?.id ?? "").startsWith("demo-")) motivos.push("Un id «demo-…» es de prueba y no entra al almacén real.");
   if (registrado_por && registrado_por.tipo !== "humano") motivos.push("En el almacén real solo una persona incorpora lecciones.");
+  if (leccion?.muestra?.naturaleza === "demo") motivos.push("La muestra es de naturaleza «demo» (datos de prueba): no describe nada real y no entra al almacén real.");
   const ev = evaluarLeccion(leccion, { ahora, lecciones });
   const r = (id) => ev.reglas.find((x) => x.id === id);
   const exigir = (id, que) => (r(id).estado === "cumple" ? cumple.push(`${que}: ${r(id).motivo}`) : motivos.push(`${que} (${id}, ${r(id).estado}): ${r(id).motivo}`));

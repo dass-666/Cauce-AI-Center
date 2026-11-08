@@ -377,7 +377,7 @@ export function registrarCasosLaboratorio(leerTexto) {
 
   prueba("Laboratorio · contratos: una verificación solo la firma lab-V; «verdadera», «respaldada» o «aprobada» se rechazan", async () => {
     const v = await ver(await mundo());
-    const ia = clon(v); ia.autor = { tipo: "ia", identificador: "sintetico-v0", version: "lab-V 0.1" };
+    const ia = clon(v); ia.autor = { tipo: "ia", identificador: "sintetico-v0", version: "lab-V 0.2" };
     verdadero(tiene(validarVerificacion(ia).errores, /solo el código verificador firma/), "firma de IA");
     const r = clon(v); r.resultado = "verdadera";
     verdadero(tiene(validarVerificacion(r).errores, /no existe «verdadera»/), "resultado verdadero");

@@ -5,15 +5,20 @@
 //   · la ficha se recalcula desde su texto y debe tener la huella registrada (si alguien la tocó, no se carga);
 //   · cada documento se valida con su contrato y debe ser del mismo trabajo y del mismo mundo DEMO/REAL;
 //   · cada versión del trabajo debe extender a la anterior (historial solo-anexado) y el historial se reproduce;
-//   · el informe debe ser el que el trabajo cita, con su huella.
+//   · el informe debe ser el que el trabajo cita, con su huella;
+//   · (auditoría) las huellas se cruzan entre documentos: cada ejecución fija su encargo, cada verificación se
+//     RECALCULA con lab-V sobre la ejecución y el encargo guardados y debe salir idéntica, cada paso del trabajo
+//     cita documentos que existen y coinciden, cada importación aceptada corresponde a una ejecución importada, y
+//     los hechos, el origen y la vigencia de la ficha deben cuadrar con su texto y con el trabajo.
 // Si algo no cuadra, el expediente no se carga y se dice por qué (el archivo guardado no se borra).
 
-import { L, esObj, sha256 } from "./base.js";
+import { L, esObj, sha256, jsonCanonico, esHuella, ROLES } from "./base.js";
 import { validarEncargo, validarEjecucion, validarVerificacion } from "./contratos.js";
-import { validarTrabajo, extiendeA } from "./trabajo.js";
+import { validarTrabajo, extiendeA, transitar, COORDINADOR } from "./trabajo.js";
 import { validarInforme } from "./informe.js";
-import { huellaDoc } from "./verificador.js";
-import { nuevoExpediente } from "./coordinador.js";
+import { huellaDoc, verificar } from "./verificador.js";
+import { nuevoExpediente, avanzar, relojDesde } from "./coordinador.js";
+import { crearAdaptadorManual } from "./adaptadores.js";
 
 export const FORMATO_EXPEDIENTE = "cauce.lab.expediente-local";
 export const VERSION_EXPEDIENTE = "0.1";
@@ -70,6 +75,104 @@ export async function restaurarExpediente(o) {
   } else x.informe = null;
   for (const p of L(trabajo.pasos)) for (const id of p.ejecuciones) if (!x.ejecuciones.has(id)) return { ok: false, errores: [`Falta la ejecución ${id} que cita el trabajo.`] };
   if (trabajo.espera?.encargo_id && !x.encargos.has(trabajo.espera.encargo_id)) return { ok: false, errores: ["Falta el encargo que el trabajo está esperando."] };
+  const cruce = await cruzarHuellas(x, docs, o);
+  if (cruce.length) return { ok: false, errores: cruce.slice(0, 12) };
+  // (auditoría) «en_analisis» es un estado transitorio del Coordinador: un guardado que quedó ahí (cierre a mitad del
+  // análisis o archivo recortado) no tendría salida. Se devuelve a pendiente con constancia en el historial; nada se
+  // pierde (los pasos ya verificados se conservan y se reutilizan).
+  if (x.trabajo.estado === "en_analisis") {
+    const en = new Date(Math.max(Date.now(), Date.parse(x.trabajo.historial.at(-1).en) + 1000)).toISOString().replace(/\.\d{3}Z$/, "Z");
+    x.trabajo = transitar(x.trabajo, "pendiente", { por: COORDINADOR, motivo: "Reanudación: el guardado quedó a mitad del análisis; vuelve a pendiente para poder continuar.", en });
+    x.documentos.push({ tipo: "trabajo", documento: x.trabajo });
+    // Un trabajo manual vuelve a ESPERAR la respuesta del rol que toque (los pasos verificados se reutilizan).
+    if (x.trabajo.adaptador.id === "manual-claude") await avanzar(x, { adaptador: crearAdaptadorManual(new Map()), reloj: relojDesde(en) });
+  }
   x.importaciones = L(o.importaciones).filter((i) => esObj(i)).slice(0, 200);
   return { ok: true, errores: [], expediente: x };
+}
+
+/**
+ * ¿La verificación guardada es la que lab-V produce hoy? Misma versión de lab-V: idéntica byte a byte. Versión anterior
+ * guardada: una versión nueva de lab-V solo puede AÑADIR alertas (nunca quitar ni cambiar lo literal), así que citas,
+ * afirmaciones (salvo sus listas de alertas), errores y fuentes deben coincidir, y cada alerta guardada debe seguir
+ * saliendo. Si lab-V nuevo encuentra alertas que la guardada no tiene, la persona lo ve al reanudar (no se oculta).
+ */
+function mismaVerificacion(guardada, actual) {
+  if (guardada.autor?.version === actual.autor?.version) return jsonCanonico(guardada) === jsonCanonico(actual);
+  const sinAlertas = (v) => jsonCanonico({ ...v, autor: null, alertas: null, resumen: { ...v.resumen, n_alertas: 0 }, resultado: null, afirmaciones: L(v.afirmaciones).map((a) => ({ ...a, alertas: null })), revision_humana: null });
+  if (sinAlertas(guardada) !== sinAlertas(actual)) return false;
+  const nuevas = new Set(L(actual.alertas).map((a) => jsonCanonico(a)));
+  if (!L(guardada.alertas).every((a) => nuevas.has(jsonCanonico(a)))) return false;
+  const orden = ["sin_salida", "rechazada", "con_fallas", "apta_para_revision_humana"];
+  return orden.indexOf(actual.resultado) <= orden.indexOf(guardada.resultado); // el nuevo nunca es más benévolo
+}
+
+const C_IMPORTACION = ["en", "rol", "encargo_id", "respuesta_sha256", "aceptada", "errores", "avisos", "declarado_por", "fallos", "correcciones"];
+
+/**
+ * Cruce de huellas entre los documentos guardados. Ningún documento se cree solo porque cumple su contrato: se
+ * comprueba que los demás lo fijen. Devuelve la lista de errores (vacía si todo cuadra).
+ */
+async function cruzarHuellas(x, docs, o) {
+  const err = [];
+  const t = x.trabajo, f = x.ficha;
+  // Ficha: hechos ↔ texto, origen ↔ trabajo, vigencia ↔ lectura.
+  const textoDeHechos = `${L(f.hechos).map((h) => h?.linea).join("\n")}\n`;
+  if (!L(f.hechos).length || textoDeHechos !== f.copia.texto) err.push("ficha.hechos no reproducen el texto de la ficha: se modificaron después de guardarse.");
+  const lectura = L(f.hechos).find((h) => h?.tipo === "lectura");
+  if (!lectura || lectura.generado_en !== t.origen.generado_en || !String(lectura.linea).includes(`generada el ${lectura.generado_en} con vigencia de ${lectura.vigencia_segundos} segundos`)) err.push("ficha.hechos: la lectura no coincide con el origen del trabajo.");
+  if (!esObj(f.origen) || jsonCanonico(f.origen) !== jsonCanonico(t.origen)) err.push("ficha.origen no es el origen que declara el trabajo.");
+  if (f.vigencia !== null) {
+    const v = f.vigencia, ref = Date.parse(v?.referencia), gen = Date.parse(lectura?.generado_en);
+    const bien = esObj(v) && v.vigencia_segundos === lectura?.vigencia_segundos && (v.vencida === null
+      ? v.edad_segundos === null
+      : Number.isFinite(ref) && Number.isFinite(gen) && v.edad_segundos === Math.round((ref - gen) / 1000) && v.vencida === (v.edad_segundos > v.vigencia_segundos)
+        && (v.referencia_es !== "leido_en" || v.referencia === t.origen.leido_en));
+    if (!bien) err.push("ficha.vigencia no se deduce de la lectura guardada: se modificó.");
+  }
+  // Documentos, en orden, con el registro tal como estaba cuando se produjo cada uno.
+  const registro = { encargos: new Map(), ejecuciones: new Map(), verificaciones: new Map() };
+  const porId = new Map();
+  for (const [i, d] of docs.entries()) {
+    const doc = d.documento, r = `documentos[${i}] (${d.tipo})`;
+    if (d.tipo === "encargo") {
+      if (!String(doc.pregunta).startsWith(`${t.pregunta}\n\nRol `)) err.push(`${r}: la pregunta del encargo no es la del trabajo.`);
+      const fp = L(doc.fuentes_permitidas)[0], ins = L(doc.insumos).find((z) => z.tipo === "copia_fuente");
+      if (!fp || fp.fuente_id !== f.fuente.fuente_id || fp.sha256 !== f.fuente.sha256 || !ins || ins.ref !== f.fuente.fuente_id || ins.sha256 !== f.fuente.sha256) err.push(`${r}: la fuente permitida no es la ficha guardada (o su huella cambió).`);
+      for (const z of L(doc.insumos)) if (z.tipo === "lab_ejecucion_verificada" && (!registro.ejecuciones.has(z.ref) || (await huellaDoc(registro.ejecuciones.get(z.ref))) !== z.sha256)) err.push(`${r}: el insumo ${z.ref} no es una ejecución guardada con esa huella.`);
+      registro.encargos.set(doc.id, doc);
+    } else if (d.tipo === "ejecucion") {
+      const enc = registro.encargos.get(doc.encargo_id);
+      if (!enc) err.push(`${r}: cita un encargo que no está guardado antes (${doc.encargo_id}).`);
+      else if ((await huellaDoc(enc)) !== doc.encargo_sha256) err.push(`${r}: la huella del encargo no coincide: el encargo o la ejecución cambiaron después de guardarse.`);
+      registro.ejecuciones.set(doc.id, doc);
+    } else if (d.tipo === "verificacion") {
+      const ej = registro.ejecuciones.get(doc.ejecucion_id), enc = registro.encargos.get(doc.encargo_id);
+      if (!ej || !enc) { err.push(`${r}: cita una ejecución o un encargo que no están guardados antes.`); continue; }
+      let otra = null;
+      try { otra = (await verificar({ encargo: enc, ejecucion: ej, copias: new Map([[f.fuente.fuente_id, f.copia]]), registro, ahora: doc.verificado_en })).verificacion; } catch (e) { err.push(`${r}: no se pudo recalcular con lab-V (${String(e?.message ?? e).slice(0, 120)}).`); continue; }
+      if (!mismaVerificacion(doc, otra)) err.push(`${r}: lab-V no reproduce esta verificación con la ejecución y el encargo guardados: alguno de los tres se modificó.`);
+      registro.verificaciones.set(doc.ejecucion_id, doc);
+      porId.set(doc.id, doc);
+    }
+  }
+  // Pasos del trabajo ↔ documentos.
+  for (const [i, p] of L(t.pasos).entries()) {
+    const r = `pasos[${i}]`;
+    if (!registro.encargos.has(p.encargo_id)) err.push(`${r}: cita un encargo que no está guardado.`);
+    for (const id of p.ejecuciones) if (registro.ejecuciones.get(id)?.encargo_id !== p.encargo_id) err.push(`${r}: la ejecución ${id} no es de su encargo.`);
+    if (p.verificacion_id !== null) {
+      const v = porId.get(p.verificacion_id);
+      if (!v || v.ejecucion_id !== p.ejecuciones.at(-1) || v.resultado !== p.resultado_verificacion) err.push(`${r}: la verificación que cita no existe, no es de su última ejecución o su resultado cambió.`);
+    } else if (p.resultado_verificacion !== null) err.push(`${r}: resultado sin verificación.`);
+  }
+  // Importaciones: estructura y, si fueron aceptadas, la ejecución importada con esa huella.
+  const huellasImportadas = new Set([...registro.ejecuciones.values()].map((ej) => ej?.intercambio?.respuesta_sha256).filter(Boolean));
+  for (const [i, im] of L(o.importaciones).entries()) {
+    const r = `importaciones[${i}]`;
+    if (!esObj(im) || Object.keys(im).some((k) => !C_IMPORTACION.includes(k)) || !ROLES.includes(im.rol) || typeof im.aceptada !== "boolean" || !Array.isArray(im.errores) || !Array.isArray(im.avisos) || typeof im.declarado_por !== "string") { err.push(`${r}: estructura desconocida.`); continue; }
+    if (!registro.encargos.has(im.encargo_id) || registro.encargos.get(im.encargo_id).rol !== im.rol) err.push(`${r}: cita un encargo que no está guardado o de otro rol.`);
+    if (im.aceptada && !(esHuella(im.respuesta_sha256) && huellasImportadas.has(im.respuesta_sha256))) err.push(`${r}: se dice aceptada pero ninguna ejecución guardada trae esa respuesta.`);
+  }
+  return err;
 }

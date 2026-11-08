@@ -281,6 +281,17 @@ export async function verificar({ encargo, ejecucion, copias = new Map(), regist
       if (!previa) return true; // insumos que no son ejecuciones (banco, CSI) se comprueban arriba
       return L(previa.afirmaciones).some((a) => a.id === m[2]) || L(previa.hipotesis).some((h) => h.id === m[2]) || L(previa.objeciones).some((o) => o.id === m[2]) || L(previa.recomendaciones).some((r) => r.id === m[2]);
     };
+    // (auditoría) Una afirmación del rol anterior que lab-V dejó sin respaldo no sirve de base: la salida de un rol no
+    // se convierte en evidencia por repetirse en el siguiente.
+    const baseSinRespaldo = (ref) => {
+      const m = /^([^#]+)#(.+)$/.exec(String(ref ?? ""));
+      if (!m) return false;
+      const vprev = registro?.verificaciones?.get?.(m[1]), va = L(vprev?.afirmaciones).find((a) => a.afirmacion_id === m[2]);
+      if (!va) return false;
+      const idx = L(registro?.ejecuciones?.get?.(m[1])?.afirmaciones).findIndex((a) => a.id === m[2]);
+      return va.estado_cita === "sin_respaldo_citado" || (va.clase === "hecho_citado" && va.estado_cita === "citas_con_fallas")
+        || L(vprev.alertas).some((a) => a.codigo === "inferencia_sin_base" && a.ruta === `afirmaciones[${idx}]`);
+    };
     if (v02) {
       const refs = [...L(ejecucion.objeciones).map((o, i) => [`objeciones[${i}].a`, o.a]), ...L(ejecucion.afirmaciones).flatMap((a, i) => L(a.se_basa_en).map((r, j) => [`afirmaciones[${i}].se_basa_en[${j}]`, r])),
         ...L(ejecucion.recomendaciones).flatMap((x, i) => L(x.se_basa_en).map((r, j) => [`recomendaciones[${i}].se_basa_en[${j}]`, r]))];
@@ -288,6 +299,7 @@ export async function verificar({ encargo, ejecucion, copias = new Map(), regist
         const m = /^([^#]+)#/.exec(String(ref ?? ""));
         if (m && !refsInsumosDe(encargo).has(m[1]) && !registro?.ejecuciones?.has?.(m[1])) err("referencia_a_insumo_desconocido", `${ruta}: «${m[1]}» no es un insumo del encargo ni una ejecución registrada.`);
         else if (!entidadExiste(ref)) alerta("referencia_inexistente", ruta, `«${ref}» no existe en esa ejecución: se refiere a algo que el rol anterior no dijo.`);
+        else if (baseSinRespaldo(ref)) alerta("base_sin_respaldo", ruta, `«${ref}» se apoya en una afirmación del rol anterior que lab-V dejó SIN respaldo (cita no encontrada o inexistente): la salida de un rol no se vuelve evidencia por repetirse.`);
       }
     }
     // Una objeción a «<insumo>#<id>» debe apuntar a un insumo que el encargo declare (o a una ejecución registrada).

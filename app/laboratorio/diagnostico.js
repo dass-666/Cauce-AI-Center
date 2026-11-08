@@ -19,7 +19,7 @@ export const CONTRATO_DIAGNOSTICO = "cauce.lab.diagnostico";
 export const VERSION_DIAGNOSTICO = "0.1";
 
 /** Alertas de lab-V que hablan de evidencia (la cita o el respaldo) y no de forma. */
-const ALERTAS_EVIDENCIA = new Set(["fuente_inexistente", "extracto_no_encontrado", "copia_alterada", "copia_ausente", "fuente_pendiente", "sin_huella", "extracto_demasiado_corto", "extracto_ambiguo", "posible_fuera_de_contexto", "posterior_al_corte", "fecha_desconocida", "fecha_indeterminada", "texto_no_verificable", "hecho_sin_cita", "hecho_sin_cita_utilizable", "menciona_fecha_posterior_al_corte", "inferencia_sin_base", "referencia_inexistente", "respuesta_ia_como_fuente", "lectura_vencida", "rol_afirma_hechos_nuevos"]);
+const ALERTAS_EVIDENCIA = new Set(["fuente_inexistente", "extracto_no_encontrado", "copia_alterada", "copia_ausente", "fuente_pendiente", "sin_huella", "extracto_demasiado_corto", "extracto_ambiguo", "posible_fuera_de_contexto", "posterior_al_corte", "fecha_desconocida", "fecha_indeterminada", "texto_no_verificable", "hecho_sin_cita", "hecho_sin_cita_utilizable", "menciona_fecha_posterior_al_corte", "inferencia_sin_base", "referencia_inexistente", "respuesta_ia_como_fuente", "lectura_vencida", "rol_afirma_hechos_nuevos", "base_sin_respaldo"]);
 const ALERTAS_SEGURIDAD = new Set(["posible_inyeccion_de_instrucciones", "contiene_instrucciones_no_ejecutadas", "recomendacion_financiera", "autoaprobacion"]);
 /** Alertas que una persona DEBE mirar (no las decide el código). */
 const ALERTAS_HUMANAS = new Set(["posible_contradiccion_declarada", "posible_fuera_de_contexto", "posible_inyeccion_de_instrucciones"]);

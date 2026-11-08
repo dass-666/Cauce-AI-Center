@@ -11,7 +11,7 @@
 //     «pendiente_revision_humana» en la fase 1.
 
 import {
-  VERSION_LAB, AUTOR_VERIFICADOR, CONTRATO_ENCARGO, CONTRATO_EJECUCION, CONTRATO_VERIFICACION, ROLES, ESTADOS_EJECUCION,
+  VERSION_LAB, AUTOR_VERIFICADOR, VERSIONES_VERIFICADOR, CONTRATO_ENCARGO, CONTRATO_EJECUCION, CONTRATO_VERIFICACION, ROLES, ESTADOS_EJECUCION,
   ESTADOS_CON_SALIDA, ESTADOS_CON_ERROR, CLASES_AFIRMACION, TIPOS_INSUMO, ADAPTADORES, TIPOS_OBJECION, ID_FUENTE,
   esIdLab, esIdDeLaboratorio, esObj, L, esEnteroEntre, clavesExactas, esFechaConZona, esFechaODia, texto, esHuella, buscarDatosPrivados,
   LIMITES, tamanoDocumento, tieneInvisibles, VERSIONES_EJECUCION, AUTORIAS_EJECUCION, PROCEDENCIAS, TIPOS_OBJECION_02,
@@ -379,8 +379,8 @@ export function validarVerificacion(doc) {
     if (!esIdLab(doc.encargo_id, "encargo", doc.es_demo === true)) e("encargo_id inválido (o de otro mundo DEMO/REAL).");
   }
   if (!nuloO(doc.ejecucion_sha256, esHuella) || !nuloO(doc.encargo_sha256, esHuella)) e("ejecucion_sha256 / encargo_sha256 deben ser huellas o null.");
-  if (!esObj(doc.autor) || doc.autor.tipo !== AUTOR_VERIFICADOR.tipo || doc.autor.identificador !== AUTOR_VERIFICADOR.identificador || doc.autor.version !== AUTOR_VERIFICADOR.version || Object.keys(doc.autor).length !== 3)
-    e(`autor debe ser exactamente ${JSON.stringify(AUTOR_VERIFICADOR)}: solo el código verificador firma verificaciones (una IA no se verifica a sí misma).`);
+  if (!esObj(doc.autor) || doc.autor.tipo !== AUTOR_VERIFICADOR.tipo || doc.autor.identificador !== AUTOR_VERIFICADOR.identificador || !VERSIONES_VERIFICADOR.includes(doc.autor.version) || Object.keys(doc.autor).length !== 3)
+    e(`autor debe ser {tipo:"codigo", identificador:"lab-V", version: ${VERSIONES_VERIFICADOR.join(" | ")}}: solo el código verificador firma verificaciones (una IA no se verifica a sí misma).`);
   if (!esFechaConZona(doc.verificado_en)) e("verificado_en debe ser instante con zona.");
   if (!RESULTADOS_VERIFICACION.includes(doc.resultado)) e(`resultado debe ser ${RESULTADOS_VERIFICACION.join(" | ")} (no existe «verdadera» ni «aprobada»).`);
   if (typeof doc.incompleta !== "boolean") e("incompleta debe ser true o false.");

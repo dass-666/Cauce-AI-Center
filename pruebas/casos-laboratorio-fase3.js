@@ -279,9 +279,8 @@ export function registrarCasosLaboratorioFase3(leer) {
     verdadero(/Falta la ejecución/.test((await restaurarExpediente(c)).errores.join(" ")), "falta una ejecución citada");
     const d = clon(o); d.documentos.find((q) => q.tipo === "ejecucion").documento.afirmaciones[0].texto = "cambiado";
     const rd = await restaurarExpediente(d);
-    verdadero(rd.ok, "una ejecución cambiada valida por forma…");
-    const sigue = await pegar(rd.expediente, relojDesde("2026-11-08T06:00:00Z"), (await respuesta(rd.expediente)).texto);
-    verdadero(/huella|insumo_modificado/.test(JSON.stringify(rd.expediente.trabajo.historial.at(-1)) + JSON.stringify(sigue.verificacion?.errores ?? [])), "…pero lab-V detecta que el insumo cambió al reanudar");
+    // Auditoría: antes se cargaba y solo lab-V lo detectaba al reanudar; ahora la reanudación cruza huellas y no carga.
+    verdadero(!rd.ok && /lab-V no reproduce|huella del encargo/.test(rd.errores.join(" ")), "una ejecución cambiada no se carga: " + rd.errores.join(" "));
   });
 
   prueba("Lab 3 · adversarial: reutilizar una respuesta de otro trabajo o repetir una importación se rechaza", async () => {

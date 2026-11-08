@@ -34,6 +34,7 @@
     import { registrarCasosLaboratorioFase2 } from "./pruebas/casos-laboratorio-fase2.js";
     import { registrarCasosLaboratorioFase3 } from "./pruebas/casos-laboratorio-fase3.js";
     import { registrarCasosLaboratorioFase31 } from "./pruebas/casos-laboratorio-fase3-1.js";
+    import { registrarCasosAuditoria } from "./pruebas/casos-auditoria.js";
     import { ejecutar } from "./pruebas/mini.js";
     const leer = async (ruta) => {
       const r = await fetch(ruta, { cache: "no-store" });
@@ -58,6 +59,7 @@ registrarCasosFaseL(leer);
     registrarCasosLaboratorioFase2(leer);
     registrarCasosLaboratorioFase3(leer);
     registrarCasosLaboratorioFase31(leer);
+    registrarCasosAuditoria(leer);
     const r = await ejecutar();
     const resumen = document.getElementById("resumen");
     resumen.textContent = `${r.pasaron} pasaron, ${r.fallaron} fallaron`;

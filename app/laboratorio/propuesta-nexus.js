@@ -31,7 +31,9 @@ export function prepararPropuestaNexus(trabajo, informe, { hallazgo_id, fecha, a
   const citas = L(h.citas).filter((c) => c.utilizable);
   const objs = L(informe.objeciones).filter((o) => h.objeciones.includes(o.id));
   const borrador = {
-    id: `lab.${trabajo.id}.${h.id}`.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(0, 80),
+    // (auditoría) Un trabajo DEMO produce un borrador con id «demo-…»: así entra solo al almacén de prueba de Nexus y
+    // nunca al real, aunque alguien le añada huellas a mano (registro.js exige el prefijo según el almacén).
+    id: `${trabajo.es_demo ? "demo-" : ""}lab.${trabajo.id.replace(/^demo-/, "")}.${h.id}`.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(0, 80),
     esquema: "cauce.leccion", version_esquema: "0.3", tipo: "hallazgo",
     origen: { proyecto: "laboratorio-ia", componente: "lab-coordinador", version_sistema: informe.autor.version, tipo: "texto_ia" },
     autor: { tipo: informe.modo.es_ia ? "ia" : "codigo", identificador: informe.modo.es_ia ? `laboratorio-ia:${informe.modo.adaptador}` : "guion-demo-sin-modelo" },
