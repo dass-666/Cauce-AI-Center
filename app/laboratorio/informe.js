@@ -20,7 +20,9 @@ export const INCERTIDUMBRE = ["baja", "media", "alta", "desconocida"];
 export const ALERTAS_DE_EVIDENCIA = ["fuente_inexistente", "extracto_no_encontrado", "extracto_ambiguo", "extracto_demasiado_corto", "posterior_al_corte", "fecha_desconocida",
   "fecha_indeterminada", "copia_alterada", "copia_ausente", "sin_huella", "fuente_pendiente", "texto_no_verificable", "posible_fuera_de_contexto", "respuesta_ia_como_fuente", "hecho_sin_cita", "hecho_sin_cita_utilizable", "salida_parcial", "ejecucion_sin_salida",
   // fase 3
-  "inferencia_sin_base", "referencia_inexistente", "posible_inyeccion_de_instrucciones", "lectura_vencida"];
+  "inferencia_sin_base", "referencia_inexistente", "posible_inyeccion_de_instrucciones", "lectura_vencida",
+  // auditoría
+  "base_sin_respaldo"];
 /** Verbos de operación con dinero o apuestas: una recomendación así no sale del Laboratorio. */
 const OPERACION = /\b(compr(a|ar|e|en)|vend(a|er|e|en)|apost(ar|e|a)|apuesta|invert(ir|ir en)|transfer(ir|encia)|retir(ar|o) (de )?fondos|orden de (compra|venta)|ejecutar (la )?operaci[oó]n)\b/i;
 const ROL_TXT = { investigador: "Investigador", analista: "Analista", critico: "Abogado del Diablo" };

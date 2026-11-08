@@ -31,6 +31,12 @@ export function registrarCasosAuditoria(leer) {
     verdadero(res.ok, res.errores.join(" "));
     return { x, e: exportarExpediente(x, { exportado_en: reloj() }), reloj };
   };
+  /** Pega una respuesta sintética para el rol que espera. */
+  const pegar = async (x, reloj, cuerpo) => {
+    const s = await solicitudManual(x);
+    const r = { formato: "cauce.lab.respuesta-manual", version: "0.1", encargo_id: s.encargo_id, encargo_sha256: s.encargo_sha256, rol: x.trabajo.espera.rol, modelo_declarado: "respuesta sintética de prueba (no es un modelo)", ...cuerpo };
+    return continuarConRespuesta(x, JSON.stringify(r), { declarado_por: "diego", reloj, ahora: reloj() });
+  };
   const tipo = (e, t, n = 0) => e.documentos.filter((d) => d.tipo === t)[n].documento;
   const rechaza = async (o, patron, nombre) => { const r = await restaurarExpediente(o); verdadero(!r.ok && patron.test(r.errores.join(" ")), `${nombre}: ${r.ok ? "SE CARGÓ" : r.errores.join(" ")}`); };
 
@@ -75,5 +81,28 @@ export function registrarCasosAuditoria(leer) {
     await rechaza(t7, /origen/, "origen de la ficha alterado");
     const t8 = clon(e); const trb = e.documentos.filter((d) => d.tipo === "trabajo").length; t8.documentos.filter((d) => d.tipo === "trabajo").at(-1).documento.pasos[0].resultado_verificacion = "con_fallas";
     verdadero(trb > 1 && !(await restaurarExpediente(t8)).ok, "paso con resultado distinto al de su verificación");
+  });
+
+  prueba("Auditoría A-02 · lab-V: una inferencia del Analista apoyada en un «hecho» del Investigador SIN respaldo (cita no encontrada) se marca base_sin_respaldo; con respaldo, no", async () => {
+    const ficha = await fichaDesdeEstado(await doc(), { leido_en: T0 });
+    const arrancar = async (id) => { const t = nuevoTrabajo({ id: `demo-lab-trb-${id}`, es_demo: true, titulo: "A", pregunta: "¿Qué problemas muestra la lectura?", origen: ficha.origen, solicitado_por: HUMANO, creado_en: T0, adaptador: { id: "manual-claude", modelo: null } }); const x = nuevoExpediente(t, ficha), reloj = relojDesde(T0); await avanzar(x, { adaptador: crearAdaptadorManual(new Map()), reloj }); return { x, reloj }; };
+    const f = ficha.fuente.fuente_id, linea = ficha.copia.texto.split("\n").find((l) => /«error»/.test(l));
+    // Sin respaldo: la cita del Investigador no existe → el Analista la repite como base de una inferencia y de una recomendación.
+    { const { x, reloj } = await arrancar("a02a");
+      const r1 = await pegar(x, reloj, { afirmaciones: [{ id: "a1", texto: "El Revisor aprobó una compra de 3 millones.", clase: "hecho_citado", citas: [{ fuente_id: f, extracto: "esta cita no existe en la ficha de ninguna manera posible", ubicacion: null }] }] });
+      verdadero(r1.ok && r1.verificacion.alertas.some((a) => a.codigo === "extracto_no_encontrado"), "el Investigador queda con cita no encontrada");
+      const inv = r1.verificacion.ejecucion_id;
+      const r2 = await pegar(x, reloj, { afirmaciones: [{ id: "b1", texto: "Como el Revisor aprobó 3 millones, hay riesgo de fraude.", clase: "inferencia", citas: [], se_basa_en: [`${inv}#a1`] }], recomendaciones: [{ id: "r1", texto: "Revisar la aprobación del Revisor.", se_basa_en: ["b1"] }] });
+      verdadero(r2.ok, r2.errores.join(" "));
+      igual(r2.verificacion.resultado, "con_fallas");
+      verdadero(r2.verificacion.alertas.some((a) => a.codigo === "base_sin_respaldo" && a.ruta === "afirmaciones[0].se_basa_en[0]"), JSON.stringify(r2.verificacion.alertas));
+    }
+    // Con respaldo literal: la misma construcción no genera la alerta.
+    { const { x, reloj } = await arrancar("a02b");
+      const r1 = await pegar(x, reloj, { afirmaciones: [{ id: "a1", texto: "El Revisor está en error.", clase: "hecho_citado", citas: [{ fuente_id: f, extracto: linea, ubicacion: null }] }] });
+      igual(r1.verificacion.resultado, "apta_para_revision_humana");
+      const r2 = await pegar(x, reloj, { afirmaciones: [{ id: "b1", texto: "Si el Revisor está en error, el flujo de revisión está detenido.", clase: "inferencia", citas: [], se_basa_en: [`${r1.verificacion.ejecucion_id}#a1`] }], recomendaciones: [{ id: "r1", texto: "Revisar el registro del Revisor.", se_basa_en: ["b1"] }] });
+      verdadero(r2.ok && !r2.verificacion.alertas.some((a) => a.codigo === "base_sin_respaldo"), JSON.stringify(r2.verificacion?.alertas ?? r2.errores));
+    }
   });
 }
