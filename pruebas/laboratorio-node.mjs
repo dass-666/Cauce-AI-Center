@@ -143,6 +143,27 @@ prueba("Lab Node · aislamiento de la herramienta: sin red, sin procesos hijos, 
     verdadero(!re.test(t), `herramientas/laboratorio.mjs contiene ${re}`);
 });
 
+prueba("Lab 2 Node · flujo-demo, trabajos y revisar: registro DEMO encadenado, decisión humana con motivo y sin repetir", async () => {
+  const d = await temporal(), reg = join(d, "demo-reg.jsonl"), sal = join(d, "salida");
+  const a = await correr("flujo-demo", "--registro", reg, "--salida", sal);
+  igual(a.codigo, 0, a.salida); verdadero(/NO es IA|No es IA/.test(a.salida), a.salida);
+  igual((await readdir(sal)).filter((f) => f.endsWith(".md")).length, 4);
+  const lineas = (await readFile(reg, "utf8")).trimEnd().split("\n").length;
+  verdadero(/no se repite/.test((await correr("flujo-demo", "--registro", reg)).salida));
+  igual((await readFile(reg, "utf8")).trimEnd().split("\n").length, lineas, "la segunda corrida no duplica");
+  verdadero((await correr("flujo-demo", "--registro", join(d, "real.jsonl"))).codigo !== 0, "flujo-demo nunca escribe en un registro REAL");
+  const corto = await correr("revisar", "--registro", reg, "--trabajo", "demo-lab-trb-compago-001", "--decision", "aprobar", "--por", "diego", "--motivo", "ok", "--demo", "--ahora", "2030-01-01T00:00:00Z");
+  igual(corto.codigo, 1, corto.salida);
+  const sinEv = await correr("revisar", "--registro", reg, "--trabajo", "demo-lab-trb-prueba-lab-v", "--decision", "aprobar", "--por", "diego", "--motivo", "Quiero aprobar igual.", "--demo", "--ahora", "2030-01-01T00:00:00Z");
+  igual(sinEv.codigo, 1, sinEv.salida);
+  const bien = await correr("revisar", "--registro", reg, "--trabajo", "demo-lab-trb-compago-001", "--decision", "aprobar", "--por", "diego", "--motivo", "Revisé citas y objeciones.", "--demo", "--ahora", "2030-01-01T00:00:00Z");
+  igual(bien.codigo, 0, bien.salida); verdadero(/NO crea lecciones/.test(bien.salida));
+  const lista = await correr("trabajos", reg, "--demo");
+  verdadero(/Aprobado por una persona · aprobado por diego/.test(lista.salida) && /registro íntegro/.test(lista.salida), lista.salida);
+  igual((await correr("verificar-registro", reg, "--demo")).codigo, 0);
+  await rm(d, { recursive: true });
+});
+
 const r = await ejecutar();
 for (const p of r.resultados) console.log(`${p.ok ? "OK   " : "FALLA"} ${p.nombre}${p.ok ? "" : "\n      " + p.error}`);
 console.log(`\n${r.pasaron} pasaron, ${r.fallaron} fallaron`);

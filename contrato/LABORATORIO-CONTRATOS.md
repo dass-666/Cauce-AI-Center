@@ -123,3 +123,51 @@ Las seis cosas que lab-V deja **separadas** (y dónde quedan en el documento):
   - documento o entrada modificados
   - mezcla DEMO/REAL
 - La escritura en disco la hace solo `herramientas/laboratorio.mjs`, con reemplazo atómico. Un registro dañado no se anexa ni se repara solo.
+
+---
+
+# Fase 2 · contratos nuevos (aditivos; los tres de arriba no cambian)
+
+Código: `app/laboratorio/trabajo.js`, `app/laboratorio/informe.js`, `app/laboratorio/propuesta-nexus.js`. Pruebas: `pruebas/casos-laboratorio-fase2.js`.
+
+| Contrato | Quién lo firma | Para qué |
+|---|---|---|
+| `cauce.lab.trabajo` 0.1 | Lo pide una persona; lo mueve el Coordinador (código `lab-coordinador`); lo cierra **solo** una persona | Una solicitud de análisis sobre lo que entregó un motor, con su máquina de estados e historial solo-anexado. |
+| `cauce.lab.informe` 0.1 | Solo el Coordinador (código) | Consolida hallazgos (con evidencia e incertidumbre), hipótesis, objeciones, faltantes, limitaciones y recomendaciones. **Nunca** se declara aprobado. |
+| `cauce.lab.propuesta-nexus` 0.1 | El Laboratorio, solo para trabajos aprobados por una persona | Borrador de `cauce.leccion` 0.3 en estado «propuesta» con el dictamen previo de Nexus. **No se escribe** en el almacén de Nexus. |
+
+## `cauce.lab.trabajo`
+
+- Id: `lab-trb-…` (`demo-lab-trb-…` en DEMO).
+- `origen`: `{motor, nombre, contrato, version, modo: "solo_lectura", es_demo, generado_en, leido_en, sha256_documento, ficha, fuente_id}`. `modo` distinto de `solo_lectura` o un `es_demo` distinto al del trabajo = inválido.
+- `adaptador.id`: `sin-modelo` (guion determinista; **solo DEMO**) · `manual-claude` · `ollama`.
+- `estado`: `pendiente`, `en_analisis`, `requiere_evidencia`, `requiere_revision`, `aprobado_por_humano`, `rechazado`, `error`.
+- `historial[]`: `{n, de, a, en, por: {tipo: humano|codigo, identificador}, motivo}`. El validador lo **reproduce** desde la solicitud: cada paso debe estar permitido y el estado final debe coincidir. Ninguna IA aparece nunca en `por`.
+- `intentos {usados, maximo}`: cuántas veces se reintentó tras «error» (debe cuadrar con el historial).
+- `decision_humana`: solo en los estados finales; `{decision, por: {tipo: "humano", identificador, autenticacion: "declarada"}, en, motivo}`.
+
+Transiciones (quién puede):
+
+| De → a | Quién |
+|---|---|
+| pendiente → en_analisis | Coordinador |
+| en_analisis → requiere_evidencia · requiere_revision · error · pendiente (interrupción) | Coordinador |
+| requiere_evidencia → pendiente (evidencia nueva: ronda nueva) · requiere_revision · rechazado | Persona |
+| requiere_revision → aprobado_por_humano · rechazado · requiere_evidencia | Persona |
+| error → pendiente (reintento, con tope) | Coordinador o persona |
+| error · pendiente → rechazado | Persona |
+| aprobado_por_humano, rechazado | Finales |
+
+Aprobar exige informe y un motivo de al menos 10 caracteres.
+
+## `cauce.lab.informe`
+
+- `autor` = `{tipo: "codigo", identificador: "lab-coordinador"}`; `modo.es_ia` dice si hubo modelo (el guion DEMO declara `false`).
+- `hallazgos[]`: cada afirmación de los roles con `clase`, `incertidumbre` (baja solo con cita comprobada por lab-V), `respaldo`, `respaldo_semantico: "pendiente_revision_humana"`, sus citas y las objeciones que recibió.
+- `estado_propuesto`: `requiere_evidencia` si lab-V no pudo comprobar alguna cita; si no, `requiere_revision`. Nunca «aprobado».
+- `recomendaciones[]`: siempre `requiere_decision_humana: true` y `accion_automatica: false`. Las que parecen operaciones con dinero o apuestas van a `recomendaciones_excluidas` con su motivo.
+- `revision_humana`: siempre `{estado: "pendiente"}` (la decisión vive en el trabajo).
+
+## Registro
+
+`cauce.lab.registro` acepta además `trabajo` (una entrada por versión: la clave única es id + largo del historial; una versión que no conserve intacto el historial anterior se marca `historial_reescrito`) e `informe`.
