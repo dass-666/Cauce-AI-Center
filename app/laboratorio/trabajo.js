@@ -20,7 +20,7 @@ export const ETIQUETA_ESTADO = Object.freeze({
   aprobado_por_humano: "Aprobado por una persona", rechazado: "Rechazado", error: "Error",
 });
 /** Adaptadores de modelo que un trabajo puede pedir (ver adaptadores.js). «sin-modelo» = guion determinista, solo DEMO. */
-export const ADAPTADORES_TRABAJO = ["sin-modelo", "manual-claude", "ollama"];
+export const ADAPTADORES_TRABAJO = ["sin-modelo", "manual-claude", "ollama", "automatico"];
 export const COORDINADOR = Object.freeze({ tipo: "codigo", identificador: "lab-coordinador" });
 export const MAX_INTENTOS = 3;
 
@@ -175,6 +175,7 @@ export function validarTrabajo(doc) {
   const fin = ESTADOS_FINALES.includes(doc.estado);
   if (fin) {
     const d = doc.decision_humana, ult = L(doc.historial).at(-1);
+    if (esObj(d?.por) && d.por.autenticacion !== "declarada") e(`decision_humana.por.autenticacion «${d.por.autenticacion}»: no hay proveedor de identidad en este proyecto, así que una autenticación no puede declararse en los datos (solo «declarada»).`);
     if (!esObj(d) || d.por?.tipo !== "humano" || d.por?.autenticacion !== "declarada" || !texto(d.motivo) || d.decision !== (doc.estado === "aprobado_por_humano" ? "aprobado" : "rechazado") || d.en !== ult?.en || d.por?.identificador !== ult?.por?.identificador)
       e("decision_humana debe coincidir con la última transición: {decision, por: {tipo: humano, identificador, autenticacion: declarada}, en, motivo}.");
   } else if (doc.decision_humana !== null) e("decision_humana solo existe en aprobado_por_humano o rechazado.");

@@ -78,11 +78,21 @@ export async function fichaDesdeEstado(documento, { leido_en } = {}) {
     fuente: { fuente_id, estado: "consultada", origen: "primaria", sha256: huella, texto_sha256: huella, publicada_en: d.generado_en, conocida_en: leido_en ?? null },
     copia: { bytes, texto },
     hechos,
+    // Fase 3: ¿la ficha es una foto vieja? Para DEMO se mide contra el «ahora» simulado del documento (los DEMO
+    // están escritos a mano con una fecha fija); para REAL, contra el instante en que se leyó.
+    vigencia: vigenciaDe(d, leido_en),
     origen: {
       motor, nombre: MOTORES[motor].nombre, contrato: d.contrato, version: d.version, modo: "solo_lectura", es_demo: d.es_demo === true,
       generado_en: d.generado_en, leido_en: leido_en ?? null, sha256_documento: await sha256(jsonCanonico(d)), ficha: VERSION_FICHA, fuente_id,
     },
   };
+}
+
+function vigenciaDe(d, leido_en) {
+  const referencia = d.es_demo && typeof d.demo?.ahora_simulado === "string" ? d.demo.ahora_simulado : leido_en ?? null;
+  const edad = referencia ? (Date.parse(referencia) - Date.parse(d.generado_en)) / 1000 : NaN;
+  if (!Number.isFinite(edad)) return { vencida: null, referencia, edad_segundos: null, vigencia_segundos: d.vigencia_segundos };
+  return { vencida: edad > d.vigencia_segundos, referencia, referencia_es: referencia === leido_en ? "leido_en" : "ahora_simulado", edad_segundos: Math.round(edad), vigencia_segundos: d.vigencia_segundos };
 }
 
 /** Lectura vencida: la ficha se generó hace más de su vigencia respecto a `ahora` (instante con zona). */

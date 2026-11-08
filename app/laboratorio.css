@@ -68,3 +68,20 @@ html.lab-abierto .principal { grid-template-columns: 1fr !important; }
   .laboratorio .boton, .laboratorio .boton-chico { min-height: 44px; }
 }
 .lab-hallazgo > small { display: block; }
+
+/* Fase 3 · consulta con IA por intercambio manual. Sin animaciones nuevas (Intel UHD). */
+.lab-chip.c-espera { color: #7cc7ff; }
+.lab-chip.lab-nat { background: transparent; border: 1px solid #3a4666; font-weight: 600; }
+.lab-chip.nat-guion { color: #f2c14e; } .lab-chip.nat-manual { color: #7cc7ff; } .lab-chip.nat-auto { color: #c79bff; }
+.lab-banda-ia { border-left: 4px solid #7cc7ff; background: #12253a; }
+.lab-esperando_respuesta .lab-mesa { stroke: #7cc7ff; stroke-width: 2; stroke-dasharray: 4 3; }
+.lab-manual { border: 1px solid #2f4f73; border-radius: 10px; padding: 12px 14px; margin: 12px 0; background: #101d2e; }
+.lab-pasos li { margin: 4px 0; }
+.lab-ancho { grid-column: 1 / -1; }
+.lab-archivo { position: relative; display: inline-flex; align-items: center; gap: 6px; }
+.lab-archivo input[type="file"] { max-width: 220px; font-size: 12px; }
+.lab-ok { color: #5fd38d; font-weight: 700; }
+.lab-avisos { color: var(--c-revision); }
+.lab-aviso-identidad { color: var(--c-revision); font-size: 13px; }
+.lab-nueva { margin: 8px 0 10px; }
+@media (max-width: 640px) { .lab-archivo input[type="file"] { max-width: 100%; } }
