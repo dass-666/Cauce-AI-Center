@@ -237,3 +237,43 @@ extiende a sus versiones anteriores, el informe es el que cita el trabajo. Si al
 
 `decision_humana.por.autenticacion` solo admite `declarada`: no hay proveedor de identidad. Un `autenticada` escrito
 en los datos se rechaza. Interfaz preparada: `app/laboratorio/identidad.js` (`proveedorIdentidad()`, hoy «ninguno»).
+
+# Fase 3.1 · resistencia del intercambio manual, diagnóstico y comparación (compatible con la fase 3)
+
+## `cauce.lab.ejecucion` 0.2 · campo opcional `intercambio.correcciones`
+
+Lista (hasta 20) de códigos `[a-z_]` de las **correcciones de forma** que el sistema aplicó al importar la respuesta.
+Ninguna cambia el significado; todas se declaran en los avisos y quedan aquí para auditar. Una ejecución sin el campo
+sigue validando igual (las de la fase 3 no cambian). Códigos (`ETIQUETA_CORRECCION`, `app/laboratorio/manual.js`):
+`bloque_elegido_entre_varios`, `comas_finales_quitadas`, `comillas_tipograficas_convertidas` (solo si TODAS las comillas
+eran tipográficas), `rol_normalizado`, `lista_nula_vaciada`, `plantilla_sin_rellenar_quitada`, `prefijo_linea_quitado`
+(el `[Ln]` que la propia solicitud pone delante de cada línea), `comillas_envolventes_quitadas`, `ubicacion_convertida_a_texto`.
+
+Lo que NO se corrige nunca: una cita parafraseada, un hecho sin cita, una inferencia sin base, una fuente que no está en
+el catálogo, un marcador «…» dentro de una afirmación, un JSON con comillas mezcladas. Eso se rechaza o lo marca lab-V.
+
+## Fallos de importación con código y categoría (`importarRespuesta().detalles`)
+
+`{codigo, categoria, recuperable, texto, fragmento?}`. Categorías (`CATEGORIAS_FALLO`): `formato` (no se pudo leer el
+JSON), `contrato` (se leyó pero no es la respuesta esperada), `seguridad` (tamaño, repetición, reutilización,
+invisibles, claves de estado o aprobación), `evidencia` (solo lab-V). `recuperable` = basta volver a pedir el texto; no
+significa que el sistema lo arregle. El `fragmento` (±40 caracteres alrededor del error) se muestra en pantalla y **no se
+guarda**: en `importaciones[].fallos` solo van `{codigo, categoria, recuperable}`.
+
+## `cauce.lab.diagnostico` 0.1 (`app/laboratorio/diagnostico.js`)
+
+Resumen de un expediente **sin contenido**: por rol, intentos aceptados y rechazados, fallos por código y categoría,
+correcciones de forma, resultado y alertas de lab-V (por código y cantidad), citas utilizables y afirmaciones cuyo apoyo
+semántico queda pendiente de una persona. Globales: `rol_que_fallo`, `validaciones_fallidas`, `categoria_principal`,
+`recuperable_sin_cambiar_significado` (null sin fallos; true solo si todo fue forma; false si hay evidencia o seguridad),
+`requiere_revision_humana[]`, `pruebas_sugeridas[]`. No trae pregunta, ficha, extractos ni solicitud; `validarDiagnostico`
+rechaza un documento que los traiga. Se descarga desde «Auditoría» (Markdown o JSON) y se puede compartir.
+
+## `cauce.lab.comparacion` 0.1 (`app/laboratorio/comparacion.js`, `herramientas/comparar-modelos.mjs`)
+
+Mide expedientes y agrupa por **modelo declarado**: `validez_estructural` (aceptados/intentos), `citas_literales`
+(literales o normalizadas / total), `cobertura_evidencia` (hechos citados con cita utilizable / hechos citados),
+`contradicciones_detectadas`, `afirmaciones_sin_respaldo`, `errores_seguridad`, `tiempo_segundos` (manual: del encargo a
+la importación, incluye a la persona; automático: inicio→fin), `costo_mxn` (lo que registre la ejecución). Solo entran
+ejecuciones con autoría `ia_manual` o `ia_automatica`: el guion DEMO no es un modelo. Sin expedientes de IA → `sin_datos:
+true`. `puntuacion_humana` siempre null hasta que una persona la anexe. No mide verdad ni apoyo semántico.
