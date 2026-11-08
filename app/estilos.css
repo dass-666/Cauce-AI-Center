@@ -181,7 +181,27 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
   position: relative; background: #121a2c; border: 1px solid var(--borde); border-radius: 12px; padding: 16px;
   align-self: start; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto;
 }
-.panel-cerrar { position: absolute; top: 8px; right: 8px; background: none; border: 0; color: var(--texto); font-size: 22px; cursor: pointer; }
+.panel-botones { position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; align-items: center; }
+.panel-cerrar { background: none; border: 0; color: var(--texto); font-size: 22px; cursor: pointer; padding: 2px 6px; }
+.panel-plegar { background: none; border: 0; color: var(--texto-suave); font: inherit; font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.panel-plegar:hover { color: var(--texto); background: rgba(255,255,255,.06); }
+.panel-plegar-cerrado { display: none; }
+@media (max-width: 760px) { .panel-plegar { display: none; } }
+/* Panel plegado (escritorio): una franja de 44 px con «◂ Detalle»; la selección y la cámara no cambian. */
+@media (min-width: 761px) {
+  body.panel-plegado .principal:has(.panel:not([hidden])) { grid-template-columns: minmax(0, 1fr) 44px; }
+  body.panel-plegado .panel { padding: 8px 2px; overflow: hidden; }
+  body.panel-plegado .panel > :not(.panel-botones) { display: none; }
+  body.panel-plegado .panel-botones { position: static; flex-direction: column-reverse; gap: 10px; }
+  body.panel-plegado .panel-plegar-abierto { display: none; }
+  body.panel-plegado .panel-plegar-cerrado { display: inline; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 13px; color: var(--texto); }
+  /* Escritorio: cabecera y franjas más compactas; la vista 3D ocupa el alto que queda en la ventana. */
+  .cabecera { padding: 8px 16px; gap: 8px 16px; }
+  .piso, .boton { padding: 6px 11px; }
+  .banda-demo { padding: 5px 16px; }
+  .conexion { padding: 6px 16px; }
+  .principal { padding: 12px 16px; gap: 12px; }
+}
 .detalle h2 { font-size: 20px; margin-bottom: 6px; }
 .detalle h3 { font-size: 14px; margin: 16px 0 6px; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .05em; }
 .detalle-tipo { margin: 0; font-size: 12px; color: var(--texto-suave); text-transform: uppercase; letter-spacing: .06em; }
@@ -218,7 +238,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 .boton[aria-pressed="true"] { border-color: var(--brillo); color: var(--brillo); }
 .boton-chico { padding: 4px 10px; font-size: 13px; }
 .aviso-vista { margin: 0; padding: 8px 16px; background: #3a1f1f; color: #ffd0d0; font-size: 13px; }
-.oficina.modo-3d { position: relative; height: clamp(360px, calc(100vh - 210px), 980px); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
+.oficina.modo-3d { position: relative; height: clamp(360px, calc(100vh - var(--arriba-oficina, 210px) - 14px), 980px); border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; }
 .vista3d { position: absolute; inset: 0; }
 .vista3d canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
 .vista3d canvas:active { cursor: grabbing; }
@@ -791,3 +811,5 @@ html.csi-abierto .principal { grid-template-columns: 1fr !important; }
 .enlace-estacion { padding: 0; border: 0; background: none; color: #9fc4e8; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .lista-puestos-estacion .puesto-elegido { outline: 1px solid #ffd89a; border-radius: 6px; }
 .enlace-confirmado { color: #5fd0e0; }
+/* Los botones del panel (plegar, cerrar) no tapan la línea de arriba del detalle (proyecto, tipo e insignia). */
+.panel .detalle-tipo { padding-right: 58px; }

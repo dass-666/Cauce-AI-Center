@@ -21,23 +21,18 @@ const CLIP_GESTO = { celebrar: "emote-yes", reaccion_error: "emote-no" };
 
 /** Modelo que le toca a un agente: siempre el mismo para el mismo id. */
 export function modeloDe(id) {
+  if (id.startsWith("modelo:") && MODELOS_KENNEY.includes(id.slice(7))) return id.slice(7); // cuerpo elegido a propósito
   return MODELOS_KENNEY[huella(id) % MODELOS_KENNEY.length];
 }
 
 /**
- * Cuerpos para los personajes de una estación: ids cuyo modelo YA usa algún agente del piso, para que la estación no
- * descargue ni suba a la GPU modelos (y texturas) nuevos. Distintos entre sí mientras alcancen; prefiere modelos que no
- * estén en el cuarto anfitrión para que no parezcan clones de sus vecinos. Sin agentes en el piso (p. ej. un piso
- * REAL sin datos), cada puesto usa su propia clave. Determinista: mismo piso, mismos cuerpos.
+ * Cuerpos de los personajes de estación: un conjunto FIJO de tres modelos, uno por puesto (el mismo en todas las
+ * estaciones). Así cada función se distingue de sus compañeras, y recorrer los pisos no sube a la GPU modelos
+ * nuevos después del primero que tenga estación (texturas y geometrías estables). character-male-c ya lo usan los
+ * agentes que trabajan en las demos de Compago y Ek Chuah; los otros dos son +2 texturas de 512×512 como máximo.
  */
-export function cuerposEstacion(claves, idsPiso = [], idsCuarto = []) {
-  const porModelo = new Map();
-  for (const id of idsPiso) if (!porModelo.has(modeloDe(id))) porModelo.set(modeloDe(id), id);
-  if (porModelo.size === 0) return [...claves];
-  const enCuarto = new Set(idsCuarto.map(modeloDe));
-  const orden = [...porModelo.keys()].sort((a, b) => (enCuarto.has(a) - enCuarto.has(b)) || a.localeCompare(b));
-  return claves.map((_, i) => porModelo.get(orden[i % orden.length]));
-}
+export const MODELOS_ESTACION = Object.freeze(["character-female-d", "character-male-a", "character-male-c"]);
+export const cuerpoEstacion = (indice) => `modelo:${MODELOS_ESTACION[indice % MODELOS_ESTACION.length]}`;
 
 /** 0..1: cuánto teclea en el instante r. Ráfagas de 3–6 s con pausas cortas; distinto para cada personaje (r ya trae su fase). */
 export function rafagaDe(r) {
@@ -65,7 +60,6 @@ export function crearCatalogoKenney(recursos) {
   const cargador = new GLTFLoader();
   const promesas = new Map(); // nombre → Promise<gltf|null>
   const listos = new Map();   // nombre → gltf|null (ya resuelto)
-  const usados = new Map();   // nombre → id del primer personaje que lo usó
 
   function cargar(n) {
     if (!promesas.has(n)) {
@@ -101,16 +95,7 @@ export function crearCatalogoKenney(recursos) {
     /** Cuerpo de Kenney, o null para que el personaje use el provisional. */
     fabricar(id, recursosOficina) {
       const gltf = listos.get(modeloDe(id));
-      if (gltf && !usados.has(modeloDe(id))) usados.set(modeloDe(id), id);
       return gltf ? crearCuerpoKenney(gltf, recursosOficina) : null;
-    },
-    /** Un id por cada modelo que ya se fabricó en esta sesión (fabricado no es dibujado: ver enGpu). */
-    usados: () => [...usados.values()],
-    /** ¿La textura del modelo de este id ya se subió a la GPU? (alguien con ese modelo ya se dibujó) */
-    enGpu(id, renderer) {
-      let si = false;
-      listos.get(modeloDe(id))?.scene.traverse((o) => { if (o.material?.map && renderer.properties.get(o.material.map).__webglTexture) si = true; });
-      return si;
     },
   };
 }

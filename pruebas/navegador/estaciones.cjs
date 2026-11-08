@@ -68,7 +68,7 @@ function compagoReal(base) {
   const panel = await p.locator('#panel').innerText();
   ok('tocar el tablero abre el detalle de la estación', /Estación de trabajo/i.test(panel) && /Observatorio Geopolítico/.test(panel), panel.slice(0, 80).replace(/\n/g, ' '));
   ok('el detalle dice DEMO, que los personajes son funciones (no agentes de IA) y los datos que faltan', /DEMO/.test(panel) && /no un agente de IA/i.test(panel) && /Datos que faltan/i.test(panel) && /magnitud del cambio/i.test(panel), panel.match(/Datos que faltan[\s\S]{0,60}/i)?.[0]?.replace(/\n/g, ' '));
-  ok('el detalle muestra el origen (PR #4 sin fusionar) y el enlace confirmado por las dos partes', /PR #4/.test(panel) && /confirmada por las dos partes/.test(panel));
+  ok('el detalle muestra el origen (PR #4) y dice que la transferencia es de DEMOSTRACIÓN, no una comunicación real', /PR #4/.test(panel) && /Transferencia de DEMOSTRACIÓN/.test(panel) && /No es una comunicación real/.test(panel) && !/confirmada por las dos partes/.test(panel));
   const cam = await p.evaluate(() => window.__cauce3d.camara());
   ok('la cámara se acerca y enfoca «Análisis de riesgo»', cam.enfocado === 'riesgo' && cam.zoom > 1.3, `zoom ${cam.zoom.toFixed(2)}, enfocado ${cam.enfocado}`);
   await p.waitForTimeout(800);
@@ -134,7 +134,7 @@ function compagoReal(base) {
   const q2 = await abrir({ proyecto: 'compago' });
   const con = await met(q2);
   await q2.close();
-  ok('Compago (recién abierto): la estación agrega ≤ 2 texturas de imagen (tablero + atlas de iconos; cuerpos con modelos ya a la vista), ≤ 1 de huesos por personaje, y el total queda en ≤ 32', con.texturas_imagen - sin.texturas_imagen <= 2 && con.texturas_huesos - sin.texturas_huesos <= 3 && con.texturas <= 32, `imagen ${sin.texturas_imagen} → ${con.texturas_imagen}, huesos ${sin.texturas_huesos} → ${con.texturas_huesos}, total ${sin.texturas} → ${con.texturas}`);
+  ok('Compago (recién abierto): la estación agrega ≤ 3 texturas de imagen (tablero + 2 pieles de los modelos que distinguen a los personajes; iconos dentro del atlas de burbujas), ≤ 1 de huesos por personaje, y el total queda en ≤ 32', con.texturas_imagen - sin.texturas_imagen <= 3 && con.texturas_huesos - sin.texturas_huesos <= 3 && con.texturas <= 32, `imagen ${sin.texturas_imagen} → ${con.texturas_imagen}, huesos ${sin.texturas_huesos} → ${con.texturas_huesos}, total ${sin.texturas} → ${con.texturas}`);
   await q.close();
 
   // ------------------------------------------------------------ Compago REAL sin archivo de estaciones

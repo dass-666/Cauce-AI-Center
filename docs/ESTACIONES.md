@@ -9,7 +9,7 @@ función independiente y transversal a varios proyectos justificaría un espacio
 | Estación | Oficina › departamento anfitrión | Funciones (un personaje cada una) | Origen de la función |
 |---|---|---|---|
 | Observatorio Geopolítico y Macroeconómico | Ek Chuah › Análisis de riesgo | Analista macroeconómico (divisas, inflación, mercados) · Analista geopolítico (noticias, regulaciones, acontecimientos) · Analista de riesgos (verificación, alertas, implicaciones) | Ek Chuah PR #4 (borrador, sin fusionar) |
-| Oportunidades Internacionales | Compago › Evaluación de oportunidades | Investigador de países y proveedores · Analista de importación, logística y aranceles · Evaluador de costos, márgenes y viabilidad | Compago PR #26 (borrador, sin fusionar) |
+| Oportunidades Internacionales | Compago › Evaluación de oportunidades | Investigador de países y proveedores · Analista de importación, logística y aranceles · Evaluador de costos, márgenes y viabilidad | Compago PR #26–#28 (borradores, sin fusionar) |
 
 Por qué esos anfitriones: el Observatorio clasifica verificación y riesgos de acontecimientos, que es el trabajo de
 «Análisis de riesgo»; Oportunidades Internacionales evalúa si una señal justifica investigar, que es lo que hace
@@ -23,13 +23,14 @@ Por qué esos anfitriones: el Observatorio clasifica verificación y riesgos de 
   abajo, el enlace con la otra oficina) y, a sus lados, dos pantallas ambientales (pictogramas sin cifras que nunca
   cambian: «curva» y «mapa» en el Observatorio, «mapa» y «comparar» en Oportunidades). El tablero no sobresale del
   panel (arriba a ~1.35 m) para no tapar, desde la cámara del edificio, los escritorios del departamento.
-- Los personajes de la estación usan **cuerpos que el piso ya tiene a la vista** (mismo modelo de Kenney que algún
-  personaje visible): no se descargan ni se suben a la GPU modelos nuevos. Si el piso no tiene a nadie a la vista,
-  toman un modelo que ya se dibujó en la sesión. Consecuencia visible: con una sola persona a la vista (Compago DEMO),
-  los tres se parecen a ella.
+- Los tres personajes de cada estación usan **tres modelos fijos y distintos** de Kenney (`MODELOS_ESTACION` en
+  `kenney.js`: female-d, male-a, male-c), ya incluidos en el repositorio. Antes reutilizaban el modelo de las
+  personas a la vista y en Compago DEMO los tres eran iguales; ahora se distinguen a simple vista. Cuesta 2 pieles de
+  modelo en la GPU, compensadas con las mejoras de abajo.
 - Un objeto propio en el extremo izquierdo: un mapa de pie (Observatorio) o un globo terráqueo (Oportunidades).
-- Una **luz** en el extremo derecho de la mesa: azul claro solo con una transferencia confirmada por las dos partes;
-  ámbar apagado si solo un lado la registra; gris sin datos.
+- Una **luz** en el extremo derecho de la mesa: azul claro solo con una transferencia REAL confirmada por las dos
+  partes; **ámbar** si la confirmación es de demostración (y el tablero dice «transferencia de DEMOSTRACIÓN (no es
+  real)»); ámbar apagado si solo un lado la registra; gris sin datos.
 - Pantallas de los monitores: apagadas sin registro; del color del estado cuando hay un registro o un proceso.
 
 ## Qué representan los personajes
@@ -62,10 +63,13 @@ la pantalla encendida, el tablero y el panel, siempre con su fuente.
 
 | Dato | Hoy |
 |---|---|
-| Que la función existe y en qué PR está | Real (leído de los PR #4 de Ek Chuah y #26 de Compago, sin modificarlos) |
+| Que la función existe y en qué PR está | Real (leído de Ek Chuah PR #4 y Compago PR #26–#28, sin modificarlos) |
 | Estados, conteos, faltantes y enlace que se ven | **Demostración** (`datos/demo/*-estaciones.json`, escritos a mano, rotulados DEMO) |
 | Acontecimientos, señales, proveedores, cotizaciones | **Ninguno**: no hay ninguno real en Cauce |
 | Transferencia Ek Chuah → Compago | **Demostración**: ambas demos registran `SEN-DEMO-ARANCEL-01`; no existe un envío real |
+
+Un piso DEMO vigente dice «Demostración vigente» (no «En línea»), para no sugerir que el proyecto real está
+funcionando.
 
 Con un piso REAL y sin `datos/reales/<proyecto>-estaciones.json`, la estación queda con las sillas vacías y el panel
 dice que falta su exportador. Nunca usa la demostración en su lugar.
@@ -73,30 +77,37 @@ dice que falta su exportador. Nunca usa la demostración en su lugar.
 ## Contratos
 
 - `cauce.estado-proyecto` 1.0.0: **sin cambios**.
-- `cauce.estaciones` 0.1.0 (nuevo, propuesta): ver `contrato/ESTACIONES-CONTRATO.md`, con lo que falta en Ek Chuah y
-  Compago para conectarse y el desalineamiento actual entre `ek-chuah.observatorio` y `ek-chuah.senales-economicas`.
+- `cauce.estaciones` 0.1.0 (nuevo, propuesta): ver `contrato/ESTACIONES-CONTRATO.md`. Ahí se separan el canal
+  comercial Ek Chuah → Compago (`senales-economicas` 0.2.0, ya resuelto en Compago PR #27, no pasa por Cauce) y el
+  estado de estaciones hacia Cauce (sin exportador en ninguno), con la especificación exacta para cada proyecto.
+- Lector de la salida de Compago `estado_internacional` 0.1.x (`app/nucleo/estaciones-compago.js`): cuando Compago
+  la escriba en un archivo, Cauce ya la traduce a `cauce.estaciones` sin cambios de código.
 
 ## Rendimiento (SwiftShader, no es la Intel UHD)
 
 Medido en Chromium con SwiftShader (cuenta objetos; **no** mide cuadros por segundo de la Intel UHD):
 
-| Vista | Sin estaciones (`?estaciones=0`) | Con estación |
-|---|---|---|
-| Compago, edificio | 97 llamadas · 27 texturas | 108 llamadas · 32 texturas (presupuesto ≤ 32) |
-| Ek Chuah, edificio | 73 llamadas | 84 llamadas |
+| Vista (edificio) | 9c002f0 sin estaciones | 9c002f0 con estación | Ahora sin estaciones | Ahora con estación |
+|---|---|---|---|---|
+| Compago | 97 llamadas · 27 texturas | 108 · 32 | **78 · 26** | **89 · 32** |
+| Ek Chuah | 73 | 84 | — | **71 · 29** |
+| Montambre | 49 | — | 39 | — |
+| CSI | 84 | — | 71 | — |
 
-+11 llamadas por piso: tablero (1), pantallas + luz del enlace en una sola malla (1), tres personajes (cuerpo e icono;
-sin anillo de estado), y la decoración se fusiona con el cuarto. Sin luces, sombras ni partículas nuevas; el tablero
-se redibuja solo si cambia lo que muestra; los datos se leen en el mismo ciclo de 30 s del piso.
+Presupuestos de fase M: ≤ 110 llamadas y ≤ 32 texturas. Compago pasa de 2 llamadas de margen a **21**; las texturas
+siguen justas (32) porque los dos modelos nuevos que distinguen a los personajes ocupan lo que se ahorró.
 
-Texturas (+5 en Compago): tablero (1), **un solo atlas** para los iconos de los 8 estados (1, creado al iniciar, así
-que no crece al aparecer estados nuevos) y una textura de huesos por personaje animado (3, ~1 KB cada una). Para
-caber en el presupuesto se cambiaron dos cosas que también benefician a los personajes que ya existían:
+Qué se cambió (sin reescribir el renderizador ni perder calidad visible):
 
-- cuerpo y cabeza de cada personaje de Kenney traían dos esqueletos idénticos; ahora comparten uno (una textura de
-  huesos y una actualización por cuadro por personaje, no dos). Base sin estaciones: 28 → 27 texturas;
-- los personajes de estación reutilizan modelos ya dibujados (ver arriba), así que recorrer los 4 pisos varias veces
-  no deja texturas ni geometrías de más.
+- **Fusión entre cuartos** (`fusionarEntreCuartos`, `oficina.js`): los muebles y paredes estáticos de todos los
+  cuartos de un piso que comparten material se juntan en una sola malla (antes, una por cuarto). Comparado píxel a
+  píxel con `?fusion=0`: idéntico en Compago y Montambre; 9–30 píxeles distintos en Ek Chuah y CSI, por animación.
+- **Charcos de luz** del techo con la misma textura radial blanca de las sombras, teñida por color (−1 textura).
+- **Iconos de estación dentro del atlas de burbujas** de estado (−1 textura).
+- Cuerpo y cabeza de cada personaje comparten esqueleto (de 9c002f0).
+- Sin luces, sombras ni partículas nuevas; el tablero se redibuja solo si cambia lo que muestra; recorrer los pisos
+  varias veces no deja geometrías ni texturas de más (prueba de 4 idas y vueltas).
 
-`?medir=1` muestra ahora también `texturas_huesos` y `texturas_imagen` en `__cauce3d.metricas()`.
-**No se ha medido en la Intel UHD de Diego**: pasos en `docs/VALIDAR-ESTACIONES.md`.
+`?medir=1` muestra además cuadro p50/p95/p99, cps del 1 % más lento y memoria JS; `?fusion=0` apaga la fusión para
+comparar. **No se ha medido en la Intel UHD de Diego**: `herramientas\medir-estaciones.bat` lo hace solo
+(`docs/VALIDAR-ESTACIONES.md`).

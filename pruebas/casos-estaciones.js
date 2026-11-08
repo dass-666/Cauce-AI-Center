@@ -13,6 +13,7 @@ import {
   cruzarEnlace, aplicarEstaciones, estadoDeEstacion, idPersonaje, firmaEstaciones,
 } from "../app/nucleo/estaciones.js";
 import { validarDocumento } from "../app/nucleo/contrato.js";
+import { estacionesDesdeCompago, normalizarCargaEstaciones } from "../app/nucleo/estaciones-compago.js";
 import { construirModeloVista } from "../app/nucleo/modelo.js";
 import { validarRegistro } from "../app/nucleo/registro.js";
 import { leerConfiguracion } from "../app/configuracion.js";
@@ -333,4 +334,41 @@ export function registrarCasosEstaciones(leerTexto) {
     igual(leerConfiguracion("http://127.0.0.1:8765/").estaciones, true);
     igual(leerConfiguracion("http://127.0.0.1:8765/?estaciones=0&medir=1").estaciones, false);
   });
+  prueba("DEMO vigente: la conexión dice «Demostración vigente», nunca «En línea» (que sugiere el proyecto real)", async () => {
+    const { escEk, v1Ek } = await datos();
+    const demo = construirModeloVista({ proyecto: { id: "ek-chuah", nombre: "Ek Chuah" }, carga: ok(v1Ek), distribucion: escEk, ahora: AHORA, origen: "demo" });
+    igual(demo.conexion, "en_linea");
+    igual(demo.conexion_etiqueta, "Demostración vigente");
+  });
+  prueba("Compago estado_internacional 0.1.1 → cauce.estaciones: reparto conservador, sin «en_proceso», sin enlaces", async () => {
+    const ej = await leerJSON("contrato/ejemplos/compago-estado-internacional.json");
+    const r = estacionesDesdeCompago(ej);
+    verdadero(r.ok, r.error);
+    const v = validarEstaciones(r.datos);
+    verdadero(v.valido, v.errores.join("; "));
+    const est = r.datos.estaciones[0];
+    igual(est.puestos.map((p) => p.estado), ["investigacion_pendiente", "datos_insuficientes", "sin_actividad"]);
+    verdadero(est.puestos.every((p) => p.estado !== "en_proceso"), "nadie teclea: Compago no registra procesos");
+    igual(est.enlaces, undefined, "sin id de señal no hay transferencia que confirmar");
+    igual(r.datos.es_demo, true);
+    igual(r.datos.fuente.tipo, "demo");
+    // Riesgo manda sobre evidencia insuficiente; evaluación disponible no confirma rentabilidad.
+    const c2 = copia(ej); c2.departamento.estacion.conteos = { riesgo_detectado: 1, evidencia_insuficiente: 3, evaluacion_disponible: 2, acontecimiento_recibido: 1, investigacion_pendiente: 0 };
+    igual(estacionesDesdeCompago(c2).datos.estaciones[0].puestos.map((p) => p.estado), ["senal_recibida", "riesgo_detectado", "evaluacion_disponible"]);
+    // Todo en cero: nadie con actividad inventada.
+    const c3 = copia(ej); c3.departamento.estacion.conteos = {};
+    igual(estacionesDesdeCompago(c3).datos.estaciones[0].puestos.map((p) => p.estado), ["sin_actividad", "sin_actividad", "sin_actividad"]);
+  });
+  prueba("Compago estado_internacional: se rechaza otra versión, es_demo que no coincide, o sin estación", async () => {
+    const ej = await leerJSON("contrato/ejemplos/compago-estado-internacional.json");
+    const v = copia(ej); v.version = "0.2.0"; verdadero(!estacionesDesdeCompago(v).ok);
+    const d = copia(ej); d.departamento.estacion.es_demo = false; verdadero(!estacionesDesdeCompago(d).ok);
+    const s = copia(ej); delete s.departamento.estacion; verdadero(!estacionesDesdeCompago(s).ok);
+    // Una carga inválida no cae a la demostración: queda como archivo inválido (sillas vacías).
+    igual(normalizarCargaEstaciones(ok(v)).tipo, "json_invalido");
+    // Un cauce.estaciones normal pasa sin cambios.
+    const { demoCo } = await datos();
+    igual(normalizarCargaEstaciones(ok(demoCo)).datos, demoCo);
+  });
+
 }

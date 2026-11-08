@@ -1,0 +1,23 @@
+{
+  "contrato": "compago.estado-internacional",
+  "version": "0.1.1",
+  "proyecto": { "id": "compago" },
+  "generado_en": "2026-11-08T21:00:00Z",
+  "vigencia_segundos": 1800,
+  "es_demo": true,
+  "demo": { "ahora_simulado": "2026-11-08T21:05:00Z" },
+  "_nota": "EJEMPLO SINTÉTICO escrito a mano en Cauce con la forma de apps/internacional/estacion.py (Compago PR #28, 0.1.1). No viene de Compago ni describe datos reales.",
+  "departamento": {
+    "id": "oportunidades-internacionales",
+    "nombre": "Oportunidades internacionales",
+    "descripcion": "Acontecimientos económicos internacionales e investigaciones abiertas a partir de ellos. Un acontecimiento oficial no es una oportunidad rentable.",
+    "indicadores": [{ "etiqueta": "Señales evaluables", "valor": 1 }],
+    "agentes": [{ "id": "analista-internacional", "nombre": "Analista internacional", "rol": "Muestra acontecimientos e investigaciones; las decisiones las toma una persona", "estado": "requiere_revision", "actividad": { "descripcion": "Evidencia insuficiente" } }],
+    "estacion": {
+      "version": "0.1.1", "es_demo": true, "estado_principal": "evidencia_insuficiente",
+      "estados_activos": ["evidencia_insuficiente", "investigacion_pendiente", "acontecimiento_recibido"],
+      "conteos": { "acontecimiento_recibido": 2, "riesgo_detectado": 0, "evidencia_insuficiente": 1, "investigacion_pendiente": 1, "evaluacion_disponible": 0 },
+      "detalle": { "acontecimientos_no_evaluables": 1, "investigaciones_abiertas": 2, "investigaciones_incompletas": 0, "productos_candidatos": 1 }
+    }
+  }
+}

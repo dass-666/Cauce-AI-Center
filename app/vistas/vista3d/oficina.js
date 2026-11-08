@@ -568,6 +568,44 @@ export function fusionarEstaticos(grupo, recursos) {
     const malla = new THREE.Mesh(recursos.agregar(fusion), material);
     malla.renderOrder = Math.max(...lista.map((x) => x.orden));
     if (clave === LISO) malla.name = "estaticos-color";
+    malla.userData.fusion = clave === LISO ? LISO : material; // fusionarEntreCuartos los vuelve a juntar en el edificio
     grupo.add(malla);
   }
+}
+
+/**
+ * Rendimiento UHD: en el edificio cada cuarto (y la arquitectura) ya fusionó lo suyo por material, pero eso deja
+ * una malla por cuarto y material (8 cuartos × 4–6 materiales ≈ 45 llamadas de dibujo). Aquí se juntan las del
+ * mismo material de TODOS los cuartos en una sola malla del edificio. Solo toca mallas marcadas por
+ * fusionarEstaticos (sin selección ni animación); si dos no se pueden unir (atributos distintos), se quedan como
+ * estaban. Las mallas transparentes no se juntan: perderían el orden de dibujo entre cuartos.
+ * @returns {number} mallas que se ahorraron
+ */
+export function fusionarEntreCuartos(grupo, recursos) {
+  grupo.updateMatrixWorld(true);
+  const inversa = grupo.matrixWorld.clone().invert();
+  const porClave = new Map();
+  grupo.traverse((o) => {
+    if (!o.isMesh || !o.userData.fusion) return;
+    if (o.userData.fusion !== "liso" && o.material.transparent) return;
+    const lista = porClave.get(o.userData.fusion) ?? [];
+    lista.push(o);
+    porClave.set(o.userData.fusion, lista);
+  });
+  let ahorro = 0;
+  for (const [clave, mallas] of porClave) {
+    if (mallas.length < 2) continue;
+    const geos = mallas.map((o) => o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inversa, o.matrixWorld)));
+    const fusion = mergeGeometries(geos);
+    for (const g of geos) g.dispose();
+    if (!fusion) continue;
+    const material = clave === "liso" ? recursos.agregar(new THREE.MeshLambertMaterial({ vertexColors: true })) : clave;
+    const malla = new THREE.Mesh(recursos.agregar(fusion), material);
+    malla.renderOrder = Math.max(...mallas.map((o) => o.renderOrder));
+    malla.name = clave === "liso" ? "estaticos-color" : "estaticos-edificio";
+    for (const o of mallas) { o.removeFromParent(); o.geometry.dispose(); }
+    grupo.add(malla);
+    ahorro += mallas.length - 1;
+  }
+  return ahorro;
 }

@@ -8,8 +8,10 @@ Uso:  py servir.py            (o: python servir.py)
       py servir.py --base /cauce/     (fase L: prueba local de cómo se vería publicada bajo una subruta)
 """
 import argparse
+import os
+import socket
+import sys
 import http.server
-import socketserver
 import threading
 import webbrowser
 from functools import partial
@@ -78,6 +80,17 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
             super().log_message(formato, *args)
 
 
+class Servidor(http.server.ThreadingHTTPServer):
+    """En Windows, SO_REUSEADDR deja que DOS programas escuchen el mismo puerto (y uno le roba al otro las
+    peticiones). Ahí se pide el puerto en exclusiva: si está ocupado, se avisa en vez de arrancar a medias."""
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 def main():
     p = argparse.ArgumentParser(description="Centro de operaciones: servidor local")
     p.add_argument("--puerto", type=int, default=8765)
@@ -87,8 +100,14 @@ def main():
     base = "/" + a.base.strip("/") + "/" if a.base.strip("/") else "/"
     Manejador.base = base
     url = f"http://{HOST}:{a.puerto}{base}"
-    socketserver.TCPServer.allow_reuse_address = True
-    with http.server.ThreadingHTTPServer((HOST, a.puerto), partial(Manejador, directory=str(RAIZ))) as srv:
+    try:
+        srv = Servidor((HOST, a.puerto), partial(Manejador, directory=str(RAIZ)))
+    except OSError:
+        print(f"El puerto {a.puerto} ya está en uso en esta computadora.")
+        print(f"- Si el centro de operaciones ya está abierto, entra a {url} (no hace falta abrirlo dos veces).")
+        print(f"- Si es otro programa, usa otro puerto:  iniciar.bat --puerto 8775")
+        sys.exit(2)
+    with srv:
         print(f"Centro de operaciones en {url}  (Ctrl+C para detener)")
         if not a.sin_abrir:
             threading.Timer(0.6, lambda: webbrowser.open(url)).start()

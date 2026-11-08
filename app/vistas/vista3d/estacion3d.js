@@ -17,7 +17,8 @@ import { ESTADOS_ESTACION } from "../../nucleo/estaciones.js";
 const ALTO = 0.6; // alto del escritorio (mobiliario.js)
 const ANCHO_TABLERO = 2.8; // m; con el lienzo 4:1 queda de 0.7 m de alto: cabe en la cara del panel (0.75 m)
 const PANTALLA_APAGADA = 0x1a2233;
-const COLOR_ENLACE = { confirmado: 0x5fd0e0, sin_confirmar: 0x8a7440, ninguno: 0x3a4152, sin_dato: 0x3a4152 };
+// demo: «confirmada» solo entre dos archivos de demostración: color de DEMO, nunca el azul de una transferencia real.
+const COLOR_ENLACE = { confirmado: 0x5fd0e0, demo: 0xc98f2e, sin_confirmar: 0x8a7440, ninguno: 0x3a4152, sin_dato: 0x3a4152 };
 // Pictogramas ambientales por equipo (estilo-visual.js): decoración que dice «qué tipo de trabajo», no «qué pasa».
 const PICTOS = { observatorio: ["curva", "mapa"], comercio: ["mapa", "comparar"] };
 
@@ -119,7 +120,7 @@ export function crearEstacion3D(destino, est, lugar, ctx) {
     const a = lugar.asientos[i];
     const per = new Personaje({
       agente: comoAgente(p), puesto: { x: a.x, z: a.z }, cuarto, retraso: i * 0.6, todos, quieto: compartido.quieto,
-      // Cuerpo: un modelo que el piso ya usa (p.cuerpo, ver cuerposEstacion en kenney.js): sin texturas nuevas.
+      // Cuerpo: uno fijo por puesto (p.cuerpo, ver cuerpoEstacion en kenney.js).
       fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(p.cuerpo ?? id, recursos) : null,
       geo: compartido.geoPersonaje, recursos, texturaSombra: compartido.texturaSombra,
       // Sin anillo de estado en el piso: el estado ya lo dicen el icono, la pantalla y el tablero (3 llamadas menos).
@@ -140,7 +141,7 @@ export function crearEstacion3D(destino, est, lugar, ctx) {
     });
     geoPantallas.attributes.color.needsUpdate = true;
     if (nueva.enlace) {
-      colorTmp.setHex(COLOR_ENLACE[nueva.enlace.estado] ?? COLOR_ENLACE.sin_dato);
+      colorTmp.setHex(nueva.es_demo && nueva.enlace.estado === "confirmado" ? COLOR_ENLACE.demo : COLOR_ENLACE[nueva.enlace.estado] ?? COLOR_ENLACE.sin_dato);
       for (let v = verticesPantallas; v < geoPantallas.attributes.position.count; v++) colores.set([colorTmp.r, colorTmp.g, colorTmp.b], v * 3);
     }
     tablero.dibujar(nueva);
@@ -162,7 +163,7 @@ export function crearEstacion3D(destino, est, lugar, ctx) {
     /** Para pruebas y para acercar la cámara: centro de la estación en el cuarto. */
     lugar: { x: lugar.x, z: lugar.z + 0.4, ancho, fondo: 2.2 },
     resumen: () => ({ id: est.id, estado: ultimo.estado, enlace: ultimo.enlace?.estado ?? null, es_demo: ultimo.es_demo,
-      puestos: personajes.map((p, i) => ({ id: ultimo.puestos[i].id, estado: ultimo.puestos[i].estado, visible: p.raiz.visible, bucle: p.bucle, accion: p.accion })) }),
+      puestos: personajes.map((p, i) => ({ id: ultimo.puestos[i].id, estado: ultimo.puestos[i].estado, visible: p.raiz.visible, bucle: p.bucle, accion: p.accion, cuerpo: est.puestos[i].cuerpo ?? null })) }),
   };
 }
 
@@ -224,10 +225,11 @@ function crearTablero(recursos, ancho) {
     ctx.font = "24px system-ui, sans-serif";
     ctx.fillStyle = "#8a94a8";
     const flecha = e.enlace ? (e.enlace.sentido === "salida" ? "→" : "←") : "";
-    const enlace = !e.enlace ? "" : e.enlace.estado === "confirmado" ? `${flecha} ${e.enlace.nombre ?? e.enlace.proyecto}: transferencia confirmada por ambas partes`
+    const enlace = !e.enlace ? "" : e.enlace.estado === "confirmado" && e.es_demo ? `${flecha} ${e.enlace.nombre ?? e.enlace.proyecto}: transferencia de DEMOSTRACIÓN (no es real)`
+      : e.enlace.estado === "confirmado" ? `${flecha} ${e.enlace.nombre ?? e.enlace.proyecto}: transferencia confirmada por ambas partes`
       : e.enlace.estado === "sin_confirmar" ? `${flecha} ${e.enlace.nombre ?? e.enlace.proyecto}: registrada solo de este lado (sin confirmar)`
       : `${flecha} ${e.enlace.nombre ?? e.enlace.proyecto}: sin transferencias registradas`;
-    if (e.enlace) { ctx.fillStyle = e.enlace.estado === "confirmado" ? "#5fd0e0" : "#8a94a8"; ctx.fillText(recortar(ctx, enlace, 980), 28, 228); }
+    if (e.enlace) { ctx.fillStyle = e.enlace.estado === "confirmado" ? (e.es_demo ? "#ffb547" : "#5fd0e0") : "#8a94a8"; ctx.fillText(recortar(ctx, enlace, 980), 28, 228); }
     else ctx.fillText(e.vigente ? "Personajes = funciones del sistema, no agentes de IA" : `Sin información: ${e.motivo ?? "sin datos vigentes"}`, 28, 228);
     textura.needsUpdate = true;
   }
@@ -244,36 +246,10 @@ function recortar(ctx, texto, max) {
   return t + "…";
 }
 
-/**
- * Iconos sobre la cabeza para los estados de estación. Rendimiento UHD: UN solo lienzo (atlas) con los 8 estados,
- * dibujado una vez al iniciar; cada estado es un clon de la textura con su recorte (offset/repeat). Three.js sube a
- * la GPU una sola textura por imagen, así que los estados que aparezcan después (en otro piso o tras un cambio) no
- * agregan texturas: el conteo queda fijo en 1.
- */
-export function crearBurbujasEstacion(recursos) {
-  const estados = Object.keys(ESTADOS_ESTACION);
-  const lienzo = document.createElement("canvas");
-  lienzo.width = 64 * estados.length;
-  lienzo.height = 64;
-  const c = lienzo.getContext("2d");
-  estados.forEach((estado, k) => {
-    const e = ESTADOS_ESTACION[estado];
-    const x0 = 64 * k;
-    c.fillStyle = "#0f1526"; c.beginPath(); c.arc(x0 + 32, 32, 29, 0, Math.PI * 2); c.fill();
-    c.lineWidth = 5; c.strokeStyle = hex(e.color); c.stroke();
-    c.fillStyle = hex(e.color); c.font = "bold 30px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText(e.icono, x0 + 32, 34);
-  });
-  const atlas = recursos.agregar(new THREE.CanvasTexture(lienzo));
-  atlas.colorSpace = THREE.SRGBColorSpace;
-  const materiales = new Map();
-  estados.forEach((estado, k) => {
-    const tex = k === 0 ? atlas : recursos.agregar(atlas.clone()); // el clon comparte la imagen (misma textura en GPU)
-    tex.repeat.set(1 / estados.length, 1);
-    tex.offset.set(k / estados.length, 0);
-    materiales.set(estado, recursos.agregar(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true })));
-  });
-  return {
-    material: (estado) => materiales.get(estado) ?? materiales.get("sin_informacion"),
-  };
+/** Iconos de los estados de estación, para el atlas común de crearBurbujas (prefijo «estacion:»). */
+export const ICONOS_ESTACION = Object.entries(ESTADOS_ESTACION).map(([clave, e]) => ({ clave: `estacion:${clave}`, color: e.color, icono: e.icono, tam: 30 }));
+
+/** Burbujas de los personajes de estación, sobre el atlas común (una sola textura para todos los iconos). */
+export function burbujasEstacion(burbujas) {
+  return { material: (estado) => burbujas.extra(`estacion:${estado}`) ?? burbujas.extra("estacion:sin_informacion") };
 }

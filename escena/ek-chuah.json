@@ -16,7 +16,7 @@
       "departamento": "riesgo",
       "equipo": "observatorio",
       "funcion": "Registra acontecimientos y fuentes, separa hechos, hipótesis e inferencias y clasifica su verificación. No recomienda comprar ni vender.",
-      "origen": "Ek Chuah PR #4 (borrador, sin fusionar): src/ek_chuah/observatorio, contratos ek-chuah.observatorio 0.1.0 y ek-chuah.senales-economicas 0.1.0. Sin exportador hacia Cauce todavía.",
+      "origen": "Ek Chuah PR #4 (borrador, sin fusionar): src/ek_chuah/observatorio, contratos ek-chuah.observatorio 0.1.0 y ek-chuah.senales-economicas 0.2.0 (lo consume Compago PR #27, sin fusionar). Sin exportador hacia Cauce todavía.",
       "puestos": [
         {
           "id": "macro",

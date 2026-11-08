@@ -17,7 +17,7 @@
       "departamento": "oportunidades",
       "equipo": "comercio",
       "funcion": "Recibe señales externas, abre investigaciones de países, proveedores y productos para México y las evalúa solo con datos suficientes. Una señal es una alerta, no una oportunidad confirmada.",
-      "origen": "Compago PR #26 (borrador, sin fusionar): apps/internacional, contrato compago.senal-internacional 0.1.0 (provisional). Sin interfaz web ni exportador hacia Cauce todavía.",
+      "origen": "Compago PR #26–#28 (borradores, sin fusionar): apps/internacional; lee ek-chuah.senales-economicas 0.2.0 (PR #27) y tiene una salida estado_internacional 0.1.1 (PR #28) que aún no escribe archivo. Sin exportador hacia Cauce todavía.",
       "puestos": [
         {
           "id": "investigador",

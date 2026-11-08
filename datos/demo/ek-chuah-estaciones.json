@@ -10,7 +10,7 @@
   "estaciones": [
     {
       "id": "observatorio",
-      "contrato_origen": "ek-chuah.senales-economicas 0.1.0 (forma usada como referencia; datos inventados)",
+      "contrato_origen": "ek-chuah.senales-economicas 0.2.0 (forma usada como referencia; datos inventados)",
       "nota": "[DEMO] Ningún acontecimiento de esta demostración es real.",
       "puestos": [
         { "id": "macro", "estado": "sin_actividad", "nota": "[DEMO] Sin señales de divisas ni de inflación en esta demostración." },

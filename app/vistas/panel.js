@@ -13,6 +13,14 @@ import { ESTADOS_ESTACION } from "../nucleo/estaciones.js";
  * @param extra.historial  cambios observados en esta sesión (bitácora de la sala), del más nuevo al más viejo
  * @param extra.ahoraMs    hora de la computadora (para "reciente")
  */
+/** Pliega (true) o despliega el panel de detalle. Se recuerda entre visitas. */
+export function plegarPanel(plegado) {
+  document.body.classList.toggle("panel-plegado", plegado);
+  try { localStorage.setItem("cauce.panelPlegado", plegado ? "1" : "0"); } catch { /* sin almacenamiento: solo esta visita */ }
+  window.dispatchEvent(new Event("resize"));
+}
+try { if (localStorage.getItem("cauce.panelPlegado") === "1") document.body.classList.add("panel-plegado"); } catch { /* nada */ }
+
 export function dibujarPanel(contenedor, modelo, seleccion, alCerrar, { historial = [], ahoraMs = Date.now(), alSeleccionar = null } = {}) {
   contenedor.replaceChildren();
   if (!seleccion) {
@@ -34,7 +42,12 @@ export function dibujarPanel(contenedor, modelo, seleccion, alCerrar, { historia
     return;
   }
   contenedor.hidden = false;
-  const cerrar = el("button", { clase: "panel-cerrar", type: "button", onclick: alCerrar, "aria-label": "Cerrar detalle" }, "×");
+  const cerrar = el("div", { clase: "panel-botones" },
+    // Plegar deja la selección y la cámara como están; solo da el ancho del panel al edificio (se recuerda).
+    el("button", { clase: "panel-plegar", type: "button", onclick: () => plegarPanel(!document.body.classList.contains("panel-plegado")),
+      "aria-label": "Plegar o desplegar el detalle", title: "Plegar el detalle (más espacio para el edificio)" },
+      el("span", { clase: "panel-plegar-abierto", "aria-hidden": "true" }, "⇥"), el("span", { clase: "panel-plegar-cerrado" }, "◂ Detalle")),
+    el("button", { clase: "panel-cerrar", type: "button", onclick: alCerrar, "aria-label": "Cerrar detalle" }, "×"));
   const contexto = { historial, ahoraMs, alSeleccionar };
   if (estacion) { contenedor.append(cerrar, detalleEstacion(estacion, seleccion.puesto ?? null, modelo, contexto)); return; }
   contenedor.append(cerrar, agente ? detalleAgente(agente, depDelAgente, modelo, contexto) : detalleDepartamento(dep, modelo, contexto));
@@ -188,7 +201,7 @@ function detalleEstacion(e, puestoId, modelo, { alSeleccionar }) {
     ? `${e.fuente?.nombre ?? "Archivo de estaciones"} · generado ${e.edad_segundos !== null ? `hace ${describirDuracion(e.edad_segundos)}` : ""}${e.hora_simulada ? " (hora simulada)" : ""}${e.vigencia_segundos ? `, vigencia ${describirDuracion(e.vigencia_segundos)}` : ""}`
     : "Sin archivo de estado de la estación"));
   if (e.motivo) filas.push(fila("Por qué no hay datos", e.motivo));
-  const enlace = e.enlace ? textoEnlace(e.enlace) : null;
+  const enlace = e.enlace ? textoEnlace(e.enlace, e.es_demo) : null;
   return el("article", { clase: "detalle detalle-estacion" },
     el("p", { clase: "detalle-tipo" }, `${modelo.proyecto.nombre} · Estación de trabajo `, insignia),
     el("h2", {}, e.nombre),
@@ -220,9 +233,10 @@ function detalleEstacion(e, puestoId, modelo, { alSeleccionar }) {
   );
 }
 
-function textoEnlace(x) {
+function textoEnlace(x, esDemo = false) {
   const otro = x.nombre ?? x.proyecto;
   const dir = x.sentido === "salida" ? `Envía señales a ${otro}` : `Recibe señales de ${otro}`;
+  if (x.estado === "confirmado" && esDemo) return `${dir}. Transferencia de DEMOSTRACIÓN: las dos demostraciones registran ${x.confirmadas.join(", ")}. No es una comunicación real entre los proyectos.`;
   if (x.estado === "confirmado") return `${dir}. Transferencia confirmada por las dos partes: ${x.confirmadas.join(", ")}.`;
   if (x.estado === "sin_confirmar") return `${dir}. Registrada solo de este lado (${x.solo_aqui.join(", ")}): sin confirmar. ${x.motivo ?? "La otra estación no registra la misma señal."}`;
   if (x.estado === "ninguno") return `${dir}. Sin transferencias registradas.`;

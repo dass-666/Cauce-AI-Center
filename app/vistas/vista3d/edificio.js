@@ -4,7 +4,7 @@
 // También decide cuántas veces por segundo se anima cada cuarto (el enfocado, siempre).
 
 import * as THREE from "three";
-import { crearOficina } from "./oficina.js";
+import { crearOficina, fusionarEntreCuartos } from "./oficina.js";
 import { distribuirEdificio } from "./plano-edificio.js";
 import { crearArquitectura } from "./arquitectura.js";
 import { temaDe, acentoDe } from "./identidad.js";
@@ -29,7 +29,7 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
   } else {
     const plano = distribuirEdificio(deps.map((d) => ({ id: d.id, posicion: d.posicion, puestos: Math.max(1, d.agentes.length), filasExtra: d.estaciones?.length ?? 0 })));
     const info = plano.cuartos.map((c, i) => ({ ...c, nombre: deps[i].nombre, tema: temaDe(deps[i]), acento: acentoDe(deps[i]) }));
-    arquitectura = crearArquitectura(plano, info, recursos, { mob: compartido.mobiliario, proyecto: modelo.proyecto });
+    arquitectura = crearArquitectura(plano, info, recursos, { mob: compartido.mobiliario, proyecto: modelo.proyecto, degradado: compartido.texturaSombra });
     grupo.add(arquitectura.grupo);
     info.forEach((c, i) => {
       const dep = deps[i];
@@ -48,6 +48,8 @@ export function crearEscenario(deps, modelo, compartido, { modo }) {
     // La cámara puede recorrer todo el edificio (cuartos y recepción).
     limites = { minX: -plano.ancho / 2, maxX: plano.ancho / 2, minZ: -plano.fondo / 2, maxZ: plano.fondo / 2, ancho: plano.ancho, fondo: plano.fondo };
     recepcion = plano.recepcion;
+    // Lo estático del mismo material de todos los cuartos, en una sola malla (?fusion=0 lo deja por cuarto, para A/B).
+    if (compartido.fusionEdificio !== false) fusionarEntreCuartos(grupo, recursos);
   }
   arquitectura?.actualizar(modelo);
 

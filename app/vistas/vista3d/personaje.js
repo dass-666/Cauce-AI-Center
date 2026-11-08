@@ -94,7 +94,7 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
   torso.add(cabeza);
 
   const sombra = new THREE.Mesh(geo.sombra, recursos.agregar(new THREE.MeshBasicMaterial({
-    map: texturaSombra, transparent: true, depthWrite: false, opacity: 0.55, userData: { sinBrillo: true },
+    map: texturaSombra, color: 0x000000, transparent: true, depthWrite: false, opacity: 0.47, userData: { sinBrillo: true }, // 0.55 × 0.85 (degradado blanco compartido)
   })));
   sombra.position.y = 0.012;
   raiz.add(sombra);
@@ -380,33 +380,42 @@ function levantarMano(c, r) {
   c.cabeza.rotation.x = -0.15;
 }
 
-/** Iconos sobre la cabeza (uno por estado, compartidos por todos los personajes). */
-export function crearBurbujas(recursos, ESTADOS) {
-  const cache = new Map();
-  return {
-    material(estado) {
-      if (cache.has(estado)) return cache.get(estado);
-      const lienzo = document.createElement("canvas");
-      lienzo.width = lienzo.height = 64;
-      const ctx = lienzo.getContext("2d");
-      const color = `#${COLOR_ESTADO[estado].toString(16).padStart(6, "0")}`;
-      ctx.fillStyle = "#0f1526";
-      ctx.beginPath();
-      ctx.arc(32, 32, 29, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = color;
-      ctx.stroke();
-      ctx.fillStyle = color;
-      ctx.font = "bold 32px system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(ESTADOS[estado].icono, 32, 34);
-      const tex = recursos.agregar(new THREE.CanvasTexture(lienzo));
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const mat = recursos.agregar(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-      cache.set(estado, mat);
-      return mat;
-    },
-  };
+/**
+ * Atlas de iconos redondos: UN lienzo con todos los iconos en fila, dibujado una vez. Cada icono es un clon de la
+ * textura con su recorte; Three.js sube una sola textura por imagen, así que el número de texturas no crece con
+ * los estados que vayan apareciendo. entradas: [{ clave, color (número), icono (texto), tam (px de la letra) }].
+ */
+export function crearAtlasIconos(recursos, entradas) {
+  const lienzo = document.createElement("canvas");
+  lienzo.width = 64 * entradas.length;
+  lienzo.height = 64;
+  const ctx = lienzo.getContext("2d");
+  entradas.forEach(({ color, icono, tam = 32 }, k) => {
+    const x0 = 64 * k, c = `#${color.toString(16).padStart(6, "0")}`;
+    ctx.fillStyle = "#0f1526"; ctx.beginPath(); ctx.arc(x0 + 32, 32, 29, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = c; ctx.stroke();
+    ctx.fillStyle = c; ctx.font = `bold ${tam}px system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(icono, x0 + 32, 34);
+  });
+  const atlas = recursos.agregar(new THREE.CanvasTexture(lienzo));
+  atlas.colorSpace = THREE.SRGBColorSpace;
+  const materiales = new Map();
+  entradas.forEach(({ clave }, k) => {
+    const tex = k === 0 ? atlas : recursos.agregar(atlas.clone()); // el clon comparte la imagen (misma textura en GPU)
+    tex.repeat.set(1 / entradas.length, 1);
+    tex.offset.set(k / entradas.length, 0);
+    materiales.set(clave, recursos.agregar(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true })));
+  });
+  return materiales;
+}
+
+/**
+ * Iconos sobre la cabeza (uno por estado, compartidos por todos los personajes), en un solo atlas.
+ * extra: más iconos en el MISMO atlas (los de las estaciones, con su prefijo): una textura para todos.
+ * Devuelve { material(estado), extra(clave) }.
+ */
+export function crearBurbujas(recursos, ESTADOS, extra = []) {
+  const materiales = crearAtlasIconos(recursos, [
+    ...Object.keys(ESTADOS).map((e) => ({ clave: e, color: COLOR_ESTADO[e], icono: ESTADOS[e].icono })), ...extra]);
+  return { material: (estado) => materiales.get(estado) ?? materiales.get("sin_datos"), extra: (clave) => materiales.get(clave) };
 }

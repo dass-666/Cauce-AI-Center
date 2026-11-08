@@ -20,7 +20,7 @@ const VENTANA = { abajo: 0.75, arriba: 1.75, ancho: 1.6, pilar: 0.45 };
  * @param plano     resultado de distribuirEdificio
  * @param cuartos   [{ id, nombre, tema, acento, x, z, ancho, fondo }]
  */
-export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyecto = null } = {}) {
+export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyecto = null, degradado = null } = {}) {
   mob ??= crearMobiliario(recursos);
   const estilo = estiloDe(proyecto);
   const pal = paletaDe(proyecto?.estilo); // fase M: paleta del proyecto (muros exteriores, pasillos, banqueta)
@@ -221,7 +221,7 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
   // sin actividad; de noche se nota más (aplicarLuz).
   for (const c of cuartos) for (let x = -c.ancho / 2 + 3.2; x < c.ancho / 2 - 1.5; x += 6.4) charcos.push([c.x + x, c.z - c.fondo / 2 + 2.3, 3.6]);
   let matCharcos = null;
-  if (charcos.length) { const malla = crearCharcosLuz(charcos, recursos); matCharcos = malla.material; grupo.add(malla); }
+  if (charcos.length) { const malla = crearCharcosLuz(charcos, recursos, degradado); matCharcos = malla.material; grupo.add(malla); }
   // Fase M: sombras de contacto (oclusión falsa) al pie de los muros: tiras con degradado, una sola llamada de
   // dibujo para todo el edificio. Dan profundidad sin sombras en tiempo real.
   const tiras = [];
@@ -250,7 +250,7 @@ export function crearArquitectura(plano, cuartos, recursos, { mob = null, proyec
     // Fase L: la marquesina repite nombre y conexión del modelo (y se redibuja solo si cambian).
     aplicarLuz(luz) {
       matVentana.color.setHex(luz.ventana);
-      if (matCharcos) matCharcos.opacity = 0.26 + 0.22 * (luz.noche ?? 0); // de noche la luz interior se nota más
+      if (matCharcos) matCharcos.opacity = (0.26 + 0.22 * (luz.noche ?? 0)) * matCharcos.userData.escalaAlfa; // de noche la luz interior se nota más
     },
   };
 }
@@ -530,19 +530,26 @@ function crearSombrasContacto(lista, recursos) {
 }
 
 /** Fase L: charcos de luz (planos con degradado radial, suma de color). Todos en una sola malla. */
-function crearCharcosLuz(lista, recursos) {
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const ctx = c.getContext("2d");
-  const g = ctx.createRadialGradient(32, 32, 1, 32, 32, 32);
-  g.addColorStop(0, "rgba(255,214,150,0.55)");
-  g.addColorStop(1, "rgba(255,214,150,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 64, 64);
-  const textura = recursos.agregar(new THREE.CanvasTexture(c));
+function crearCharcosLuz(lista, recursos, degradado = null) {
+  // Con `degradado` (blanco, alfa 1 → 0, compartido con las sombras) el color cálido y el alfa 0.55 del dibujo
+  // original los pone el material: misma luz con una textura menos.
+  let textura = degradado;
+  if (!textura) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const ctx = c.getContext("2d");
+    const g = ctx.createRadialGradient(32, 32, 1, 32, 32, 32);
+    g.addColorStop(0, "rgba(255,214,150,0.55)");
+    g.addColorStop(1, "rgba(255,214,150,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    textura = recursos.agregar(new THREE.CanvasTexture(c));
+  }
   const geos = lista.map(([x, z, d]) => new THREE.PlaneGeometry(d, d).rotateX(-Math.PI / 2).translate(x, 0.003, z));
   const malla = new THREE.Mesh(recursos.agregar(mergeSimple(geos)), recursos.agregar(new THREE.MeshBasicMaterial({
-    map: textura, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.32, toneMapped: false,
+    // El color va en lineal, igual que los valores del lienzo original (textura sin espacio de color).
+    map: textura, color: degradado ? new THREE.Color().setRGB(1, 214 / 255, 150 / 255, THREE.LinearSRGBColorSpace) : 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    opacity: 0.32 * (degradado ? 0.55 : 1), toneMapped: false, userData: { escalaAlfa: degradado ? 0.55 : 1 },
   })));
   malla.userData.dinamico = true;
   malla.renderOrder = 1;
