@@ -10,6 +10,10 @@ import { nuevoExpediente, avanzar, relojDesde } from "../app/laboratorio/coordin
 import { crearAdaptadorManual } from "../app/laboratorio/adaptadores.js";
 import { solicitudManual, continuarConRespuesta } from "../app/laboratorio/manual.js";
 import { exportarExpediente, restaurarExpediente } from "../app/laboratorio/expediente.js";
+import { decidir } from "../app/laboratorio/coordinador.js";
+import { escenariosDemo } from "../app/laboratorio/escenarios-demo.js";
+import { prepararPropuestaNexus } from "../app/laboratorio/propuesta-nexus.js";
+import { registroVacio, agregarLeccion, admisionReal } from "../app/nexus/registro.js";
 
 const clon = (v) => JSON.parse(JSON.stringify(v));
 const HUMANO = { tipo: "humano", identificador: "diego" };
@@ -118,5 +122,22 @@ export function registrarCasosAuditoria(leer) {
     igual(r.expediente.trabajo.pasos[0].resultado_verificacion, "apta_para_revision_humana", "el paso del Investigador se reutiliza");
     verdadero(validarTrabajo(r.expediente.trabajo).ok, "el trabajo reanudado cumple su contrato");
     verdadero((await restaurarExpediente(exportarExpediente(r.expediente, { exportado_en: T0 }))).ok, "y se puede volver a guardar y reanudar");
+  });
+
+  prueba("Auditoría A-04 · una propuesta a Nexus nacida de un trabajo DEMO lleva id «demo-…»: entra solo al almacén de prueba y el real la rechaza aunque se le añadan huellas a mano", async () => {
+    const { expedientes } = await escenariosDemo({ compago: await doc("compago"), "ek-chuah": await doc("ek-chuah") });
+    const x = expedientes.find((e) => e.trabajo.estado === "requiere_revision" && e.informe);
+    decidir(x, "aprobado_por_humano", { por: HUMANO, motivo: "Aprobado en la prueba para generar la propuesta.", en: "2026-11-08T09:00:00Z" });
+    const p = prepararPropuestaNexus(x.trabajo, x.informe, { hallazgo_id: x.informe.hallazgos[0].id, fecha: "2026-11-08T09:01:00Z" });
+    verdadero(p.ok, p.errores.join(" "));
+    verdadero(p.propuesta.borrador_leccion.id.startsWith("demo-lab."), p.propuesta.borrador_leccion.id);
+    igual(p.propuesta.revision_esceptica.errores_forma, [], "sigue cumpliendo la forma de cauce.leccion");
+    const sobre = (reg) => ({ registro: reg, registrado_en: "2026-11-08T09:02:00Z", registrado_por: HUMANO });
+    verdadero((await agregarLeccion(registroVacio("lecciones", { es_demo: true }), sobre(p.propuesta.borrador_leccion))).ok, "entra al almacén DEMO");
+    const real = await agregarLeccion(registroVacio("lecciones", { es_demo: false }), sobre(p.propuesta.borrador_leccion));
+    verdadero(!real.ok && /demo/.test(real.errores.join(" ")), "no entra al almacén REAL: " + real.errores.join(" "));
+    const forzada = clon(p.propuesta.borrador_leccion); forzada.id = forzada.id.replace(/^demo-/, ""); for (const e of forzada.evidencia) e.sha256 = "a".repeat(64);
+    const adm = admisionReal(forzada, { ahora: Date.parse("2026-11-08T09:02:00Z"), registrado_por: HUMANO });
+    verdadero(!adm.admisible && adm.motivos.some((m) => /naturaleza «demo»/.test(m)), "con huellas añadidas y sin prefijo, la naturaleza demo la sigue frenando: " + adm.motivos.join(" "));
   });
 }
