@@ -104,13 +104,12 @@ export function crearAdaptadorAutomatico(config = CONFIG_APAGADA, { transporte =
       if (previo > config.presupuesto_mxn) return { estado: "fallo", error: `El costo estimado (${previo} MXN) supera el presupuesto (${config.presupuesto_mxn} MXN): no se envía.` };
       const ctl = new AbortController();
       enCurso = ctl;
-      let t;
-      let r;
+      let t, r, porTiempo = false;
       try {
         r = await Promise.race([
           transporte.enviar({ texto, modelo: config.modelo, senal: ctl.signal }),
-          new Promise((_, rechazar) => { t = setTimeout(() => { ctl.abort(); rechazar(new Error(`tiempo agotado (${config.limite_ms} ms)`)); }, config.limite_ms); }),
-          new Promise((_, rechazar) => ctl.signal.addEventListener("abort", () => rechazar(new Error(desactivado ? "desactivado durante la llamada" : "cancelado por una persona")), { once: true })),
+          new Promise((_, rechazar) => { t = setTimeout(() => { porTiempo = true; ctl.abort(); rechazar(new Error(`tiempo agotado (${config.limite_ms} ms)`)); }, config.limite_ms); }),
+          new Promise((_, rechazar) => ctl.signal.addEventListener("abort", () => rechazar(new Error(porTiempo ? `tiempo agotado (${config.limite_ms} ms)` : desactivado ? "desactivado durante la llamada" : "cancelado por una persona")), { once: true })),
         ]);
       } catch (err) { return { estado: "sin_conexion", error: `La llamada no terminó: ${String(err?.message ?? err).slice(0, 200)}` }; }
       finally { clearTimeout(t); enCurso = null; }

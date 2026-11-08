@@ -171,3 +171,69 @@ Aprobar exige informe y un motivo de al menos 10 caracteres.
 ## Registro
 
 `cauce.lab.registro` acepta además `trabajo` (una entrada por versión: la clave única es id + largo del historial; una versión que no conserve intacto el historial anterior se marca `historial_reescrito`) e `informe`.
+
+# Fase 3 · contrato 0.2 (autoría) y formatos del intercambio manual
+
+Motivo: el 0.1 obligaba a declarar `autor.tipo = "ia"` en toda ejecución, también cuando la escribía el guion DEMO.
+Eso permitía que un resultado DEMO pareciera análisis de IA. El 0.2 lo corrige sin reescribir nada de lo registrado.
+
+## Vocabulario común de autoría (`TIPOS_AUTORIA`, `app/laboratorio/base.js`)
+
+| Autoría | Qué es | Dónde aparece |
+|---|---|---|
+| `guion_demo` | Reglas escritas a mano o un transporte de prueba. **No es IA.** Solo con datos DEMO. | ejecución |
+| `ia_manual` | Un modelo de IA cuya respuesta una persona copió y pegó. Procedencia **declarada**. | ejecución |
+| `ia_automatica` | Un modelo llamado por un adaptador automático. Procedencia informada por el adaptador. | ejecución |
+| `codigo` | Resultado determinista del sistema (lab-V, Coordinador). | verificación, informe, historial |
+| `humano` | Intervención de una persona, con identidad **declarada**. | encargo, historial, decisión |
+
+## `cauce.lab.ejecucion` 0.2
+
+Todo lo del 0.1, más:
+
+- `autor`: `{tipo, identificador, adaptador, proveedor, modelo, procedencia, verificada}`.
+  - `tipo` ∈ `guion_demo | ia_manual | ia_automatica` (ni `codigo` ni `humano`: una ejecución es la salida de un rol).
+  - `verificada` es siempre `false`: este proyecto no puede comprobar criptográficamente qué modelo respondió.
+  - `guion_demo`: solo `es_demo: true`; adaptador `ninguno` (o `automatico` con proveedor `prueba`); procedencia
+    `no_aplica`; `modelo: null`; `intercambio: null`.
+  - `ia_manual`: adaptador `manual-claude`; procedencia `declarada`; con `intercambio` si terminó.
+  - `ia_automatica`: adaptador `ollama | automatico`; proveedor real (no `prueba`); procedencia `informada_por_adaptador`.
+  - Un identificador de guion (`guion…`, `sin-modelo`) o el adaptador `ninguno` no pueden declararse IA.
+- `intercambio` (solo `ia_manual`): `{formato: "cauce.lab.respuesta-manual 0.1", declarado_por: {tipo: humano,
+  identificador, autenticacion: declarada}, metodo: pegado|archivo, importado_en, respuesta_sha256 (huella del texto
+  pegado tal cual), solicitud_sha256 (huella de lo que se pidió), modelo_en_respuesta, avisos}`.
+- `preguntas`, `limitaciones`: listas de texto.
+- `recomendaciones`: `[{id, texto, se_basa_en}]`; `se_basa_en` no puede ir vacío (sin justificación no hay recomendación).
+- `afirmaciones[].se_basa_en`: ids locales o `«<insumo>#<id>»`; nunca a sí misma.
+- Objeciones: además de los tipos 0.1, `error_razonamiento`, `riesgo`, `explicacion_rival`.
+
+**Compatibilidad.** El 0.1 se sigue aceptando para LEER lo registrado (sus huellas están citadas en verificaciones e
+informes, así que no se migra reescribiendo). `autoriaDeEjecucion()` lo interpreta por su adaptador (`ninguno` →
+guion DEMO) y lo marca `legado: true`. Todo lo nuevo se produce en 0.2. `cauce.lab.encargo` y
+`cauce.lab.verificacion` siguen en 0.1 (se añadió el valor `automatico` a la lista de adaptadores).
+
+## `cauce.lab.informe` 0.2
+
+Igual que 0.1, con `modo.autoria = [{rol, tipo, identificador, proveedor, modelo, procedencia, verificada: false,
+declarado_por, legado}]`. Reglas: no se mezcla `guion_demo` con IA en un informe; con guion, `es_demo` y
+`es_ia: false`; todo IA, `es_ia: true`; manual = procedencia declarada. Las preguntas de los roles entran en
+«información que falta», sus limitaciones en «limitaciones» y sus recomendaciones como `propuesta_del_rol`
+(siempre `requiere_decision_humana`, nunca automáticas; las de dinero se excluyen).
+
+## `cauce.lab.respuesta-manual` 0.1 (lo que se pega)
+
+`{formato, version, encargo_id, encargo_sha256, rol, modelo_declarado, preguntas, afirmaciones, hipotesis, objeciones,
+dudas, contradicciones, limitaciones, recomendaciones}`. Campos desconocidos (p. ej. `estado`, `decision_humana`) se
+rechazan. Listas opcionales ausentes quedan vacías y se avisa. Se rechaza: JSON truncado o inválido, otro encargo,
+otra huella, otro rol, una respuesta ya importada o usada en otro trabajo, más de 300 000 caracteres.
+
+## `cauce.lab.expediente-local` 0.1 (guardar y reanudar)
+
+`{formato, version, exportado_en, trabajo_id, es_demo, ficha: {fuente, texto, hechos, origen, vigencia}, documentos,
+importaciones}`. Al reanudar: la ficha debe tener su huella, cada documento valida con su contrato, el trabajo
+extiende a sus versiones anteriores, el informe es el que cita el trabajo. Si algo no cuadra, no se carga.
+
+## Identidad de quien revisa
+
+`decision_humana.por.autenticacion` solo admite `declarada`: no hay proveedor de identidad. Un `autenticada` escrito
+en los datos se rechaza. Interfaz preparada: `app/laboratorio/identidad.js` (`proveedorIdentidad()`, hoy «ninguno»).
