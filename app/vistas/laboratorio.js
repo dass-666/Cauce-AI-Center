@@ -25,6 +25,7 @@ import { prepararPropuestaNexus } from "../laboratorio/propuesta-nexus.js";
 import { entradasDeDocumentos, serializar } from "../laboratorio/registro.js";
 import { PREGUNTA_DEMO } from "../laboratorio/escenarios-demo.js";
 import { solicitudManual, continuarConRespuesta, huellasImportadas, encargoEnEspera, LIMITE_RESPUESTA } from "../laboratorio/manual.js";
+import { diagnosticarExpediente, diagnosticoMarkdown } from "../laboratorio/diagnostico.js";
 import { exportarExpediente, restaurarExpediente } from "../laboratorio/expediente.js";
 import { naturalezaDe, faseDe, rolesDe, NATURALEZA } from "../laboratorio/presentacion.js";
 import { estadoDecision, proveedorIdentidad, ADVERTENCIA_DECLARADA } from "../laboratorio/identidad.js";
@@ -43,7 +44,9 @@ const ESTADO_CLASE = { pendiente: "c-demo", en_analisis: "c-real", requiere_evid
 const INCERT = { baja: "baja", media: "media", alta: "alta", desconocida: "desconocida" };
 
 /** Estado de la vista (en memoria: se pierde al recargar; los trabajos DEMO se recalculan igual). */
-const inicial = () => ({ expedientes: [], cargando: false, cargado: false, errores: [], elegido: null, pestana: "hallazgos", corriendo: null, activa: null, senal: null, reales: [], docs: {}, mensaje: null, n: 1, propuesta: null, solicitud: null, importacion: null, copiado: null });
+const inicial = () => ({ expedientes: [], cargando: false, cargado: false, errores: [], elegido: null, pestana: "hallazgos", corriendo: null, activa: null, senal: null, reales: [], docs: {}, mensaje: null, n: 1, propuesta: null, solicitud: null, importacion: null, copiado: null,
+  // fase 3.1: lo escrito en el formulario manual sobrevive a cada redibujado (un intento fallido no borra el texto pegado)
+  formulario: { quien: "diego", modelo: "", proveedor: "", pegado: "" } });
 const ui = inicial();
 let alCambiarContador = null;
 /** Clave del navegador donde se guardan los trabajos con respuestas manuales (solo en este equipo). */
@@ -270,8 +273,9 @@ function panelManual(x, redibujar) {
     ui.solicitud = { encargo_id: enc.id, texto: null };
     solicitudManual(x).then((s) => { if (ui.solicitud?.encargo_id === enc.id) { ui.solicitud = { encargo_id: enc.id, ...s }; redibujar(); } });
   }
-  const sol = ui.solicitud;
-  const imp = ui.importacion?.encargo_id === enc.id ? ui.importacion : null;
+  const sol = ui.solicitud, f = ui.formulario;
+  // La última importación aceptada se sigue mostrando en el panel del rol siguiente (con sus avisos y correcciones).
+  const imp = ui.importacion && (ui.importacion.encargo_id === enc.id || ui.importacion.ok) ? ui.importacion : null;
   const n = ["investigador", "analista", "critico"].indexOf(rol) + 1;
   return el("section", { clase: "lab-manual", "aria-labelledby": "lab-manual-titulo", "data-espera": rol },
     el("h3", { id: "lab-manual-titulo" }, `Te toca: respuesta del ${ETIQUETA_ROL[rol]} (rol ${n} de 3)`),
@@ -285,16 +289,18 @@ function panelManual(x, redibujar) {
       el("li", {}, el("strong", {}, "Copia la respuesta completa de Claude "), "(el bloque JSON) y pégala aquí, o importa un archivo."),
       el("li", {}, el("strong", {}, "Verifica y continúa: "), "el sistema comprueba formato, encargo y huella; lab-V comprueba cada cita.")),
     el("div", { clase: "lab-form" },
-      el("label", {}, "Quién trae la respuesta ", el("input", { id: "lab-quien", type: "text", value: "diego", maxlength: "80", autocomplete: "off" })),
-      el("label", {}, "Modelo (declarado) ", el("input", { id: "lab-modelo", type: "text", maxlength: "120", placeholder: "p. ej. el que muestre la app de Claude", autocomplete: "off" })),
-      el("label", {}, "Proveedor ", el("input", { id: "lab-proveedor", type: "text", maxlength: "120", placeholder: "p. ej. Anthropic (app de Claude)", autocomplete: "off" })),
-      el("label", { clase: "lab-ancho" }, `Respuesta (máx. ${LIMITE_RESPUESTA.toLocaleString("es-MX")} caracteres; se trata como texto no confiable) `, el("textarea", { id: "lab-pegar", rows: "6", clase: "lab-texto", spellcheck: "false" }))),
+      el("label", {}, "Quién trae la respuesta ", el("input", { id: "lab-quien", type: "text", value: f.quien, maxlength: "80", autocomplete: "off", oninput: (ev) => { f.quien = ev.target.value; } })),
+      el("label", {}, "Modelo (declarado) ", el("input", { id: "lab-modelo", type: "text", value: f.modelo, maxlength: "120", placeholder: "p. ej. el que muestre la app de Claude", autocomplete: "off", oninput: (ev) => { f.modelo = ev.target.value; } })),
+      el("label", {}, "Proveedor ", el("input", { id: "lab-proveedor", type: "text", value: f.proveedor, maxlength: "120", placeholder: "p. ej. Anthropic (app de Claude)", autocomplete: "off", oninput: (ev) => { f.proveedor = ev.target.value; } })),
+      el("label", { clase: "lab-ancho" }, `Respuesta (máx. ${LIMITE_RESPUESTA.toLocaleString("es-MX")} caracteres; se trata como texto no confiable) `, el("textarea", { id: "lab-pegar", rows: "6", clase: "lab-texto", spellcheck: "false", oninput: (ev) => { f.pegado = ev.target.value; } }, f.pegado))),
     el("div", { clase: "lab-botones" },
       el("button", { type: "button", clase: "boton", "data-accion": "importar-respuesta", disabled: !!ui.corriendo, onclick: () => importar(x, document.getElementById("lab-pegar")?.value ?? "", "pegado", redibujar) }, "Verificar y continuar"),
       el("label", { clase: "boton boton-chico lab-archivo" }, "Importar archivo…", el("input", { id: "lab-archivo", type: "file", accept: ".json,.txt,.md,text/plain,application/json", onchange: async (ev) => { const f = ev.target.files?.[0]; if (f) importar(x, await f.text(), "archivo", redibujar); } }))),
-    imp ? el("div", { clase: imp.ok ? "lab-nota" : "nexus-errores", role: imp.ok ? "status" : "alert", "data-importacion": imp.ok ? "aceptada" : "rechazada" },
-      el("strong", {}, imp.ok ? "Respuesta aceptada." : "La respuesta NO se aceptó (el trabajo no cambió):"),
-      imp.errores.length ? el("ul", {}, ...imp.errores.slice(0, 8).map((t) => el("li", {}, t))) : null,
+    imp ? el("div", { clase: imp.ok ? "lab-nota" : "nexus-errores", role: imp.ok ? "status" : "alert", "data-importacion": imp.ok ? "aceptada" : "rechazada", "data-categoria": imp.categoria ?? null },
+      el("strong", {}, imp.ok ? `Respuesta del ${ETIQUETA_ROL[imp.rol] ?? "rol anterior"} aceptada.` : `La respuesta NO se aceptó (el trabajo no cambió)${imp.categoria ? ` · fallo de ${imp.categoria}${imp.recuperable ? ", recuperable: basta volver a pedir el texto bien formado" : ""}` : ""}:`),
+      imp.errores.length ? el("ul", {}, ...imp.errores.slice(0, 8).map((t, i) => el("li", {}, imp.detalles?.[i]?.codigo ? el("code", { clase: "lab-codigo" }, imp.detalles[i].codigo) : null, imp.detalles?.[i]?.codigo ? " " : "", t,
+        imp.detalles?.[i]?.fragmento ? el("pre", { clase: "lab-fragmento", "data-fragmento": "" }, imp.detalles[i].fragmento) : null))) : null,
+      !imp.ok && f.pegado ? el("p", { clase: "lab-nota", "data-texto-conservado": "" }, "Tu texto sigue en el cuadro de arriba: corrígelo o pide a la conversación que lo repita y vuelve a pulsar «Verificar y continuar».") : null,
       imp.avisos.length ? el("ul", { clase: "lab-avisos" }, ...imp.avisos.slice(0, 6).map((t) => el("li", {}, `⚠ ${t}`))) : null) : null);
 }
 
@@ -310,16 +316,21 @@ async function copiar(texto, redibujar) {
 async function importar(x, texto, metodo, redibujar) {
   const enc = encargoEnEspera(x);
   if (!enc || ui.corriendo) return;
-  const quien = document.getElementById("lab-quien")?.value, modelo = document.getElementById("lab-modelo")?.value, proveedor = document.getElementById("lab-proveedor")?.value;
+  const f = ui.formulario;
+  const quien = document.getElementById("lab-quien")?.value ?? f.quien, modelo = document.getElementById("lab-modelo")?.value ?? f.modelo, proveedor = document.getElementById("lab-proveedor")?.value ?? f.proveedor;
+  Object.assign(f, { quien, modelo, proveedor });
+  if (metodo === "pegado") f.pegado = texto;
   ui.corriendo = x.trabajo.id; ui.activa = "verificador"; redibujar();
   try {
     const ahora = new Date(Math.max(Date.now(), Date.parse(x.trabajo.historial.at(-1).en) + 1000)).toISOString().replace(/\.\d{3}Z$/, "Z");
     const r = await continuarConRespuesta(x, texto, { declarado_por: quien, modelo, proveedor, metodo, ahora, reloj: relojDesde(ahora), ya_importadas: huellasImportadas(ui.expedientes) });
-    ui.importacion = { encargo_id: enc.id, ok: r.ok, errores: r.errores, avisos: r.avisos };
+    const cats = [...new Set(L(r.detalles).map((d) => d.categoria))];
+    ui.importacion = { encargo_id: enc.id, rol: enc.rol, ok: r.ok, errores: r.errores, avisos: r.avisos, detalles: L(r.detalles), categoria: ["formato", "contrato", "seguridad"].find((c) => cats.includes(c)) ?? null, recuperable: L(r.detalles).length > 0 && L(r.detalles).every((d) => d.recuperable) };
+    if (r.ok) f.pegado = "";
     if (r.ok) ui.mensaje = x.trabajo.espera ? `Respuesta del ${ETIQUETA_ROL[enc.rol]} verificada (lab-V: ${String(r.verificacion?.resultado ?? "—").replace(/_/g, " ")}). Siguiente: ${ETIQUETA_ROL[x.trabajo.espera.rol]}.`
       : `Respuesta del ${ETIQUETA_ROL[enc.rol]} verificada. Estado: ${ETIQUETA_ESTADO[x.trabajo.estado]}.`;
     if (r.ok) ui.solicitud = null;
-  } catch (err) { ui.importacion = { encargo_id: enc.id, ok: false, errores: [`El Coordinador se detuvo: ${err.message}`], avisos: [] }; }
+  } catch (err) { ui.importacion = { encargo_id: enc.id, rol: enc.rol, ok: false, errores: [`El Coordinador se detuvo: ${err.message}`], avisos: [], detalles: [], categoria: null, recuperable: false }; }
   ui.corriendo = null; ui.activa = null;
   guardar(); alCambiarContador?.(esperanPersona());
   redibujar();
@@ -435,7 +446,10 @@ function auditoria(x, redibujar) {
       x.informe ? descarga(`${x.informe.id}.md`, () => informeMarkdown(x.informe, t), "Descargar informe (Markdown)") : null,
       descargaRegistro(x)),
   ];
-  partes.push(el("div", { clase: "lab-botones" }, descarga(`${t.id}-expediente.json`, () => `${JSON.stringify(exportarExpediente(x, { exportado_en: ahoraISO() }), null, 1)}\n`, "Exportar expediente completo (para reanudar o archivar)")));
+  partes.push(el("div", { clase: "lab-botones" }, descarga(`${t.id}-expediente.json`, () => `${JSON.stringify(exportarExpediente(x, { exportado_en: ahoraISO() }), null, 1)}\n`, "Exportar expediente completo (para reanudar o archivar)"),
+    descarga(`${t.id}-diagnostico.md`, () => diagnosticoMarkdown(diagnosticarExpediente(x, { generado_en: ahoraISO() })), "Descargar diagnóstico (sin contenido de respuestas)"),
+    descarga(`${t.id}-diagnostico.json`, () => `${JSON.stringify(diagnosticarExpediente(x, { generado_en: ahoraISO() }), null, 2)}\n`, "Diagnóstico (JSON)")));
+  partes.push(el("p", { clase: "lab-nota" }, "El diagnóstico resume qué rol y qué validación fallaron (formato · contrato · evidencia · seguridad), si se recupera sin cambiar el significado y qué revisar o probar después. No incluye el texto de las respuestas ni de la ficha: se puede compartir sin exponer la consulta."));
   if (L(x.importaciones).length) partes.push(el("h4", {}, "Importaciones de respuestas manuales"), el("ol", { clase: "lab-historial" }, ...x.importaciones.map((i) => el("li", { "data-import": i.aceptada ? "aceptada" : "rechazada" }, `${fecha(i.en)} · ${ETIQUETA_ROL[i.rol]} · ${i.aceptada ? "aceptada" : "rechazada"} · trajo ${i.declarado_por || "?"} (declarado)${i.respuesta_sha256 ? ` · huella ${i.respuesta_sha256.slice(0, 12)}…` : ""}${i.errores.length ? ` · ${i.errores[0]}` : ""}`))));
   return el("div", {}, ...partes);
 }

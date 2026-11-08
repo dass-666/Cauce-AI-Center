@@ -325,7 +325,9 @@ function autoria02(doc, e) {
   }
 }
 function intercambio(x, doc, e) {
-  if (!clavesExactas(x, C_INTERCAMBIO, "intercambio.", e)) return;
+  if (!clavesExactas(x, [...C_INTERCAMBIO, "correcciones"], "intercambio.", e, C_INTERCAMBIO)) return;
+  // fase 3.1 (opcional): correcciones de FORMA aplicadas al importar, por código; nunca cambian el significado.
+  if ("correcciones" in x && !(Array.isArray(x.correcciones) && x.correcciones.length <= 20 && x.correcciones.every((c) => typeof c === "string" && /^[a-z_]{1,60}$/.test(c)))) e("intercambio.correcciones debe ser una lista de códigos (a-z y _, hasta 20).");
   if (x.formato !== "cauce.lab.respuesta-manual 0.1") e("intercambio.formato debe ser «cauce.lab.respuesta-manual 0.1».");
   if (!esObj(x.declarado_por) || x.declarado_por.tipo !== "humano" || !texto(x.declarado_por.identificador) || Object.keys(x.declarado_por).length !== 3 || x.declarado_por.autenticacion !== "declarada")
     e("intercambio.declarado_por debe ser {tipo: humano, identificador, autenticacion: declarada}: una persona trajo la respuesta.");

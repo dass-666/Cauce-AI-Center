@@ -85,3 +85,7 @@ html.lab-abierto .principal { grid-template-columns: 1fr !important; }
 .lab-aviso-identidad { color: var(--c-revision); font-size: 13px; }
 .lab-nueva { margin: 8px 0 10px; }
 @media (max-width: 640px) { .lab-archivo input[type="file"] { max-width: 100%; } }
+
+/* fase 3.1: fallo de importación con código y fragmento del lugar exacto (solo en pantalla; no se guarda) */
+.lab-codigo { font-size: .78em; background: rgba(0,0,0,.08); padding: 0 .3em; border-radius: 3px; }
+.lab-fragmento { white-space: pre-wrap; word-break: break-all; font-size: .8em; margin: .2em 0 .4em; padding: .3em .5em; background: rgba(0,0,0,.06); border-left: 3px solid #c0392b; max-height: 6em; overflow: auto; }
