@@ -3,8 +3,8 @@
 // ESTO NO ES IA. Son reglas fijas, escritas a mano, que leen la ficha de un motor y producen una salida con la
 // FORMA de `cauce.lab.ejecucion` para poder probar el flujo completo (encargo → salida → lab-V → crítica → informe →
 // revisión humana) sin gastar ni instalar nada. Cada texto empieza con «[GUION DEMO]» y el autor es
-// `guion-demo-sin-modelo` con adaptador «ninguno». El contrato 0.1 obliga a autor.tipo = "ia" en una ejecución: aquí
-// ese campo significa «salida del rol», y el adaptador «ninguno» dice que no hubo modelo. La interfaz lo muestra así.
+// `guion-demo-sin-modelo` con adaptador «ninguno». Desde el contrato 0.2 su autoría es «guion_demo» (no «ia»): el
+// defecto del 0.1, que obligaba a declarar «ia», queda corregido y el contrato rechaza un guion que se declare IA.
 //
 // Lo que el guion SÍ hace de verdad (y lab-V comprueba): citar literalmente líneas de la ficha, señalar estados sin
 // evidencia, fallos contados, lecturas viejas y formular hipótesis falsables con su alternativa. Lo que NO hace:
@@ -13,7 +13,7 @@
 import { L } from "./base.js";
 
 export const MARCA_GUION = "[GUION DEMO]";
-export const AUTOR_GUION = Object.freeze({ tipo: "ia", identificador: "guion-demo-sin-modelo", adaptador: "ninguno" });
+export const AUTOR_GUION = Object.freeze({ tipo: "guion_demo", identificador: "guion-demo-sin-modelo", adaptador: "ninguno", proveedor: null, modelo: null, procedencia: "no_aplica", verificada: false });
 const g = (t) => `${MARCA_GUION} ${t}`;
 const MALOS = ["error", "bloqueado", "requiere_revision"];
 const RE_FALLO = /fall|error|rechaz|inconsist|atrasad|sin analizar|sin fuente|problema|incomplet/i;
@@ -54,8 +54,11 @@ function analista({ hechos, fuente_id }) {
     hip.push({ id: `h${2 * i + 2}`, enunciado: g(`El error de «${h.agente}» se debe al propio proceso o a su entorno (configuración, permisos, recursos), no a la entrada.`), se_refuta_si: g("La entrada que ya funcionó antes se procesa sin error."), experimento: g("El mismo experimento de la hipótesis anterior: un solo resultado distingue ambas."), alternativa_a: `h${2 * i + 1}` });
   });
   const total = hechos.filter((h) => h.tipo === "agente").length, sinEv = hechos.filter((h) => h.tipo === "agente" && !h.evidencia).length;
-  if (total) af.push({ id: "c1", texto: g(`${sinEv} de ${total} agentes no aportan evidencia en la ficha: para ellos el estado mostrado no es verificable desde el Laboratorio.`), clase: "inferencia", citas: [] });
-  if (!af.length) af.push({ id: "c0", texto: g("La ficha no muestra fallos contados ni procesos en error."), clase: "inferencia", citas: [] });
+  // Fase 3: toda inferencia dice en qué se apoya (lab-V marca «inferencia_sin_base» si no): aquí, las líneas de la ficha.
+  const sinEvLineas = hechos.filter((h) => h.tipo === "agente" && !h.evidencia).slice(0, 10);
+  if (total) af.push({ id: "c1", texto: g(`${sinEv} de ${total} agentes no aportan evidencia en la ficha: para ellos el estado mostrado no es verificable desde el Laboratorio.`), clase: "inferencia", citas: sinEvLineas.flatMap(cita) });
+  const lectura = hechos.find((h) => h.tipo === "lectura");
+  if (!af.length) af.push({ id: "c0", texto: g("La ficha no muestra fallos contados ni procesos en error."), clase: "inferencia", citas: lectura ? cita(lectura) : [] });
   return { afirmaciones: af, hipotesis: hip, objeciones: [], dudas: [], contradicciones: [] };
 }
 

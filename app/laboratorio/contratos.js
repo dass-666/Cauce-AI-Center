@@ -4,7 +4,9 @@
 //
 // Reglas de autoría (no se pueden saltar con datos):
 //   · un ENCARGO lo crea una persona (creado_por.tipo = "humano"): la IA no se encarga trabajo a sí misma;
-//   · una EJECUCIÓN siempre es de una IA (autor.tipo = "ia"): una salida de modelo no puede presentarse como humana o código;
+//   · una EJECUCIÓN es la salida de un rol. En 0.1 su autor era siempre «ia» (también para el guion DEMO: defecto
+//     documentado). En 0.2 declara su autoría real: guion_demo (no es IA, solo DEMO), ia_manual (procedencia
+//     declarada por una persona) o ia_automatica (informada por un adaptador). Nunca «codigo» ni «humano»;
 //   · una VERIFICACIÓN solo la firma el código `lab-V` y nunca declara respaldo semántico ni aprobación: eso queda
 //     «pendiente_revision_humana» en la fase 1.
 
@@ -12,7 +14,7 @@ import {
   VERSION_LAB, AUTOR_VERIFICADOR, CONTRATO_ENCARGO, CONTRATO_EJECUCION, CONTRATO_VERIFICACION, ROLES, ESTADOS_EJECUCION,
   ESTADOS_CON_SALIDA, ESTADOS_CON_ERROR, CLASES_AFIRMACION, TIPOS_INSUMO, ADAPTADORES, TIPOS_OBJECION, ID_FUENTE,
   esIdLab, esIdDeLaboratorio, esObj, L, esEnteroEntre, clavesExactas, esFechaConZona, esFechaODia, texto, esHuella, buscarDatosPrivados,
-  LIMITES, tamanoDocumento, tieneInvisibles,
+  LIMITES, tamanoDocumento, tieneInvisibles, VERSIONES_EJECUCION, AUTORIAS_EJECUCION, PROCEDENCIAS, TIPOS_OBJECION_02,
 } from "./base.js";
 
 const nuloO = (v, f) => v === null || f(v);
@@ -20,9 +22,9 @@ const unicos = (lista, e, ruta) => {
   const vistos = new Set();
   for (const x of lista) { if (vistos.has(x)) e(`${ruta}: «${x}» está repetido.`); vistos.add(x); }
 };
-function cabecera(doc, contrato, tipo, e) {
+function cabecera(doc, contrato, tipo, e, versiones = [VERSION_LAB]) {
   if (doc.contrato !== contrato) e(`contrato debe ser «${contrato}» (es «${doc.contrato}»).`);
-  if (doc.version_contrato !== VERSION_LAB) e(`version_contrato debe ser «${VERSION_LAB}» (es «${doc.version_contrato}»): no se aceptan otras versiones.`);
+  if (!versiones.includes(doc.version_contrato)) e(`version_contrato debe ser ${versiones.map((v) => `«${v}»`).join(" o ")} (es «${doc.version_contrato}»): no se aceptan otras versiones.`);
   if (typeof doc.es_demo !== "boolean") e("es_demo debe ser true o false.");
   else if (!esIdLab(doc.id, tipo, doc.es_demo)) e(`id «${doc.id}» inválido: ${doc.es_demo ? "un documento DEMO usa «demo-" : "un documento REAL usa «"}${{ encargo: "lab-enc-", ejecucion: "lab-run-", verificacion: "lab-ver-" }[tipo]}…» (minúsculas, cifras, . _ -).`);
 }
@@ -133,7 +135,15 @@ export function validarEncargo(doc) {
 
 // ======================================================================================== ejecución
 const C_EJ = ["contrato", "version_contrato", "id", "es_demo", "encargo_id", "encargo_sha256", "rol", "estado", "inicio", "fin", "latido", "autor", "afirmaciones", "hipotesis", "objeciones", "dudas", "contradicciones", "consultas_web", "uso", "error"];
+/** 0.2 = 0.1 + intercambio (procedencia del intercambio manual) + preguntas, limitaciones y recomendaciones del rol. */
+const C_EJ_02 = [...C_EJ, "intercambio", "preguntas", "limitaciones", "recomendaciones"];
+const C_AUTOR_02 = ["tipo", "identificador", "adaptador", "proveedor", "modelo", "procedencia", "verificada"];
+const C_INTERCAMBIO = ["formato", "declarado_por", "metodo", "importado_en", "respuesta_sha256", "solicitud_sha256", "modelo_en_respuesta", "avisos"];
+const C_REC = ["id", "texto", "se_basa_en"];
 const C_AF = ["id", "texto", "clase", "citas"];
+const C_AF_02 = [...C_AF, "se_basa_en"];
+/** Referencia a algo de esta salida (id local) o a una entidad de un insumo del encargo («<insumo>#<id>»). */
+const REF_INSUMO = /^[a-z0-9][a-z0-9._-]{1,80}#[a-z0-9._-]{1,41}$/i;
 const C_CITA = ["fuente_id", "extracto", "ubicacion"];
 const C_HIP = ["id", "enunciado", "se_refuta_si", "experimento", "alternativa_a"];
 const C_OBJ = ["id", "a", "tipo", "texto"];
@@ -142,9 +152,10 @@ const ID_LOCAL = /^[a-z0-9][a-z0-9._-]{0,40}$/i;
 
 export function validarEjecucion(doc) {
   const errores = []; const e = (t) => errores.push(t);
-  if (!clavesExactas(doc, C_EJ, "", e)) return resultado(errores);
+  const v02 = esObj(doc) && doc.version_contrato === "0.2";
+  if (!clavesExactas(doc, v02 ? C_EJ_02 : C_EJ, "", e)) return resultado(errores);
   if (!tamano(doc, e)) return resultado(errores);
-  cabecera(doc, CONTRATO_EJECUCION, "ejecucion", e);
+  cabecera(doc, CONTRATO_EJECUCION, "ejecucion", e, VERSIONES_EJECUCION);
   if (!esIdLab(doc.encargo_id, "encargo", doc.es_demo === true)) e(`encargo_id «${doc.encargo_id}» inválido (y debe ser del mismo mundo DEMO/REAL que la ejecución).`);
   if (!esHuella(doc.encargo_sha256)) e("encargo_sha256 debe ser la huella del encargo exacto que se ejecutó.");
   if (!ROLES.includes(doc.rol)) e(`rol «${doc.rol}» inválido.`);
@@ -156,7 +167,8 @@ export function validarEjecucion(doc) {
   if (esFechaConZona(doc.inicio) && esFechaConZona(doc.latido) && Date.parse(doc.latido) < Date.parse(doc.inicio)) e("latido es anterior a inicio.");
   if (esFechaConZona(doc.fin) && esFechaConZona(doc.latido) && Date.parse(doc.latido) > Date.parse(doc.fin)) e("latido es posterior a fin.");
 
-  if (clavesExactas(doc.autor, ["tipo", "identificador", "adaptador"], "autor.", e)) {
+  if (v02) autoria02(doc, e);
+  else if (clavesExactas(doc.autor, ["tipo", "identificador", "adaptador"], "autor.", e)) {
     if (doc.autor.tipo !== "ia") e("autor.tipo debe ser «ia»: una salida de modelo no puede presentarse como humana ni como código.");
     if (!texto(doc.autor.identificador)) e("autor.identificador es obligatorio (el modelo que declaró responder).");
     if (!ADAPTADORES.includes(doc.autor.adaptador)) e(`autor.adaptador debe ser ${ADAPTADORES.join(" | ")}.`);
@@ -168,11 +180,12 @@ export function validarEjecucion(doc) {
   const idsAf = new Set(L(doc.afirmaciones).map((a) => a?.id)), idsHip = new Set(L(doc.hipotesis).map((h) => h?.id));
   /** Una objeción apunta a algo de esta misma salida (afirmación o hipótesis) o a «<insumo>#<id>»: una entidad de un
    *  insumo del encargo (p. ej. `banco-bns-2015-v1#e01`, `lab-run-x#a3`). lab-V comprueba que el insumo exista en el encargo. */
-  const referenciaObjecion = (a) => typeof a === "string" && (idsAf.has(a) || idsHip.has(a) || (/^[a-z0-9][a-z0-9._-]{1,80}#[a-z0-9._-]{1,41}$/i.test(a) && !a.includes("..")));
+  const referenciaObjecion = (a) => typeof a === "string" && (idsAf.has(a) || idsHip.has(a) || (REF_INSUMO.test(a) && !a.includes("..")));
 
   L(doc.afirmaciones).forEach((a, i) => {
     const r = `afirmaciones[${i}].`;
-    if (!clavesExactas(a, C_AF, r, e)) return;
+    if (!clavesExactas(a, v02 ? C_AF_02 : C_AF, r, e)) return;
+    if (v02) referencias(a.se_basa_en, `${r}se_basa_en`, e, referenciaObjecion, a.id);
     if (typeof a.id !== "string" || !ID_LOCAL.test(a.id)) e(`${r}id inválido.`);
     textoLimpio(a.texto, `${r}texto`, e);
     if (!CLASES_AFIRMACION.includes(a.clase)) e(`${r}clase «${a.clase}» inválida: ${CLASES_AFIRMACION.join(" | ")}.`);
@@ -203,7 +216,8 @@ export function validarEjecucion(doc) {
     if (!clavesExactas(o, C_OBJ, r, e)) return;
     if (!texto(o.id) || !texto(o.a) || !texto(o.texto)) e(`${r}id, a y texto son obligatorios.`);
     else { if (typeof o.id !== "string" || !ID_LOCAL.test(o.id)) e(`${r}id inválido.`); textoLimpio(o.texto, `${r}texto`, e); if (!referenciaObjecion(o.a)) e(`${r}a «${o.a}» no apunta a una afirmación o hipótesis de esta salida ni a «<insumo>#<id>» (referencia rota).`); }
-    if (!TIPOS_OBJECION.includes(o.tipo)) e(`${r}tipo debe ser ${TIPOS_OBJECION.join(" | ")}.`);
+    const tipos = v02 ? TIPOS_OBJECION_02 : TIPOS_OBJECION;
+    if (!tipos.includes(o.tipo)) e(`${r}tipo debe ser ${tipos.join(" | ")}.`);
   });
   unicos(L(doc.objeciones).map((o) => o?.id), e, "objeciones");
   L(doc.dudas).forEach((d, i) => { if (!texto(d)) e(`dudas[${i}] debe ser texto.`); else textoLimpio(d, `dudas[${i}]`, e); });
@@ -229,6 +243,27 @@ export function validarEjecucion(doc) {
     for (const k of ["tokens_entrada", "tokens_salida"]) if (!nuloO(doc.uso[k], (v) => Number.isInteger(v) && v >= 0)) e(`uso.${k} debe ser entero ≥ 0 o null (desconocido).`);
     if (typeof doc.uso.costo_mxn !== "number" || !(doc.uso.costo_mxn >= 0)) e("uso.costo_mxn debe ser número ≥ 0.");
   }
+  if (v02) {
+    for (const k of ["preguntas", "limitaciones"]) {
+      if (!Array.isArray(doc[k])) e(`${k} debe ser una lista (vacía si no hay).`);
+      else { cuenta(doc[k], LIMITES.dudas, k, e); doc[k].forEach((t, i) => { if (!texto(t)) e(`${k}[${i}] debe ser texto.`); else textoLimpio(t, `${k}[${i}]`, e); }); }
+    }
+    if (!Array.isArray(doc.recomendaciones)) e("recomendaciones debe ser una lista (vacía si no hay).");
+    else {
+      cuenta(doc.recomendaciones, LIMITES.hipotesis, "recomendaciones", e);
+      doc.recomendaciones.forEach((x, i) => {
+        const r = `recomendaciones[${i}].`;
+        if (!clavesExactas(x, C_REC, r, e)) return;
+        if (typeof x.id !== "string" || !ID_LOCAL.test(x.id)) e(`${r}id inválido.`);
+        textoLimpio(x.texto, `${r}texto`, e);
+        // Una recomendación sin base es una opinión suelta: debe decir en qué hallazgo o hipótesis se apoya.
+        if (Array.isArray(x.se_basa_en) && !x.se_basa_en.length) e(`${r}se_basa_en: una recomendación debe apoyarse en al menos un hallazgo o hipótesis (no hay recomendaciones sin justificación).`);
+        referencias(x.se_basa_en, `${r}se_basa_en`, e, referenciaObjecion, null);
+      });
+      unicos(doc.recomendaciones.map((x) => x?.id), e, "recomendaciones");
+    }
+    if (ESTADOS_CON_SALIDA.includes(doc.estado) && doc.autor?.tipo === "ia_manual" && !esObj(doc.intercambio)) e("una respuesta manual terminada debe traer su intercambio (quién la trajo, cuándo y su huella).");
+  }
   if (!nuloO(doc.error, (v) => typeof v === "string")) e("error debe ser texto o null.");
   else textoLimpio(doc.error, "error", e, { obligatorio: false });
   if (ESTADOS_CON_ERROR.includes(doc.estado) && !texto(doc.error)) e(`estado ${doc.estado}: error es obligatorio (se conserva literal para auditoría).`);
@@ -237,6 +272,83 @@ export function validarEjecucion(doc) {
   if (ESTADOS_CON_SALIDA.includes(doc.estado) && !L(doc.afirmaciones).length && !L(doc.hipotesis).length && !L(doc.objeciones).length) e("estado terminado sin afirmaciones, hipótesis ni objeciones: respuesta vacía.");
   privacidad(doc, e, errores);
   return resultado(errores);
+}
+
+/** Lista de referencias (`se_basa_en`): ids locales o «<insumo>#<id>»; nunca a sí misma. */
+function referencias(lista, ruta, e, valida, propio) {
+  if (!Array.isArray(lista)) { e(`${ruta} debe ser una lista (vacía si no hay).`); return; }
+  if (lista.length > LIMITES.citas_por_afirmacion) e(`${ruta}: ${lista.length} referencias superan el límite de ${LIMITES.citas_por_afirmacion}.`);
+  lista.forEach((x, j) => {
+    if (!valida(x)) e(`${ruta}[${j}] «${x}» no apunta a una afirmación o hipótesis de esta salida ni a «<insumo>#<id>» (referencia rota).`);
+    else if (propio !== null && x === propio) e(`${ruta}[${j}]: una afirmación no puede apoyarse en sí misma (circular).`);
+  });
+}
+
+/**
+ * Autoría 0.2. Lo que se exige no depende de lo que diga el texto, sino de cómo se produjo la salida:
+ *   guion_demo     solo DEMO; adaptador «ninguno» (guion) o «automatico» con proveedor «prueba» (transporte de prueba);
+ *   ia_manual      adaptador «manual-claude», procedencia «declarada» y el intercambio que lo respalda;
+ *   ia_automatica  adaptador «ollama» o «automatico», proveedor real (no «prueba»), procedencia «informada_por_adaptador».
+ * `verificada` es siempre false: no hay forma criptográfica de comprobar qué modelo respondió.
+ */
+function autoria02(doc, e) {
+  const a = doc.autor;
+  if (!clavesExactas(a, C_AUTOR_02, "autor.", e)) return;
+  if (!AUTORIAS_EJECUCION.includes(a.tipo)) { e(`autor.tipo debe ser ${AUTORIAS_EJECUCION.join(" | ")} (una ejecución es la salida de un rol: ni código ni persona; en 0.1 era «ia»).`); return; }
+  if (!texto(a.identificador) || a.identificador.length > 120) e("autor.identificador es obligatorio (hasta 120 caracteres).");
+  else textoLimpio(a.identificador, "autor.identificador", e);
+  if (!ADAPTADORES.includes(a.adaptador)) e(`autor.adaptador debe ser ${ADAPTADORES.join(" | ")}.`);
+  for (const k of ["proveedor", "modelo"]) { if (!nuloO(a[k], (v) => typeof v === "string" && v.trim() !== "" && v.length <= 120)) e(`autor.${k} debe ser texto (hasta 120) o null (desconocido).`); else textoLimpio(a[k], `autor.${k}`, e, { obligatorio: false }); }
+  if (!PROCEDENCIAS.includes(a.procedencia)) e(`autor.procedencia debe ser ${PROCEDENCIAS.join(" | ")}.`);
+  if (a.verificada !== false) e("autor.verificada debe ser false: este proyecto no puede comprobar criptográficamente qué modelo respondió (la procedencia es declarada).");
+  const guion = /guion|sin-modelo/i.test(String(a.identificador));
+  if (a.tipo === "guion_demo") {
+    if (doc.es_demo !== true) e("autor guion_demo solo en DEMO: un guion escrito a mano nunca se presenta como análisis de datos reales.");
+    if (!(a.adaptador === "ninguno" || (a.adaptador === "automatico" && a.proveedor === "prueba"))) e("autor guion_demo: adaptador «ninguno» (guion) o «automatico» con proveedor «prueba» (transporte de prueba).");
+    if (a.procedencia !== "no_aplica") e("autor guion_demo: procedencia «no_aplica» (no hubo modelo).");
+    if (a.modelo !== null) e("autor guion_demo: modelo debe ser null (no hubo modelo).");
+    if (doc.intercambio !== null) e("autor guion_demo: intercambio debe ser null (nadie trajo una respuesta).");
+  } else {
+    if (guion) e(`autor.identificador «${a.identificador}» es el de un guion: un guion no puede declararse IA.`);
+    if (a.adaptador === "ninguno") e("adaptador «ninguno» = no hubo modelo: no puede ser autoría de IA.");
+  }
+  if (a.tipo === "ia_manual") {
+    if (a.adaptador !== "manual-claude") e("autor ia_manual: adaptador «manual-claude».");
+    if (a.procedencia !== "declarada") e("autor ia_manual: procedencia «declarada» (la persona que pegó la respuesta dice de qué modelo vino; nadie lo verificó).");
+    if (doc.intercambio !== null) intercambio(doc.intercambio, doc, e);
+  }
+  if (a.tipo === "ia_automatica") {
+    if (!["ollama", "automatico"].includes(a.adaptador)) e("autor ia_automatica: adaptador «ollama» o «automatico».");
+    if (a.proveedor === null || a.proveedor === "prueba") e("autor ia_automatica: proveedor real obligatorio (un transporte de prueba es guion_demo, no IA).");
+    if (a.procedencia !== "informada_por_adaptador") e("autor ia_automatica: procedencia «informada_por_adaptador».");
+    if (doc.intercambio !== null) e("autor ia_automatica: intercambio debe ser null (es para respuestas traídas a mano).");
+  }
+}
+function intercambio(x, doc, e) {
+  if (!clavesExactas(x, C_INTERCAMBIO, "intercambio.", e)) return;
+  if (x.formato !== "cauce.lab.respuesta-manual 0.1") e("intercambio.formato debe ser «cauce.lab.respuesta-manual 0.1».");
+  if (!esObj(x.declarado_por) || x.declarado_por.tipo !== "humano" || !texto(x.declarado_por.identificador) || Object.keys(x.declarado_por).length !== 3 || x.declarado_por.autenticacion !== "declarada")
+    e("intercambio.declarado_por debe ser {tipo: humano, identificador, autenticacion: declarada}: una persona trajo la respuesta.");
+  if (!["pegado", "archivo"].includes(x.metodo)) e("intercambio.metodo debe ser pegado | archivo.");
+  if (!esFechaConZona(x.importado_en)) e("intercambio.importado_en debe ser instante con zona.");
+  if (!esHuella(x.respuesta_sha256)) e("intercambio.respuesta_sha256 debe ser la huella del texto pegado tal cual.");
+  if (!esHuella(x.solicitud_sha256)) e("intercambio.solicitud_sha256 debe ser la huella de la solicitud que se copió.");
+  if (!nuloO(x.modelo_en_respuesta, (v) => typeof v === "string" && v.length <= 120)) e("intercambio.modelo_en_respuesta debe ser texto (hasta 120) o null.");
+  else textoLimpio(x.modelo_en_respuesta, "intercambio.modelo_en_respuesta", e, { obligatorio: false });
+  if (!Array.isArray(x.avisos) || x.avisos.length > 20) e("intercambio.avisos debe ser una lista (hasta 20).");
+  else x.avisos.forEach((t, i) => textoLimpio(t, `intercambio.avisos[${i}]`, e));
+}
+
+/**
+ * Autoría de una ejecución, en cualquier versión (para mostrar e informar). Una 0.1 no se reescribe (su huella está
+ * citada): se INTERPRETA por su adaptador y se marca `legado: true`. «ninguno» → guion DEMO; «manual-claude» → IA
+ * manual sin intercambio registrado; «ollama» → IA automática.
+ */
+export function autoriaDeEjecucion(ej) {
+  const a = esObj(ej?.autor) ? ej.autor : {};
+  if (ej?.version_contrato === "0.2") return { tipo: a.tipo, identificador: a.identificador, proveedor: a.proveedor ?? null, modelo: a.modelo ?? null, procedencia: a.procedencia, verificada: false, declarado_por: ej.intercambio?.declarado_por?.identificador ?? null, legado: false };
+  const tipo = a.adaptador === "ninguno" ? "guion_demo" : a.adaptador === "manual-claude" ? "ia_manual" : "ia_automatica";
+  return { tipo, identificador: a.identificador ?? null, proveedor: null, modelo: tipo === "guion_demo" ? null : a.identificador ?? null, procedencia: tipo === "guion_demo" ? "no_aplica" : tipo === "ia_manual" ? "declarada" : "informada_por_adaptador", verificada: false, declarado_por: null, legado: true };
 }
 
 // ======================================================================================== verificación

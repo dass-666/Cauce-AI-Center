@@ -16,6 +16,7 @@ import { AUTOR_VERIFICADOR, VERSION_LAB, CONTRATO_VERIFICACION, ESTADOS_CON_ERRO
   normalizarEspacios, sha256Bytes, apariciones, jsonCanonico, sha256, intervalo, esFechaConZona } from "./base.js";
 import { validarEncargo, validarEjecucion, validarVerificacion } from "./contratos.js";
 
+const refsInsumosDe = (encargo) => new Set(L(encargo?.insumos).map((x) => x?.ref));
 /** Huella de un documento del Laboratorio (JSON canónico: llaves ordenadas). */
 export const huellaDoc = (doc) => sha256(jsonCanonico(doc));
 
@@ -26,6 +27,12 @@ export const MIN_PALABRAS_EXTRACTO = 4;
 const VENTANA_CONTEXTO = 80;
 const NEGACIONES = /\b(no|nunca|jam[aá]s|falso|falsa|niega|neg[oó]|desminti[oó]|desmiente|rumor(?:es)?|supuestamente|contrario|not|never|false|denied|denies|deny|rumou?red|untrue|contrary|it is not true)\b[^.]*$/i;
 const INSTRUCCIONES = /(\brm\s+-rf\b|\bgit\s+(push|reset|commit|merge)\b|\bcurl\s+|\bwget\s+|\bpowershell\b|\bInvoke-WebRequest\b|\buv\s+run\b|\bnpm\s+(i|install)\b|\bpip\s+install\b|\bsudo\b|\bdel\s+\/|\bformat\s+[a-z]:)/i;
+/**
+ * Fase 3 · texto que intenta dar órdenes al sistema o al revisor (inyección de instrucciones). No se obedece: se
+ * marca para que una persona lo vea. Detecta frases típicas; una formulación nueva puede escaparse (por eso el texto
+ * de una IA nunca puede cambiar un estado, aunque no se detecte).
+ */
+export const INYECCION = /(ignor(a|e|en|ar)\b[^.]{0,30}\b(instruccion|instrucción|indicacion|indicación|reglas|lo anterior)|ignore (all |any )?(the )?(previous|prior|above) (instructions|rules)|system prompt|prompt del sistema|\bjailbreak\b|(aprueba|aprobar|marca|marcar|da por aprobad)[^.]{0,30}\b(informe|trabajo|lecci[oó]n|como aprobad)|approve (this|the) (report|job)|mark (it|this) as approved|desactiva(r)? (el )?(verificador|lab-v)|ahora eres|you are now|act as (an? )?(admin|administrator|system))/i;
 const MESES = { ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, oct: 9, nov: 10, dic: 11 };
 
 /** Fechas que el TEXTO de una afirmación menciona (AAAA-MM-DD y «15-ene-2015»), como días UTC. */
@@ -250,6 +257,39 @@ export async function verificar({ encargo, ejecucion, copias = new Map(), regist
       afirmaciones.push({ afirmacion_id: a.id, clase: a.clase, estado_cita: estadoCita, respaldo_semantico: "pendiente_revision_humana", alertas: alertasAf });
     }
     for (const [i, h] of L(ejecucion.hipotesis).entries()) if (INSTRUCCIONES.test(`${h.enunciado} ${h.experimento}`)) alerta("contiene_instrucciones_no_ejecutadas", `hipotesis[${i}]`, "La hipótesis o su experimento contiene algo parecido a un comando: no se ejecuta.");
+    // ---------- fase 3 (contrato 0.2) ----------
+    const v02 = ejecucion.version_contrato === "0.2";
+    const textos = [
+      ...L(ejecucion.afirmaciones).map((a, i) => [`afirmaciones[${i}]`, a.texto]), ...L(ejecucion.hipotesis).map((h, i) => [`hipotesis[${i}]`, `${h.enunciado} ${h.se_refuta_si} ${h.experimento}`]),
+      ...L(ejecucion.objeciones).map((o, i) => [`objeciones[${i}]`, o.texto]), ...L(ejecucion.dudas).map((d, i) => [`dudas[${i}]`, d]), ...L(ejecucion.contradicciones).map((c, i) => [`contradicciones[${i}]`, c.texto]),
+      ...L(ejecucion.preguntas).map((t, i) => [`preguntas[${i}]`, t]), ...L(ejecucion.limitaciones).map((t, i) => [`limitaciones[${i}]`, t]), ...L(ejecucion.recomendaciones).map((r, i) => [`recomendaciones[${i}]`, r.texto]),
+    ];
+    for (const [ruta, t] of textos) if (INYECCION.test(String(t))) alerta("posible_inyeccion_de_instrucciones", ruta, "El texto intenta dar órdenes (ignorar reglas, aprobar, cambiar de papel…). Se muestra como texto y no se obedece: ningún texto de una IA puede cambiar un estado.");
+    if (v02) {
+      for (const [ruta, t] of textos.filter(([r]) => /^(preguntas|limitaciones|recomendaciones|dudas|objeciones)/.test(r))) if (INSTRUCCIONES.test(String(t))) alerta("contiene_instrucciones_no_ejecutadas", ruta, "Contiene algo parecido a un comando: no se ejecuta.");
+      for (const [i, a] of L(ejecucion.afirmaciones).entries()) {
+        // Conclusión sin evidencia: una inferencia o especulación que no cita ni dice en qué se apoya.
+        if (["inferencia", "especulacion"].includes(a.clase) && !L(a.citas).length && !L(a.se_basa_en).length) alerta("inferencia_sin_base", `afirmaciones[${i}]`, `«${String(a.texto).slice(0, 80)}» es una ${a.clase} que no cita la fuente ni dice en qué hallazgo se apoya.`);
+        if (ejecucion.rol === "critico" && a.clase === "hecho_citado") alerta("rol_afirma_hechos_nuevos", `afirmaciones[${i}]`, "El Abogado del Diablo no debe aportar hechos nuevos; se verifica igual y lo revisa una persona.");
+      }
+    }
+    // Referencias a entidades de una ejecución previa (objeciones y se_basa_en): la entidad debe existir en esa ejecución.
+    const entidadExiste = (ref) => {
+      const m = /^([^#]+)#(.+)$/.exec(String(ref ?? ""));
+      if (!m) return true;
+      const previa = registro?.ejecuciones?.get?.(m[1]);
+      if (!previa) return true; // insumos que no son ejecuciones (banco, CSI) se comprueban arriba
+      return L(previa.afirmaciones).some((a) => a.id === m[2]) || L(previa.hipotesis).some((h) => h.id === m[2]) || L(previa.objeciones).some((o) => o.id === m[2]) || L(previa.recomendaciones).some((r) => r.id === m[2]);
+    };
+    if (v02) {
+      const refs = [...L(ejecucion.objeciones).map((o, i) => [`objeciones[${i}].a`, o.a]), ...L(ejecucion.afirmaciones).flatMap((a, i) => L(a.se_basa_en).map((r, j) => [`afirmaciones[${i}].se_basa_en[${j}]`, r])),
+        ...L(ejecucion.recomendaciones).flatMap((x, i) => L(x.se_basa_en).map((r, j) => [`recomendaciones[${i}].se_basa_en[${j}]`, r]))];
+      for (const [ruta, ref] of refs) {
+        const m = /^([^#]+)#/.exec(String(ref ?? ""));
+        if (m && !refsInsumosDe(encargo).has(m[1]) && !registro?.ejecuciones?.has?.(m[1])) err("referencia_a_insumo_desconocido", `${ruta}: «${m[1]}» no es un insumo del encargo ni una ejecución registrada.`);
+        else if (!entidadExiste(ref)) alerta("referencia_inexistente", ruta, `«${ref}» no existe en esa ejecución: se refiere a algo que el rol anterior no dijo.`);
+      }
+    }
     // Una objeción a «<insumo>#<id>» debe apuntar a un insumo que el encargo declare (o a una ejecución registrada).
     const refsInsumos = new Set(L(encargo.insumos).map((x) => x?.ref));
     for (const [i, o] of L(ejecucion.objeciones).entries()) {

@@ -18,13 +18,10 @@ import { verificar, huellaDoc } from "./verificador.js";
 import { transitar, rondaDe, COORDINADOR, ESTADOS_FINALES } from "./trabajo.js";
 import { construirInforme, validarInforme } from "./informe.js";
 import { ejecutarConReintentos } from "./adaptadores.js";
+import { PREGUNTA_ROL } from "./roles.js";
 
 export const ETIQUETA_ROL = Object.freeze({ investigador: "Investigador", analista: "Analista", critico: "Abogado del Diablo", verificador: "Verificador (lab-V)", coordinador: "Coordinador" });
-export const PREGUNTA_ROL = Object.freeze({
-  investigador: "Lee la ficha del motor. Separa lo que dice literalmente (hechos citados) de lo que no dice (dudas). Cita líneas exactas.",
-  analista: "Interpreta lo que encontró el Investigador: anomalías, fallos y riesgos. Declara como inferencia todo lo que no sea lectura directa y formula hipótesis falsables con su alternativa.",
-  critico: "Actúa como Abogado del Diablo: objeta las conclusiones del Analista, busca supuestos, sobreajuste, problemas de alcance y de tiempo, y pide la evidencia que falta. No afirmes hechos nuevos.",
-});
+export { PREGUNTA_ROL };
 const CORTO = { investigador: "inv", analista: "ana", critico: "cri" };
 
 /** Reloj determinista: cada llamada avanza un segundo desde `base` (instante con zona). Así el registro es reproducible. */
@@ -131,7 +128,7 @@ export async function avanzar(x, { adaptador, reloj, senal = null, max_intentos_
     previas[rol] = final;
     consolidados.push({ rol, ejecucion: final, verificacion });
   }
-  const informe = construirInforme({ trabajo: x.trabajo, ronda, generado_en: reloj(), adaptador, pasos: consolidados });
+  const informe = construirInforme({ trabajo: x.trabajo, ronda, generado_en: reloj(), adaptador, pasos: consolidados, lectura: x.ficha.vigencia ?? null });
   const vi = validarInforme(informe);
   if (!vi.ok) { mover(x, "error", `El informe consolidado no cumple su contrato (defecto del Coordinador): ${vi.errores.slice(0, 3).join(" ")}`, reloj(), { pasos }); return x; }
   anotar(x, "informe", informe);

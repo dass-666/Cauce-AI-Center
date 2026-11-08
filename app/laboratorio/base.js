@@ -23,8 +23,36 @@ export const ESTADOS_PARCIALES = ["excedio_limite", "cancelado"];
 export const ESTADOS_CON_ERROR = ["fallo", "sin_conexion"];
 export const CLASES_AFIRMACION = ["hecho_citado", "inferencia", "especulacion", "desconocido"];
 export const TIPOS_INSUMO = ["csi_investigacion", "copia_fuente", "lab_ejecucion_verificada", "banco_evaluacion"];
-export const ADAPTADORES = ["manual-claude", "ollama", "ninguno"];
+export const ADAPTADORES = ["manual-claude", "ollama", "ninguno", "automatico"];
 export const TIPOS_OBJECION = ["supuesto", "circularidad", "sobreajuste", "sesgo", "alcance", "temporalidad", "evidencia", "otra"];
+
+// ---------------------------------------------------------------------------------------------- fase 3 · autoría
+/**
+ * Versiones de `cauce.lab.ejecucion` que se aceptan. La 0.1 queda SOLO para leer lo ya registrado (sus documentos no
+ * se reescriben: sus huellas están citadas en verificaciones e informes); todo lo nuevo se produce en 0.2.
+ */
+export const VERSION_EJECUCION = "0.2";
+export const VERSIONES_EJECUCION = ["0.1", "0.2"];
+/**
+ * Quién produjo algo, en todo el Laboratorio (contrato 0.2). Antes una ejecución solo podía decir «ia», incluso cuando
+ * la escribía el guion DEMO. Ahora hay cinco autorías que no se confunden:
+ *   guion_demo     reglas escritas a mano (o un transporte de prueba): NO es IA; solo en DEMO;
+ *   ia_manual      un modelo de IA cuya respuesta una persona copió y pegó; procedencia DECLARADA, no verificada;
+ *   ia_automatica  un modelo de IA llamado por un adaptador automático; procedencia informada por el adaptador;
+ *   codigo         resultado determinista del sistema (lab-V, Coordinador);
+ *   humano         intervención de una persona (encargos, decisiones), con identidad declarada.
+ * Una EJECUCIÓN (salida de un rol) solo admite las tres primeras.
+ */
+export const TIPOS_AUTORIA = Object.freeze(["guion_demo", "ia_manual", "ia_automatica", "codigo", "humano"]);
+export const AUTORIAS_EJECUCION = Object.freeze(["guion_demo", "ia_manual", "ia_automatica"]);
+export const ETIQUETA_AUTORIA = Object.freeze({
+  guion_demo: "Guion DEMO · no es IA", ia_manual: "IA · intercambio manual (procedencia declarada)", ia_automatica: "IA · proveedor automático",
+  codigo: "Código determinista", humano: "Persona (identidad declarada)",
+});
+/** Procedencia del autor: nada en este proyecto puede comprobarla criptográficamente, así que `verificada` es siempre false. */
+export const PROCEDENCIAS = Object.freeze(["no_aplica", "declarada", "informada_por_adaptador"]);
+/** Tipos de objeción añadidos en 0.2 para el Abogado del Diablo (los de 0.1 siguen valiendo). */
+export const TIPOS_OBJECION_02 = Object.freeze([...TIPOS_OBJECION, "error_razonamiento", "riesgo", "explicacion_rival"]);
 
 /** Identificadores: prefijo por tipo de documento; los de prueba empiezan por «demo-». */
 export const PREFIJOS = { encargo: "lab-enc-", ejecucion: "lab-run-", verificacion: "lab-ver-" };
