@@ -6,10 +6,15 @@
 
 import { jsonCanonico, sha256, esHuella, esFechaConZona, esObj, L } from "./base.js";
 import { validarEncargo, validarEjecucion, validarVerificacion } from "./contratos.js";
+import { validarTrabajo, extiendeA } from "./trabajo.js";
+import { validarInforme } from "./informe.js";
 
 export const CONTRATO_REGISTRO = "cauce.lab.registro";
-export const TIPOS_ENTRADA = ["encargo", "ejecucion", "verificacion"];
-const VALIDADORES = { encargo: validarEncargo, ejecucion: validarEjecucion, verificacion: validarVerificacion };
+/** Fase 2: también «trabajo» (cada cambio de estado es una versión nueva) e «informe» (consolidado del Coordinador). */
+export const TIPOS_ENTRADA = ["encargo", "ejecucion", "verificacion", "trabajo", "informe"];
+const VALIDADORES = { encargo: validarEncargo, ejecucion: validarEjecucion, verificacion: validarVerificacion, trabajo: validarTrabajo, informe: validarInforme };
+/** Clave de unicidad: un trabajo se registra una vez por versión (largo de su historial); lo demás, una vez por id. */
+export const claveUnica = (tipo, doc) => (tipo === "trabajo" ? `trabajo:${doc?.id}#${Array.isArray(doc?.historial) ? doc.historial.length : "?"}` : `${tipo}:${doc?.id}`);
 
 const huellaEntrada = (e) => { const { sha256_entrada, ...resto } = e; return sha256(jsonCanonico(resto)); };
 
@@ -31,7 +36,7 @@ export async function nuevaEntrada(anterior, { tipo, documento, registrado_en, r
   const v = VALIDADORES[tipo](documento);
   // Un id válido no se registra dos veces (ni con el mismo contenido ni con otro): `ids_validos` son los ids ya
   // registrados como válidos, tipo:id. Un documento inválido sí puede volver a registrarse corregido con el mismo id.
-  if (v.ok && ids_validos?.has?.(`${tipo}:${documento.id}`)) return { ok: false, errores: [`id duplicado: ya hay un ${tipo} válido con id ${documento.id} en el registro.`] };
+  if (v.ok && ids_validos?.has?.(claveUnica(tipo, documento))) return { ok: false, errores: [`id duplicado: ya hay un ${tipo} válido con id ${documento.id} en el registro.`] };
   const e = {
     contrato: CONTRATO_REGISTRO, version_contrato: "0.1",
     n: anterior ? anterior.n + 1 : 1, tipo, id: typeof documento.id === "string" ? documento.id : null, es_demo: registro_es_demo,
@@ -56,7 +61,7 @@ export async function verificarRegistro(textoRegistro, { es_demo }) {
   const terminaBien = String(textoRegistro ?? "").endsWith("\n") || textoRegistro === "";
   if (lineas.at(-1) === "") lineas.pop();
   let anterior = null;
-  const idsValidos = new Map();
+  const idsValidos = new Map(), ultimoTrabajo = new Map();
   for (const [i, linea] of lineas.entries()) {
     const nl = i + 1, ultima = i === lineas.length - 1;
     let e;
@@ -77,7 +82,12 @@ export async function verificarRegistro(textoRegistro, { es_demo }) {
     if (anterior && esFechaConZona(e.registrado_en) && esFechaConZona(anterior.registrado_en) && Date.parse(e.registrado_en) < Date.parse(anterior.registrado_en))
       problemas.push({ linea: nl, codigo: "orden_temporal", detalle: `registrado_en ${e.registrado_en} es anterior a la entrada previa (${anterior.registrado_en}).` });
     if (e.valido === true && typeof e.id === "string") {
-      const clave = `${e.tipo}:${e.id}`;
+      const clave = claveUnica(e.tipo, e.documento);
+      if (e.tipo === "trabajo") {
+        const previa = ultimoTrabajo.get(e.id);
+        if (previa && !extiendeA(e.documento, previa)) problemas.push({ linea: nl, codigo: "historial_reescrito", detalle: `el trabajo ${e.id} no conserva intacto el historial de su versión anterior.` });
+        ultimoTrabajo.set(e.id, e.documento);
+      }
       if (idsValidos.has(clave)) problemas.push({ linea: nl, codigo: "id_duplicado", detalle: `ya había un ${e.tipo} válido con id ${e.id} (línea ${idsValidos.get(clave)}).` });
       else idsValidos.set(clave, nl);
     }
@@ -96,4 +106,28 @@ export function indicesDesdeEntradas(entradas) {
     if (e.tipo === "verificacion") verificaciones.set(e.documento.ejecucion_id, e.documento);
   }
   return { encargos, ejecuciones, verificaciones };
+}
+
+/** Fecha natural de un documento del Laboratorio (para registrarlo en orden). */
+export function fechaDeDocumento(tipo, d) {
+  return tipo === "trabajo" ? d?.historial?.at?.(-1)?.en : tipo === "encargo" ? d?.creado_en : tipo === "ejecucion" ? (d?.fin ?? d?.inicio) : tipo === "verificacion" ? d?.verificado_en : tipo === "informe" ? d?.generado_en : null;
+}
+
+/**
+ * Prepara (sin escribir) las entradas de registro de una lista de documentos [{tipo, documento}], en orden, a
+ * continuación de `anterior`. Si alguno no se puede registrar se detiene y lo dice (no se salta nada).
+ */
+export async function entradasDeDocumentos(documentos, { anterior = null, registro_es_demo, ids_validos = new Set() }) {
+  const entradas = [], ids = new Set(ids_validos);
+  let previa = anterior;
+  for (const { tipo, documento } of L(documentos)) {
+    const fecha = fechaDeDocumento(tipo, documento);
+    const registrado_en = previa && esFechaConZona(previa.registrado_en) && Date.parse(fecha) < Date.parse(previa.registrado_en) ? previa.registrado_en : fecha;
+    const r = await nuevaEntrada(previa, { tipo, documento, registrado_en, registro_es_demo, ids_validos: ids });
+    if (!r.ok) return { ok: false, entradas, errores: [`${tipo} ${documento?.id ?? "?"}: ${r.errores.join(" ")}`] };
+    entradas.push(r.entrada);
+    if (r.entrada.valido) ids.add(claveUnica(tipo, documento));
+    previa = r.entrada;
+  }
+  return { ok: true, entradas, errores: [] };
 }

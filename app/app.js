@@ -94,6 +94,7 @@ function ponerInmersivo(activo) {
   if (activo && salaAbierta()) ponerSala(false);
   if (activo && nexusAbierto()) ponerNexus(false);
   if (activo && csiAbierto()) ponerCSI(false);
+  if (activo && labAbierto()) ponerLaboratorio(false);
   document.documentElement.classList.toggle("inmersivo", activo);
   $("#salir-inmersivo").hidden = !activo;
   $(".boton-inmersivo").setAttribute("aria-pressed", activo ? "true" : "false");
@@ -116,7 +117,7 @@ async function cambiarVista(tipo, { forzada = false } = {}) {
       const { crearVista3D } = await import("./vistas/vista3d/escena3d.js");
       if (tipoVista !== "3d") return; // el usuario cambió mientras cargaba
       vista = crearVista3D($("#oficina"), opcionesVista);
-      if (salaAbierta() || nexusAbierto() || csiAbierto()) vista.pausar?.(true);
+      if (salaAbierta() || nexusAbierto() || csiAbierto() || labAbierto()) vista.pausar?.(true);
       avisarVista(null);
     } catch (e) {
       console.error(e);
@@ -161,6 +162,7 @@ async function iniciar() {
   $("#boton-sala").addEventListener("click", () => ponerSala(!salaAbierta()));
   $("#boton-nexus").addEventListener("click", () => ponerNexus(!nexusAbierto()));
   $("#boton-csi").addEventListener("click", () => ponerCSI(!csiAbierto()));
+  $("#boton-laboratorio").addEventListener("click", () => ponerLaboratorio(!labAbierto()));
   // S abre o cierra la sala de control (fuera de campos de texto y sin teclas modificadoras).
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
@@ -168,6 +170,7 @@ async function iniciar() {
     if (e.key === "s" || e.key === "S") { e.preventDefault(); ponerSala(!salaAbierta()); }
     if (e.key === "n" || e.key === "N") { e.preventDefault(); ponerNexus(!nexusAbierto()); }
     if (e.key === "i" || e.key === "I") { e.preventDefault(); ponerCSI(!csiAbierto()); }
+    if (e.key === "l" || e.key === "L") { e.preventDefault(); ponerLaboratorio(!labAbierto()); }
   });
 
   const registro = await cargarRegistro();
@@ -183,6 +186,7 @@ async function iniciar() {
   if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
   else if (new URLSearchParams(location.search).get("nexus") === "1") ponerNexus(true);
   else if (["1", "historico", "demo", "registro"].includes(new URLSearchParams(location.search).get("csi") ?? "")) ponerCSI(true);
+  else if (new URLSearchParams(location.search).get("laboratorio") === "1") ponerLaboratorio(true);
   estado.temporizador = setInterval(() => { if (!document.hidden) actualizar(); }, INTERVALO_MS);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) actualizar(); });
   // En window (no en document): así corre después de la vista 3D, que usa Esc para volver al piso.
@@ -192,6 +196,7 @@ async function iniciar() {
     if (salaAbierta()) ponerSala(false);
     else if (nexusAbierto()) ponerNexus(false);
     else if (csiAbierto()) ponerCSI(false);
+    else if (labAbierto()) ponerLaboratorio(false);
     else if (estado.seleccion) { estado.seleccion = null; dibujar(); }
     else if (enInmersivo()) ponerInmersivo(false);
   });
@@ -203,12 +208,12 @@ const salaAbierta = () => !$("#sala-control").hidden;
 /** Abre o cierra la sala. Mientras está abierta, la vista 3D se pausa (no gasta tarjeta gráfica). */
 function ponerSala(abrir) {
   if (abrir === salaAbierta()) return;
-  if (abrir) { ponerInmersivo(false); ponerNexus(false); ponerCSI(false); }
+  if (abrir) { ponerInmersivo(false); ponerNexus(false); ponerCSI(false); ponerLaboratorio(false); }
   $("#sala-control").hidden = !abrir;
   document.documentElement.classList.toggle("sala-abierta", abrir);
   $("#boton-sala").setAttribute("aria-pressed", abrir ? "true" : "false");
   guardarPreferencia("cauce.sala", abrir ? "1" : "0");
-  vista?.pausar?.(abrir || nexusAbierto() || csiAbierto());
+  vista?.pausar?.(abrir || nexusAbierto() || csiAbierto() || labAbierto());
   if (abrir) { dibujarSalaSiAbierta(); $("#sala-titulo")?.focus({ preventScroll: true }); }
   else if (document.activeElement === document.body || $("#sala-control").contains(document.activeElement)) $("#boton-sala").focus({ preventScroll: true });
 }
@@ -220,11 +225,11 @@ let nexusDocs = null;
 
 function ponerNexus(abrir) {
   if (abrir === nexusAbierto()) return;
-  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerCSI(false); }
+  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerCSI(false); ponerLaboratorio(false); }
   $("#nexus").hidden = !abrir;
   document.documentElement.classList.toggle("nexus-abierto", abrir);
   $("#boton-nexus").setAttribute("aria-pressed", abrir ? "true" : "false");
-  vista?.pausar?.(abrir || salaAbierta() || csiAbierto());
+  vista?.pausar?.(abrir || salaAbierta() || csiAbierto() || labAbierto());
   if (abrir) {
     if (!nexusDocs) dibujarNexus($("#nexus"), null, { alCerrar: () => ponerNexus(false) });
     leerYDibujarNexus().then(() => $("#nexus-titulo")?.focus({ preventScroll: true }));
@@ -265,17 +270,39 @@ async function leerYDibujarNexus() {
   dibujarNexus($("#nexus"), resumirNexus(nx, { ahora }), { alCerrar: () => ponerNexus(false), fuente: docs.fuente, docLecciones: docs.lecciones, docsRegistro: docs, manifiesto: docs.manifiesto ?? null, integridad, candidatas, ahoraMs: ahora });
 }
 
+// ---------- Laboratorio de IA (fase 2) ----------
+// Solo lee datos/demo/ y datos/reales/ (los mismos archivos que la oficina). No escribe nada: decisiones y registros se descargan.
+const labAbierto = () => !$("#laboratorio").hidden;
+function ponerLaboratorio(abrir) {
+  if (abrir === labAbierto()) return;
+  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerNexus(false); ponerCSI(false); }
+  $("#laboratorio").hidden = !abrir;
+  document.documentElement.classList.toggle("lab-abierto", abrir);
+  $("#boton-laboratorio").setAttribute("aria-pressed", abrir ? "true" : "false");
+  vista?.pausar?.(abrir || salaAbierta() || nexusAbierto() || csiAbierto());
+  if (abrir) {
+    const contador = (n) => { const c = $("#boton-laboratorio .boton-lab-contador"); if (!c) return; c.hidden = !n; c.textContent = n ? String(n) : ""; c.title = n ? `${n} trabajo(s) esperan a una persona` : ""; };
+    // Carga diferida: el código del Laboratorio no se descarga ni se ejecuta hasta abrirlo (cero costo al arrancar la oficina).
+    if (!$("#laboratorio").childElementCount) $("#laboratorio").replaceChildren(el("p", { clase: "sala-vacio" }, "Abriendo el Laboratorio…"));
+    import("./vistas/laboratorio.js").then(({ dibujarLaboratorio }) => {
+      if (!labAbierto()) return;
+      dibujarLaboratorio($("#laboratorio"), { alCerrar: () => ponerLaboratorio(false), cargarJSON, alContador: contador });
+      $("#laboratorio-titulo")?.focus({ preventScroll: true });
+    }).catch((err) => { console.error(err); $("#laboratorio").replaceChildren(el("p", { clase: "nexus-errores", role: "alert" }, `No se pudo cargar el Laboratorio: ${err.message}`)); });
+  } else if (document.activeElement === document.body || $("#laboratorio").contains(document.activeElement)) $("#boton-laboratorio").focus({ preventScroll: true });
+}
+
 // ---------- Laboratorio CSI (Inteligencia Estratégica) ----------
 // Solo lee datos/csi/: primero el almacén REAL (local, fuera de git); si no hay nada, el caso DEMO ficticio.
 const csiAbierto = () => !$("#csi").hidden;
 
 function ponerCSI(abrir) {
   if (abrir === csiAbierto()) return;
-  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerNexus(false); }
+  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerNexus(false); ponerLaboratorio(false); }
   $("#csi").hidden = !abrir;
   document.documentElement.classList.toggle("csi-abierto", abrir);
   $("#boton-csi").setAttribute("aria-pressed", abrir ? "true" : "false");
-  vista?.pausar?.(abrir || salaAbierta() || nexusAbierto());
+  vista?.pausar?.(abrir || salaAbierta() || nexusAbierto() || labAbierto());
   if (abrir) {
     dibujarCSI($("#csi"), null, { alCerrar: () => ponerCSI(false) });
     $("#csi-titulo")?.focus({ preventScroll: true });
