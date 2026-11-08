@@ -131,6 +131,10 @@ function compagoReal(base) {
   const q = await abrir({ proyecto: 'compago', query: '&estaciones=0' });
   const sin = await met(q), eSin = await est(q);
   ok('?estaciones=0: sin estaciones (para medir A/B en la MSI)', eSin.length === 0, `${sin.llamadas} llamadas sin estación vs ${c0.llamadas} con estación (+${c0.llamadas - sin.llamadas})`);
+  const q2 = await abrir({ proyecto: 'compago' });
+  const con = await met(q2);
+  await q2.close();
+  ok('Compago (recién abierto): la estación agrega ≤ 2 texturas de imagen (tablero + atlas de iconos; cuerpos con modelos ya a la vista), ≤ 1 de huesos por personaje, y el total queda en ≤ 32', con.texturas_imagen - sin.texturas_imagen <= 2 && con.texturas_huesos - sin.texturas_huesos <= 3 && con.texturas <= 32, `imagen ${sin.texturas_imagen} → ${con.texturas_imagen}, huesos ${sin.texturas_huesos} → ${con.texturas_huesos}, total ${sin.texturas} → ${con.texturas}`);
   await q.close();
 
   // ------------------------------------------------------------ Compago REAL sin archivo de estaciones

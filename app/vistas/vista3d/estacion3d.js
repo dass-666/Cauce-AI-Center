@@ -15,6 +15,7 @@ import { Personaje } from "./personaje.js";
 import { ESTADOS_ESTACION } from "../../nucleo/estaciones.js";
 
 const ALTO = 0.6; // alto del escritorio (mobiliario.js)
+const ANCHO_TABLERO = 2.8; // m; con el lienzo 4:1 queda de 0.7 m de alto: cabe en la cara del panel (0.75 m)
 const PANTALLA_APAGADA = 0x1a2233;
 const COLOR_ENLACE = { confirmado: 0x5fd0e0, sin_confirmar: 0x8a7440, ninguno: 0x3a4152, sin_dato: 0x3a4152 };
 // Pictogramas ambientales por equipo (estilo-visual.js): decoración que dice «qué tipo de trabajo», no «qué pasa».
@@ -50,8 +51,10 @@ export function crearEstacion3D(destino, est, lugar, ctx) {
   grupo.add(panel, remate);
   // Dos pantallas ambientales en el panel (entre asientos): siempre las mismas, sin cifras.
   const pics = PICTOS[equipo] ?? PICTOS.observatorio;
-  const xs = lugar.asientos.length >= 2 ? [(lugar.asientos[0].x + lugar.asientos[1].x) / 2, (lugar.asientos.at(-1).x + lugar.asientos.at(-2).x) / 2] : [-0.6, 0.6];
-  xs.forEach((x, i) => mob.pantallaAmbiente(grupo, m, { x, y: ALTO + 0.6, z: -0.405, ancho: 0.42, alto: 0.24, pictograma: pics[i % pics.length] }));
+  // A los lados del tablero (que ocupa el centro del panel).
+  const lado = Math.min(ANCHO_TABLERO, ancho - 1.2) / 2 + (ancho / 2 - Math.min(ANCHO_TABLERO, ancho - 1.2) / 2) / 2;
+  const xs = [-lado, lado];
+  xs.forEach((x, i) => mob.pantallaAmbiente(grupo, m, { x, y: ALTO + 0.42, z: -0.405, ancho: 0.42, alto: 0.24, pictograma: pics[i % pics.length] }));
   // Un objeto propio en el extremo izquierdo: globo (comercio internacional) o mapa de pie (observatorio).
   const ext = lugar.extremo.x - lugar.x;
   if (equipo === "comercio") mob.globo(grupo, m, { x: ext + 0.1, z: -0.1 });
@@ -89,9 +92,11 @@ export function crearEstacion3D(destino, est, lugar, ctx) {
     for (let v = i * 4; v < i * 4 + 4; v++) colores.set([colorTmp.r, colorTmp.g, colorTmp.b], v * 3);
   }
 
-  // Tablero grande sobre el panel: nombre, DEMO, estado de cada función y enlace. Se redibuja solo si cambia.
-  const tablero = crearTablero(recursos, Math.min(ancho - 0.2, cuarto.ancho - 1.2));
-  tablero.malla.position.set(0, ALTO + 0.79 + tablero.alto / 2 + 0.03, -0.44);
+  // Tablero EN la cara del panel (no encima): nombre, DEMO, estado de cada función y enlace. Se redibuja solo si
+  // cambia. Bajo a propósito (arriba a ~1.35 m, como una persona sentada): encima del panel tapaba, desde la cámara
+  // del edificio, el escritorio del departamento que queda detrás (y se lo robaba al tocarlo).
+  const tablero = crearTablero(recursos, Math.min(ANCHO_TABLERO, ancho - 1.2, cuarto.ancho - 1.2));
+  tablero.malla.position.set(0, ALTO + 0.375, -0.405);
   tablero.malla.userData.dinamico = true;
   tablero.malla.userData.seleccion = { tipo: "estacion", id: est.id };
   grupo.add(tablero.malla);
@@ -114,7 +119,8 @@ export function crearEstacion3D(destino, est, lugar, ctx) {
     const a = lugar.asientos[i];
     const per = new Personaje({
       agente: comoAgente(p), puesto: { x: a.x, z: a.z }, cuarto, retraso: i * 0.6, todos, quieto: compartido.quieto,
-      fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(id, recursos) : null,
+      // Cuerpo: un modelo que el piso ya usa (p.cuerpo, ver cuerposEstacion en kenney.js): sin texturas nuevas.
+      fabricarCuerpo: compartido.catalogo ? (id) => compartido.catalogo.fabricar(p.cuerpo ?? id, recursos) : null,
       geo: compartido.geoPersonaje, recursos, texturaSombra: compartido.texturaSombra,
       // Sin anillo de estado en el piso: el estado ya lo dicen el icono, la pantalla y el tablero (3 llamadas menos).
       burbujas: compartido.burbujasEstacion ?? compartido.burbujas, anillosEstado: null,
@@ -144,6 +150,7 @@ export function crearEstacion3D(destino, est, lugar, ctx) {
   return {
     id: est.id,
     grupo,
+    tablero: tablero.malla,
     personajes,
     agregarPersonajes(cuartoGrupo) { for (const p of personajes) cuartoGrupo.add(p.raiz); },
     actualizar,
@@ -237,25 +244,36 @@ function recortar(ctx, texto, max) {
   return t + "…";
 }
 
-/** Iconos sobre la cabeza para los estados de estación (uno por estado, compartidos). */
+/**
+ * Iconos sobre la cabeza para los estados de estación. Rendimiento UHD: UN solo lienzo (atlas) con los 8 estados,
+ * dibujado una vez al iniciar; cada estado es un clon de la textura con su recorte (offset/repeat). Three.js sube a
+ * la GPU una sola textura por imagen, así que los estados que aparezcan después (en otro piso o tras un cambio) no
+ * agregan texturas: el conteo queda fijo en 1.
+ */
 export function crearBurbujasEstacion(recursos) {
-  const cache = new Map();
+  const estados = Object.keys(ESTADOS_ESTACION);
+  const lienzo = document.createElement("canvas");
+  lienzo.width = 64 * estados.length;
+  lienzo.height = 64;
+  const c = lienzo.getContext("2d");
+  estados.forEach((estado, k) => {
+    const e = ESTADOS_ESTACION[estado];
+    const x0 = 64 * k;
+    c.fillStyle = "#0f1526"; c.beginPath(); c.arc(x0 + 32, 32, 29, 0, Math.PI * 2); c.fill();
+    c.lineWidth = 5; c.strokeStyle = hex(e.color); c.stroke();
+    c.fillStyle = hex(e.color); c.font = "bold 30px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(e.icono, x0 + 32, 34);
+  });
+  const atlas = recursos.agregar(new THREE.CanvasTexture(lienzo));
+  atlas.colorSpace = THREE.SRGBColorSpace;
+  const materiales = new Map();
+  estados.forEach((estado, k) => {
+    const tex = k === 0 ? atlas : recursos.agregar(atlas.clone()); // el clon comparte la imagen (misma textura en GPU)
+    tex.repeat.set(1 / estados.length, 1);
+    tex.offset.set(k / estados.length, 0);
+    materiales.set(estado, recursos.agregar(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true })));
+  });
   return {
-    material(estado) {
-      if (cache.has(estado)) return cache.get(estado);
-      const e = ESTADOS_ESTACION[estado] ?? ESTADOS_ESTACION.sin_informacion;
-      const lienzo = document.createElement("canvas");
-      lienzo.width = lienzo.height = 64;
-      const c = lienzo.getContext("2d");
-      c.fillStyle = "#0f1526"; c.beginPath(); c.arc(32, 32, 29, 0, Math.PI * 2); c.fill();
-      c.lineWidth = 5; c.strokeStyle = hex(e.color); c.stroke();
-      c.fillStyle = hex(e.color); c.font = "bold 30px system-ui, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
-      c.fillText(e.icono, 32, 34);
-      const tex = recursos.agregar(new THREE.CanvasTexture(lienzo));
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const mat = recursos.agregar(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-      cache.set(estado, mat);
-      return mat;
-    },
+    material: (estado) => materiales.get(estado) ?? materiales.get("sin_informacion"),
   };
 }

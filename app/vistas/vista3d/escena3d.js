@@ -23,7 +23,8 @@ import { crearTiempoGpu } from "./tiempo-gpu.js";
 import { escucharDeslizar } from "./gestos.js";
 import { calcularEncuadre, aPixeles, dentro } from "./encuadre.js";
 import { crearCapaEtiquetas } from "./etiquetas-dom.js";
-import { crearCatalogoKenney } from "./kenney.js";
+import { crearCatalogoKenney, cuerposEstacion } from "./kenney.js";
+import { presenteCon } from "./maquina.js";
 import { Recursos } from "./recursos.js";
 import { crearMedidor, firmaMedicion } from "./medidor.js";
 import { crearMobiliario } from "./mobiliario.js";
@@ -785,6 +786,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     } catch { gpu = "desconocida"; }
     return gpu;
   }
+  function texturasHuesos() {
+    const vistos = new Set();
+    escena.traverse((o) => { if (o.isSkinnedMesh && o.skeleton.boneTexture) vistos.add(o.skeleton); });
+    return vistos.size;
+  }
   function metricas() {
     const r = medidor.resumen();
     const nombre = (id) => modelo?.departamentos.find((d) => d.id === id)?.nombre ?? id;
@@ -802,6 +808,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       triangulos: renderer.info.render.triangles,
       geometrias: renderer.info.memory.geometries,
       texturas: renderer.info.memory.textures,
+      // De esas, cuántas son texturas de huesos (una por esqueleto animado ya dibujado, ~1 KB cada una): crecen con
+      // los personajes a la vista, no con imágenes. texturas_imagen = el resto (letreros, atlas, modelos).
+      texturas_huesos: texturasHuesos(),
+      texturas_imagen: renderer.info.memory.textures - texturasHuesos(),
       pixelRatio: renderer.getPixelRatio(),
       movil,
       brillo: brilloFx.activo,
@@ -880,7 +890,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       if (!per) return null;
       v = per.raiz.getWorldPosition(new THREE.Vector3());
       v.y += 0.6;
-    } else v = new THREE.Vector3(x.x, 1.75, x.z - 0.85);
+    } else v = x.e.tablero.getWorldPosition(new THREE.Vector3()); // centro del tablero
     v.project(camara);
     const r = lienzo.getBoundingClientRect();
     return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
@@ -948,7 +958,18 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const clave = `${modo}/${m.proyecto.id}/${m.es_demo ? "demo" : "real"}/${m.cuadricula.metros_por_celda}/` +
       visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => `${a.id}/${a.naturaleza ?? ""}`).join(",")}:${firmaEstaciones(d.estaciones)}`).join("|");
     // Personajes que hay que descargar: agentes del contrato y funciones de las estaciones del cuarto.
-    const ids = visibles.flatMap((d) => [...d.agentes.map((a) => a.id), ...(d.estaciones ?? []).flatMap((e) => e.puestos.map((p) => p.clave))]);
+    // Los de estación toman cuerpos de personajes que YA están a la vista en el piso (cuerposEstacion): ni
+    // descargas ni texturas nuevas en la GPU. Si no hay nadie a la vista, un modelo que ya se dibujó en la sesión;
+    // si todavía no hay ninguno, el de cualquier agente del piso (una sola vez: el modelo queda en memoria).
+    const agentesPiso = deps.flatMap((d) => d.agentes);
+    const presentes = agentesPiso.filter((a) => presenteCon(a.animacion_mostrada ?? a.apariencia?.animacion3d)).map((a) => a.id);
+    const yaDibujados = presentes.length ? [] : compartido.catalogo.usados().filter((id) => compartido.catalogo.enGpu(id, renderer));
+    const idsPiso = presentes.length ? presentes : yaDibujados.length ? yaDibujados : agentesPiso.map((a) => a.id);
+    for (const d of visibles) for (const e of d.estaciones ?? []) {
+      const cuerpos = cuerposEstacion(e.puestos.map((p) => p.clave), idsPiso, d.agentes.map((a) => a.id));
+      e.puestos.forEach((p, i) => { p.cuerpo = cuerpos[i]; });
+    }
+    const ids = visibles.flatMap((d) => [...d.agentes.map((a) => a.id), ...(d.estaciones ?? []).flatMap((e) => e.puestos.map((p) => p.cuerpo))]);
     if (clave !== claveOficina) {
       if (escenario) quitarOficina();
       if (compartido.catalogo.listos(ids)) {

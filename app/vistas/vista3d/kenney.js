@@ -24,6 +24,21 @@ export function modeloDe(id) {
   return MODELOS_KENNEY[huella(id) % MODELOS_KENNEY.length];
 }
 
+/**
+ * Cuerpos para los personajes de una estación: ids cuyo modelo YA usa algún agente del piso, para que la estación no
+ * descargue ni suba a la GPU modelos (y texturas) nuevos. Distintos entre sí mientras alcancen; prefiere modelos que no
+ * estén en el cuarto anfitrión para que no parezcan clones de sus vecinos. Sin agentes en el piso (p. ej. un piso
+ * REAL sin datos), cada puesto usa su propia clave. Determinista: mismo piso, mismos cuerpos.
+ */
+export function cuerposEstacion(claves, idsPiso = [], idsCuarto = []) {
+  const porModelo = new Map();
+  for (const id of idsPiso) if (!porModelo.has(modeloDe(id))) porModelo.set(modeloDe(id), id);
+  if (porModelo.size === 0) return [...claves];
+  const enCuarto = new Set(idsCuarto.map(modeloDe));
+  const orden = [...porModelo.keys()].sort((a, b) => (enCuarto.has(a) - enCuarto.has(b)) || a.localeCompare(b));
+  return claves.map((_, i) => porModelo.get(orden[i % orden.length]));
+}
+
 /** 0..1: cuánto teclea en el instante r. Ráfagas de 3–6 s con pausas cortas; distinto para cada personaje (r ya trae su fase). */
 export function rafagaDe(r) {
   const onda = Math.sin(r * 0.9 + Math.sin(r * 0.37) * 2);
@@ -50,6 +65,7 @@ export function crearCatalogoKenney(recursos) {
   const cargador = new GLTFLoader();
   const promesas = new Map(); // nombre → Promise<gltf|null>
   const listos = new Map();   // nombre → gltf|null (ya resuelto)
+  const usados = new Map();   // nombre → id del primer personaje que lo usó
 
   function cargar(n) {
     if (!promesas.has(n)) {
@@ -85,21 +101,41 @@ export function crearCatalogoKenney(recursos) {
     /** Cuerpo de Kenney, o null para que el personaje use el provisional. */
     fabricar(id, recursosOficina) {
       const gltf = listos.get(modeloDe(id));
+      if (gltf && !usados.has(modeloDe(id))) usados.set(modeloDe(id), id);
       return gltf ? crearCuerpoKenney(gltf, recursosOficina) : null;
+    },
+    /** Un id por cada modelo que ya se fabricó en esta sesión (fabricado no es dibujado: ver enGpu). */
+    usados: () => [...usados.values()],
+    /** ¿La textura del modelo de este id ya se subió a la GPU? (alguien con ese modelo ya se dibujó) */
+    enGpu(id, renderer) {
+      let si = false;
+      listos.get(modeloDe(id))?.scene.traverse((o) => { if (o.material?.map && renderer.properties.get(o.material.map).__webglTexture) si = true; });
+      return si;
     },
   };
 }
 
+/** ¿Dos esqueletos mueven los mismos huesos con las mismas matrices inversas? (entonces pueden ser uno) */
+export function mismoEsqueleto(a, b) {
+  return a.bones.length === b.bones.length && a.bones.every((h, i) => h === b.bones[i]) &&
+    a.boneInverses.every((m, i) => m.equals(b.boneInverses[i]));
+}
+
 function crearCuerpoKenney(gltf, recursos) {
+  let primeraUnion = null;
   const raiz = new THREE.Group();
   const modelo = clone(gltf.scene);
   modelo.scale.setScalar(gltf.userData.escala);
   raiz.add(modelo);
+  // Rendimiento UHD: cuerpo y cabeza traen cada uno su esqueleto (mismos 7 huesos, mismas matrices). Si coinciden,
+  // comparten uno solo: una textura de huesos y una actualización por personaje y cuadro en vez de dos.
+  let esqueleto = null;
   modelo.traverse((o) => {
-    if (o.isSkinnedMesh) {
-      o.frustumCulled = false; // con animación, la caja original no sirve para recortar
-      recursos.agregar(o.skeleton); // cada clon tiene su propio esqueleto (textura de huesos)
-    }
+    if (!o.isSkinnedMesh) return;
+    o.frustumCulled = false; // con animación, la caja original no sirve para recortar
+    if (esqueleto && mismoEsqueleto(esqueleto, o.skeleton) && o.bindMatrix.equals(primeraUnion)) { o.skeleton.dispose(); o.skeleton = esqueleto; return; }
+    if (!esqueleto) { esqueleto = o.skeleton; primeraUnion = o.bindMatrix; }
+    recursos.agregar(o.skeleton); // cada clon tiene su propio esqueleto (textura de huesos)
   });
   const hueso = (n) => modelo.getObjectByName(n);
   const h = { brazoD: hueso("arm-right"), brazoI: hueso("arm-left"), cabeza: hueso("head"), torso: hueso("torso") };

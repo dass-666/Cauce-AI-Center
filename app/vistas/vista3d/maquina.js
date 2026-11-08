@@ -43,6 +43,8 @@ const FINAL = Object.freeze({
 const POSTURA_GESTO = Object.freeze({ celebrar: "de_pie", reaccion_error: "de_pie", llamar_atencion: "sentado" });
 
 export const ANIMACIONES_SOPORTADAS = Object.freeze(Object.keys(FINAL));
+/** ¿Con esta animación el personaje está a la vista? (cualquier postura menos "fuera") */
+export const presenteCon = (animacion) => (FINAL[animacion]?.postura ?? "fuera") !== "fuera";
 
 /** Pasos para ir de una postura a otra estando en su lugar. */
 function cambiarPostura(desde, hacia) {
