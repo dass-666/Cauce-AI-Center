@@ -102,3 +102,55 @@ export function lecturaVencida(hechos, ahora) {
   const edad = (Date.parse(ahora) - Date.parse(h.generado_en)) / 1000;
   return Number.isFinite(edad) ? { vencida: edad > h.vigencia_segundos, edad_segundos: Math.round(edad), vigencia_segundos: h.vigencia_segundos } : null;
 }
+
+// ------------------------------------------------------------------ fase 3.1 · qué puede consumir el Laboratorio de una exportación
+/**
+ * Campos del contrato `cauce.estado-proyecto` 1.x que el Laboratorio USA en la ficha, los que el contrato trae y la
+ * ficha aún NO usa, y los que NO existen en el contrato pero harían falta para análisis mejores. Solo lectura e
+ * inventario: no inventa exportadores ni supone que un motor exporte algo que no exporta.
+ */
+export const CAMPOS_LABORATORIO = Object.freeze({
+  usados: [
+    { campo: "proyecto.id / proyecto.nombre", para: "identificar el motor y la ficha" },
+    { campo: "generado_en / vigencia_segundos", para: "fecha de la lectura y lectura vencida (lab-V)" },
+    { campo: "es_demo / demo.ahora_simulado", para: "separar DEMO de REAL; «ahora» de la demostración" },
+    { campo: "departamentos[].indicadores[].{etiqueta,valor}", para: "una línea citable por indicador" },
+    { campo: "departamentos[].agentes[].{nombre,estado}", para: "una línea citable por agente" },
+    { campo: "departamentos[].agentes[].evidencia.observado_en", para: "cuándo se observó el estado (origen + fecha)" },
+    { campo: "alertas[].{nivel,departamento_id,titulo,creada_en}", para: "una línea citable por alerta" },
+  ],
+  no_usados: [
+    { campo: "departamentos[].agentes[].error.mensaje", para: "el detalle del error que el Investigador hoy no puede citar", ruta: (d) => L(d.departamentos).some((x) => L(x.agentes).some((a) => typeof a.error?.mensaje === "string")) },
+    { campo: "departamentos[].agentes[].actividad.{descripcion,inicio,fin}", para: "qué hacía y desde cuándo (duraciones, atascos)", ruta: (d) => L(d.departamentos).some((x) => L(x.agentes).some((a) => esObj(a.actividad))) },
+    { campo: "departamentos[].agentes[].actividad.progreso", para: "avance medido por el motor (nunca estimado)", ruta: (d) => L(d.departamentos).some((x) => L(x.agentes).some((a) => esObj(a.actividad?.progreso))) },
+    { campo: "departamentos[].agentes[].evidencia.referencia", para: "el registro concreto (id, archivo) que respalda el estado", ruta: (d) => L(d.departamentos).some((x) => L(x.agentes).some((a) => typeof a.evidencia?.referencia === "string")) },
+    { campo: "departamentos[].indicadores[].{unidad,nota}", para: "leer bien un valor", ruta: (d) => L(d.departamentos).some((x) => L(x.indicadores).some((i) => "unidad" in i || "nota" in i)) },
+    { campo: "departamentos[].descripcion", para: "de dónde salen los datos del departamento", ruta: (d) => L(d.departamentos).some((x) => typeof x.descripcion === "string") },
+    { campo: "resultados[]", para: "resultados del motor (lo único que podría medir un acierto)", ruta: (d) => L(d.resultados).length > 0 },
+    { campo: "fuente.{tipo,nombre,version}", para: "procedencia del exportador", ruta: (d) => esObj(d.fuente) },
+  ],
+  faltantes: [
+    { campo: "departamentos[].indicadores[].observado_en", para: "saber de cuándo es cada valor (hoy solo hay generado_en global)" },
+    { campo: "departamentos[].indicadores[].fuente", para: "qué consulta o archivo produjo el valor (citable)" },
+    { campo: "alertas[].evidencia", para: "qué registro respalda la alerta" },
+    { campo: "lecturas_anteriores[] o historial", para: "comparar dos lecturas sin que la IA lo haga de memoria" },
+    { campo: "proyecto.version (del motor)", para: "saber con qué versión del motor se generó la lectura" },
+  ],
+});
+
+/**
+ * Inventario de un documento concreto: qué usa la ficha, qué trae y no se usa, qué falta.
+ * @returns {{ok, errores, motor?, campos_usados?, campos_no_usados?: [{campo, para, presente}], campos_faltantes?}}
+ */
+export function comprobarExportacion(documento) {
+  const v = validarDocumento(documento);
+  if (!v.valido) return { ok: false, errores: v.errores.map((t) => `No cumple el contrato v1: ${t}`) };
+  const motor = documento.proyecto.id;
+  if (!MOTORES[motor]) return { ok: false, errores: [`El motor «${motor}» no tiene integración con el Laboratorio: ${MOTORES_SIN_INTEGRACION[motor] ?? `solo ${Object.keys(MOTORES).join(", ")}`}`] };
+  return {
+    ok: true, errores: [], motor, es_demo: documento.es_demo === true,
+    campos_usados: CAMPOS_LABORATORIO.usados.map((c) => ({ ...c })),
+    campos_no_usados: CAMPOS_LABORATORIO.no_usados.map(({ ruta, ...c }) => ({ ...c, presente: ruta(documento) })),
+    campos_faltantes: CAMPOS_LABORATORIO.faltantes.map((c) => ({ ...c })),
+  };
+}

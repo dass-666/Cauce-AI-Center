@@ -134,30 +134,101 @@ export function componerSolicitud({ es_demo, trabajo_id, pregunta, encargo, enca
   return `${p.join("\n")}\n`;
 }
 
-/** Saca el objeto JSON de lo pegado: dentro de ```json … ``` si lo hay; si no, de la primera «{» a la última «}». */
+// ------------------------------------------------------------------ fase 3.1 · errores con código y categoría
+/**
+ * Categorías de un fallo de importación (para el diagnóstico y para que la persona sepa qué hacer):
+ *   formato   → lo pegado no se pudo leer como JSON (truncado, roto, sin JSON);
+ *   contrato  → el JSON se leyó pero no es la respuesta que se esperaba (campos, versión, rol, encargo, contrato 0.2);
+ *   seguridad → tamaño, repetición, reutilización, caracteres invisibles o campos que intentan traer estado/aprobación;
+ *   evidencia → (solo lab-V, después de importar) citas y respaldos.
+ * «recuperable» = volver a pedir el texto o copiarlo bien suele bastar; NO significa que el sistema lo arregle solo.
+ */
+export const CATEGORIAS_FALLO = Object.freeze(["formato", "contrato", "seguridad", "evidencia"]);
+const CLAVES_DE_ESTADO = /^(estado|aprobad[oa]|aprobacion|decision(_humana)?|revision_humana|verificad[oa]|resultado|autenticacion)$/i;
+const detalle = (codigo, categoria, texto, extra = {}) => ({ codigo, categoria, texto, recuperable: extra.recuperable ?? false, ...(extra.fragmento ? { fragmento: extra.fragmento } : {}) });
+
+/** Etiquetas en español de las correcciones de FORMA que el sistema aplica solas (nunca cambian el significado). */
+export const ETIQUETA_CORRECCION = Object.freeze({
+  bloque_elegido_entre_varios: "había varios bloques de código: se tomó el que trae el formato de respuesta",
+  comas_finales_quitadas: "se quitaron comas sobrantes antes de «}» o «]»",
+  comillas_tipograficas_convertidas: "todas las comillas eran tipográficas (“ ”): se convirtieron a comillas rectas",
+  rol_normalizado: "el rol venía con mayúsculas o espacios: se normalizó",
+  lista_nula_vaciada: "una lista venía como null: se dejó vacía",
+  plantilla_sin_rellenar_quitada: "se quitaron entradas «…» que son marcadores de la plantilla, no contenido",
+  prefijo_linea_quitado: "un extracto traía el prefijo [Ln] de la solicitud, que no forma parte de la ficha: se quitó",
+  comillas_envolventes_quitadas: "un extracto venía entre comillas: se quitaron las comillas externas",
+  ubicacion_convertida_a_texto: "una ubicación venía como número: se guardó como texto",
+});
+const PLACEHOLDER = /^[\s…<>.]*$|^<[^>]{0,80}>$/u;
+const esPlaceholder = (v) => typeof v === "string" && (PLACEHOLDER.test(v) || /^(…|\.\.\.)$/.test(v.trim()));
+
+/** Línea, columna y un fragmento corto alrededor del lugar donde JSON.parse se detuvo (para mostrar, no para guardar). */
+export function ubicarErrorJSON(cuerpo, err) {
+  const m = /position (\d+)/.exec(String(err?.message ?? ""));
+  const pos = m ? Number(m[1]) : (/line (\d+) column (\d+)/.exec(String(err?.message ?? "")) ? null : null);
+  if (pos === null || !Number.isFinite(pos)) return { posicion: null, linea: null, columna: null, fragmento: null };
+  const antes = cuerpo.slice(0, pos);
+  const linea = antes.split("\n").length, columna = pos - antes.lastIndexOf("\n");
+  const fragmento = `${pos > 40 ? "…" : ""}${cuerpo.slice(Math.max(0, pos - 40), pos)}⟵AQUÍ⟶${cuerpo.slice(pos, pos + 40)}${pos + 40 < cuerpo.length ? "…" : ""}`.replace(/\s+/g, " ");
+  return { posicion: pos, linea, columna, fragmento };
+}
+
+/** Quita comas antes de «}» o «]» fuera de cadenas (error típico de respuestas largas). No toca el contenido de las cadenas. */
+function quitarComasFinales(t) {
+  let salida = "", enCadena = false, escape = false, cambios = 0;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (enCadena) { salida += ch; if (escape) escape = false; else if (ch === "\\") escape = true; else if (ch === "\"") enCadena = false; continue; }
+    if (ch === "\"") { enCadena = true; salida += ch; continue; }
+    if (ch === ",") { const resto = t.slice(i + 1).match(/^\s*([}\]])/); if (resto) { cambios++; continue; } }
+    salida += ch;
+  }
+  return { texto: salida, cambios };
+}
+
+/**
+ * Saca el objeto JSON de lo pegado: dentro de ```json … ``` si lo hay (si hay varios bloques, el que trae el formato de
+ * respuesta); si no, de la primera «{» a la última «}». Si el JSON no se lee, intenta SOLO reparaciones de forma que no
+ * cambian el significado (comas finales; comillas tipográficas cuando TODAS lo son) y las declara en `correcciones`.
+ * @returns {{ok, valor?, texto_fuera?, sin_cierre?, correcciones: string[], truncada?, motivo?, ubicacion?}}
+ */
 export function extraerJSON(texto) {
   const t = String(texto ?? "").replace(/^﻿/, "");
-  const cerco = /```(?:json|JSON)?\s*\n?([\s\S]*?)```/.exec(t);
-  let cuerpo, fuera = false;
+  const correcciones = [];
+  const bloques = [...t.matchAll(/```(?:json|JSON)?[ \t]*\n?([\s\S]*?)```/g)];
+  let cerco = bloques[0] ?? null;
+  if (bloques.length > 1) {
+    const conFormato = bloques.filter((b) => b[1].includes(FORMATO_RESPUESTA));
+    cerco = conFormato.length ? conFormato.at(-1) : bloques.reduce((a, b) => (b[1].length > a[1].length ? b : a));
+    correcciones.push("bloque_elegido_entre_varios");
+  }
+  let cuerpo, fuera = false, sinCierre = false;
   if (cerco) { cuerpo = cerco[1]; fuera = t.slice(0, cerco.index).trim() !== "" || t.slice(cerco.index + cerco[0].length).trim() !== ""; }
   else {
     const abre = t.search(/```(?:json|JSON)?/);
     const desde = abre >= 0 ? t.indexOf("{", abre) : t.indexOf("{");
-    if (desde < 0) return { ok: false, motivo: "No encontré ningún objeto JSON («{ … }») en lo que pegaste. Copia la respuesta completa de la conversación." };
+    if (desde < 0) return { ok: false, correcciones, motivo: "No encontré ningún objeto JSON («{ … }») en lo que pegaste. Copia la respuesta completa de la conversación." };
     const hasta = t.lastIndexOf("}");
     cuerpo = hasta > desde ? t.slice(desde, hasta + 1) : t.slice(desde);
     fuera = t.slice(0, desde).replace(/```(?:json|JSON)?/, "").trim() !== "" || (hasta > desde && t.slice(hasta + 1).replace(/```/, "").trim() !== "");
-    if (abre >= 0) {
-      // Bloque ```json abierto y nunca cerrado: si el JSON está completo se acepta; si no, la respuesta se cortó.
-      try { return { ok: true, valor: JSON.parse(cuerpo), texto_fuera: fuera, sin_cierre: true }; }
-      catch { return { ok: false, truncada: true, motivo: "La respuesta parece cortada: abre un bloque ```json que no se cierra y el JSON no termina. Pide a la conversación que la repita completa (o en partes más cortas)." }; }
-    }
+    sinCierre = abre >= 0;
   }
-  try { return { ok: true, valor: JSON.parse(cuerpo), texto_fuera: fuera }; }
-  catch (err) {
-    if (estaIncompleto(cuerpo)) return { ok: false, truncada: true, motivo: "La respuesta parece cortada: el JSON no termina (faltan llaves o comillas de cierre). Pide a la conversación que la repita completa." };
-    return { ok: false, motivo: `El JSON no es válido: ${String(err.message).slice(0, 160)}. No se corrige a mano: pide a la conversación que lo devuelva bien formado.` };
+  const intentar = (c) => { try { return { valor: JSON.parse(c) }; } catch (err) { return { err }; } };
+  let r = intentar(cuerpo);
+  if (r.err) {
+    const q = quitarComasFinales(cuerpo);
+    if (q.cambios && !intentar(q.texto).err) { cuerpo = q.texto; correcciones.push("comas_finales_quitadas"); r = intentar(cuerpo); }
   }
+  if (r.err && !cuerpo.includes("\"") && /[“”„]/.test(cuerpo)) {
+    const c2 = cuerpo.replace(/[“”„]/g, "\"");
+    if (!intentar(c2).err) { cuerpo = c2; correcciones.push("comillas_tipograficas_convertidas"); r = intentar(cuerpo); }
+  }
+  if (!r.err) return { ok: true, valor: r.valor, texto_fuera: fuera, sin_cierre: sinCierre, correcciones };
+  if (sinCierre) return { ok: false, correcciones, truncada: true, motivo: "La respuesta parece cortada: abre un bloque ```json que no se cierra y el JSON no termina. Pide a la conversación que la repita completa (o en partes más cortas)." };
+  if (estaIncompleto(cuerpo)) return { ok: false, correcciones, truncada: true, motivo: "La respuesta parece cortada: el JSON no termina (faltan llaves o comillas de cierre). Pide a la conversación que la repita completa." };
+  const u = ubicarErrorJSON(cuerpo, r.err);
+  const donde = u.linea ? ` Falla en la línea ${u.linea}, columna ${u.columna} del JSON.` : "";
+  return { ok: false, correcciones, ubicacion: u, motivo: `El JSON no es válido: ${String(r.err.message).replace(/ in JSON at position \d+.*$/, "").slice(0, 120)}.${donde} Solo se corrigen solos comas sobrantes y comillas tipográficas; lo demás, pídelo de nuevo bien formado (tu texto sigue en el cuadro).` };
 }
 /** ¿Quedaron llaves, corchetes o comillas abiertas? (señal de respuesta truncada) */
 function estaIncompleto(t) {
@@ -174,32 +245,34 @@ function estaIncompleto(t) {
  * @param texto  lo pegado o el contenido del archivo importado, tal cual
  * @param p      { encargo, encargo_sha256, solicitud_sha256, declarado_por (identificador), modelo, proveedor,
  *                 metodo: "pegado"|"archivo", ahora, ya_importadas: Map respuesta_sha256 → {trabajo_id, encargo_id} }
- * @returns {Promise<{ok, errores, avisos, respuesta_sha256, respuesta?: {contenido, autor, intercambio}}>}
+ * @returns {Promise<{ok, errores, avisos, detalles, correcciones, respuesta_sha256, respuesta?: {contenido, autor, intercambio}}>}
+ *   errores/avisos: textos para la persona · detalles: [{codigo, categoria, recuperable, texto, fragmento?}] (el
+ *   fragmento es para mostrar en pantalla; no se guarda en el expediente) · correcciones: códigos de ETIQUETA_CORRECCION.
  */
 export async function importarRespuesta(texto, { encargo, encargo_sha256, solicitud_sha256, declarado_por, modelo = null, proveedor = null, metodo = "pegado", ahora = ahoraISO(), ya_importadas = new Map() }) {
-  const errores = [], avisos = [];
-  const fin = (extra = {}) => ({ ok: errores.length === 0, errores, avisos, respuesta_sha256: null, ...extra });
-  if (typeof texto !== "string" || !texto.trim()) { errores.push("No pegaste nada."); return fin(); }
-  if (texto.length > LIMITE_RESPUESTA) { errores.push(`La respuesta tiene ${texto.length} caracteres y el límite es ${LIMITE_RESPUESTA}: no se revisa.`); return fin(); }
+  const errores = [], avisos = [], detalles = [];
+  const err = (codigo, categoria, t, extra) => { errores.push(t); detalles.push(detalle(codigo, categoria, t, extra)); };
+  const fin = (extra = {}) => ({ ok: errores.length === 0, errores, avisos, detalles, correcciones: [], respuesta_sha256: null, ...extra });
+  if (typeof texto !== "string" || !texto.trim()) { err("vacia", "formato", "No pegaste nada.", { recuperable: true }); return fin(); }
+  if (texto.length > LIMITE_RESPUESTA) { err("demasiado_larga", "seguridad", `La respuesta tiene ${texto.length} caracteres y el límite es ${LIMITE_RESPUESTA}: no se revisa. Pide al modelo una respuesta más corta (menos afirmaciones por rol) o divide la consulta.`, { recuperable: true }); return fin(); }
   const quien = String(declarado_por ?? "").trim();
-  if (!quien || quien.length > 80) errores.push("Escribe quién trae la respuesta (tu nombre, hasta 80 caracteres): queda como procedencia declarada.");
-  if (!["pegado", "archivo"].includes(metodo)) errores.push("metodo debe ser pegado | archivo.");
+  if (!quien || quien.length > 80) err("sin_declarante", "contrato", "Escribe quién trae la respuesta (tu nombre, hasta 80 caracteres): queda como procedencia declarada.", { recuperable: true });
+  if (!["pegado", "archivo"].includes(metodo)) err("metodo_invalido", "contrato", "metodo debe ser pegado | archivo.");
   const limpiar = (v) => { const s = String(v ?? "").trim(); return s ? s.slice(0, 120) : null; };
   const modeloP = limpiar(modelo), proveedorP = limpiar(proveedor);
-  for (const [k, v] of [["modelo", modeloP], ["proveedor", proveedorP], ["quién la trae", quien]]) if (v && tieneInvisibles(v)) errores.push(`«${k}» contiene caracteres invisibles: escríbelo de nuevo a mano.`);
+  for (const [k, v] of [["modelo", modeloP], ["proveedor", proveedorP], ["quién la trae", quien]]) if (v && tieneInvisibles(v)) err("invisibles_en_formulario", "seguridad", `«${k}» contiene caracteres invisibles: escríbelo de nuevo a mano.`, { recuperable: true });
   const respuesta_sha256 = await sha256(texto);
   const previa = ya_importadas.get(respuesta_sha256);
   if (previa) {
-    errores.push(previa.encargo_id === encargo?.id
-      ? `Esta misma respuesta ya se importó para este encargo (huella ${respuesta_sha256.slice(0, 12)}…): no se cuenta dos veces.`
-      : `Esta respuesta ya se usó en ${previa.trabajo_id} (encargo ${previa.encargo_id}): una respuesta no se reutiliza en otro trabajo o rol.`);
+    if (previa.encargo_id === encargo?.id) err("respuesta_repetida", "seguridad", `Esta misma respuesta ya se importó para este encargo (huella ${respuesta_sha256.slice(0, 12)}…): no se cuenta dos veces.`);
+    else err("respuesta_reutilizada", "seguridad", `Esta respuesta ya se usó en ${previa.trabajo_id} (encargo ${previa.encargo_id}): una respuesta no se reutiliza en otro trabajo o rol.`);
     return fin({ respuesta_sha256 });
   }
   if (errores.length) return fin({ respuesta_sha256 });
   const an = analizarRespuesta(texto, { encargo, encargo_sha256 });
-  errores.push(...an.errores); avisos.push(...an.avisos);
-  if (!an.ok) return fin({ respuesta_sha256, truncada: an.truncada === true });
-  const { contenido, modelo_en_respuesta: enRespuesta } = an;
+  errores.push(...an.errores); avisos.push(...an.avisos); detalles.push(...an.detalles);
+  if (!an.ok) return fin({ respuesta_sha256, correcciones: an.correcciones, truncada: an.truncada === true });
+  const { contenido, modelo_en_respuesta: enRespuesta, correcciones } = an;
   if (modeloP && enRespuesta && !modeloP.toLowerCase().includes(enRespuesta.toLowerCase()) && !enRespuesta.toLowerCase().includes(modeloP.toLowerCase())) avisos.push(`Procedencia contradictoria: tú declaras «${modeloP}» y la respuesta dice «${enRespuesta}». Se registra lo que declaras tú; ninguna de las dos está verificada.`);
 
   const modeloFinal = modeloP ?? enRespuesta;
@@ -207,36 +280,47 @@ export async function importarRespuesta(texto, { encargo, encargo_sha256, solici
   const intercambio = {
     formato: `${FORMATO_RESPUESTA} ${VERSION_RESPUESTA}`, declarado_por: { tipo: "humano", identificador: quien, autenticacion: "declarada" }, metodo,
     importado_en: ahora, respuesta_sha256, solicitud_sha256, modelo_en_respuesta: enRespuesta, avisos: avisos.slice(0, 20).map((t) => t.slice(0, 500)),
+    ...(correcciones.length ? { correcciones: [...new Set(correcciones)] } : {}),
   };
   // Validación de contrato con un sobre provisional (el definitivo lo arma el Coordinador con sus ids y tiempos).
   const provisional = armarEjecucion({ id: encargo.id.replace("lab-enc-", "lab-run-") + "-i1", encargo, encargo_sha256, inicio: ahora, fin: ahora, autor, contenido, intercambio });
   const v = validarEjecucion(provisional);
-  for (const t of v.errores) errores.push(`La respuesta no cumple el contrato: ${t}`);
-  if (errores.length) return fin({ respuesta_sha256 });
-  return fin({ respuesta_sha256, respuesta: { contenido, autor, intercambio } });
+  for (const t of v.errores) err("contrato_ejecucion", /desconocida/.test(t) && CLAVES_DE_ESTADO.test(t.split(":")[0].split(".").pop()) ? "seguridad" : "contrato", `La respuesta no cumple el contrato: ${t}`);
+  if (errores.length) return fin({ respuesta_sha256, correcciones });
+  return fin({ respuesta_sha256, correcciones, respuesta: { contenido, autor, intercambio } });
 }
 
 /**
- * Análisis de FORMA de una respuesta (común al intercambio manual y al adaptador automático): extrae el JSON, rechaza
- * campos desconocidos, comprueba formato, rol, encargo y huella, y deja vacías las listas opcionales ausentes.
- * No decide nada sobre el contenido: eso es del contrato, de lab-V y de una persona.
- * @returns {{ok, errores, avisos, truncada?, contenido?, modelo_en_respuesta?}}
+ * Análisis de FORMA de una respuesta (común al intercambio manual y al adaptador automático): extrae el JSON, aplica
+ * SOLO correcciones de forma que no cambian el significado (y las declara), rechaza campos desconocidos, comprueba
+ * formato, rol, encargo y huella, y deja vacías las listas opcionales ausentes.
+ * No decide nada sobre el contenido: eso es del contrato, de lab-V y de una persona. Nunca inventa contenido.
+ * @returns {{ok, errores, avisos, detalles, correcciones, truncada?, contenido?, modelo_en_respuesta?}}
  */
 export function analizarRespuesta(texto, { encargo, encargo_sha256 }) {
-  const errores = [], avisos = [];
-  const fin = (extra = {}) => ({ ok: errores.length === 0, errores, avisos, ...extra });
+  const errores = [], avisos = [], detalles = [];
+  const err = (codigo, categoria, t, extra) => { errores.push(t); detalles.push(detalle(codigo, categoria, t, extra)); };
   const j = extraerJSON(texto);
-  if (!j.ok) { errores.push(j.motivo); return fin({ truncada: j.truncada === true }); }
+  const correcciones = [...j.correcciones];
+  const fin = (extra = {}) => ({ ok: errores.length === 0, errores, avisos, detalles, correcciones, ...extra });
+  if (!j.ok) { err(j.truncada ? "json_truncado" : "json_invalido", "formato", j.motivo, { recuperable: true, fragmento: j.ubicacion?.fragmento ?? null }); return fin({ truncada: j.truncada === true }); }
   if (j.texto_fuera) avisos.push("Había texto fuera del JSON: se ignoró (no forma parte del análisis), pero queda dentro de la huella de lo pegado.");
   const r = j.valor;
-  if (!esObj(r)) { errores.push("La respuesta debe ser un objeto JSON («{ … }»)."); return fin(); }
+  if (!esObj(r)) { err("no_es_objeto", "formato", "La respuesta debe ser un objeto JSON («{ … }»).", { recuperable: true }); return fin(); }
   const desconocidas = Object.keys(r).filter((k) => !C_RESP.includes(k));
-  if (desconocidas.length) errores.push(`Campos que el formato no conoce: ${desconocidas.slice(0, 8).join(", ")}. No se aceptan (p. ej. una respuesta no puede traer su propio estado ni su aprobación).`);
-  if (r.formato !== FORMATO_RESPUESTA || r.version !== VERSION_RESPUESTA) errores.push(`Formato «${r.formato} ${r.version}» no reconocido: se espera «${FORMATO_RESPUESTA} ${VERSION_RESPUESTA}» (copia la solicitud entera, incluida su plantilla).`);
-  if (r.rol !== encargo.rol) errores.push(`La respuesta dice ser del rol «${r.rol}» y se espera la del ${ETIQUETA_ROL[encargo.rol]}: ¿pegaste la de otro rol?`);
-  if (r.encargo_id !== encargo.id) errores.push(`La respuesta es para el encargo «${String(r.encargo_id).slice(0, 80)}», no para «${encargo.id}»: probablemente pertenece a otro trabajo, otro rol u otra ronda.`);
-  else if (r.encargo_sha256 !== encargo_sha256) errores.push("La huella del encargo de la respuesta no coincide con la de este encargo: se respondió a una versión distinta de la solicitud. Copia la solicitud actual otra vez.");
-  for (const k of LISTAS) if (k in r && !Array.isArray(r[k])) errores.push(`«${k}» debe ser una lista.`);
+  if (desconocidas.length) {
+    const deEstado = desconocidas.filter((k) => CLAVES_DE_ESTADO.test(k));
+    err("campos_desconocidos", deEstado.length ? "seguridad" : "contrato", `Campos que el formato no conoce: ${desconocidas.slice(0, 8).join(", ")}. No se aceptan (p. ej. una respuesta no puede traer su propio estado ni su aprobación).`);
+  }
+  // Correcciones de forma en la cabecera (no cambian el significado).
+  const rolN = typeof r.rol === "string" ? r.rol.trim().toLowerCase() : r.rol;
+  if (rolN !== r.rol && ROLES.includes(rolN)) correcciones.push("rol_normalizado");
+  const formato = typeof r.formato === "string" ? r.formato.trim() : r.formato, version = typeof r.version === "string" ? r.version.trim() : r.version;
+  if (formato !== FORMATO_RESPUESTA || version !== VERSION_RESPUESTA) err("formato_desconocido", "contrato", `Formato «${r.formato} ${r.version}» no reconocido: se espera «${FORMATO_RESPUESTA} ${VERSION_RESPUESTA}» (copia la solicitud entera, incluida su plantilla).`, { recuperable: true });
+  if (rolN !== encargo.rol) err("rol_distinto", "contrato", `La respuesta dice ser del rol «${r.rol}» y se espera la del ${ETIQUETA_ROL[encargo.rol]}: ¿pegaste la de otro rol?`, { recuperable: true });
+  if (r.encargo_id !== encargo.id) err("encargo_distinto", "contrato", `La respuesta es para el encargo «${String(r.encargo_id).slice(0, 80)}», no para «${encargo.id}»: probablemente pertenece a otro trabajo, otro rol u otra ronda.`, { recuperable: true });
+  else if (r.encargo_sha256 !== encargo_sha256) err("huella_encargo_distinta", "contrato", "La huella del encargo de la respuesta no coincide con la de este encargo: se respondió a una versión distinta de la solicitud. Copia la solicitud actual otra vez.", { recuperable: true });
+  for (const k of LISTAS) if (k in r && r[k] !== null && !Array.isArray(r[k])) err("lista_invalida", "contrato", `«${k}» debe ser una lista.`);
   if (!("modelo_declarado" in r)) avisos.push("La respuesta no dice qué modelo la produjo (modelo_declarado).");
   const enRespuesta = typeof r.modelo_declarado === "string" && r.modelo_declarado.trim() && !/^nombre del modelo/i.test(r.modelo_declarado) ? r.modelo_declarado.trim().slice(0, 120) : null;
   if (errores.length) return fin();
@@ -244,18 +328,52 @@ export function analizarRespuesta(texto, { encargo, encargo_sha256 }) {
   // Campos opcionales ausentes = listas vacías / null. Se avisa: no se inventa ningún contenido.
   const completados = [];
   const contenido = {};
-  for (const k of LISTAS) { if (k in r) contenido[k] = r[k]; else { contenido[k] = []; completados.push(k); } }
+  for (const k of LISTAS) {
+    if (!(k in r)) { contenido[k] = []; completados.push(k); }
+    else if (r[k] === null) { contenido[k] = []; correcciones.push("lista_nula_vaciada"); }
+    else contenido[k] = r[k];
+  }
+  // Marcadores de la plantilla («…») en listas de texto: no son contenido; en entidades: la plantilla no se rellenó.
+  for (const k of ["preguntas", "dudas", "limitaciones"]) {
+    const sin = contenido[k].filter((v) => !esPlaceholder(v));
+    if (sin.length !== contenido[k].length) { contenido[k] = sin; correcciones.push("plantilla_sin_rellenar_quitada"); }
+  }
+  const campoTexto = { afirmaciones: "texto", hipotesis: "enunciado", objeciones: "texto", recomendaciones: "texto", contradicciones: "texto" };
+  for (const [k, campo] of Object.entries(campoTexto)) for (const [i, v] of contenido[k].entries()) if (esObj(v) && esPlaceholder(v[campo])) err("plantilla_sin_rellenar", "contrato", `${k}[${i}].${campo} es el marcador «…» de la plantilla: la respuesta no se rellenó. Si el rol no tiene nada que decir ahí, la lista debe ir vacía.`, { recuperable: true });
+  if (errores.length) return fin();
   contenido.afirmaciones = contenido.afirmaciones.map((a) => {
     if (!esObj(a)) return a;
     const b = { ...a };
     if (!("citas" in b)) { b.citas = []; completados.push("citas"); }
     if (!("se_basa_en" in b)) { b.se_basa_en = []; completados.push("se_basa_en"); }
-    b.citas = Array.isArray(b.citas) ? b.citas.map((c) => (esObj(c) && !("ubicacion" in c) ? { ...c, ubicacion: null } : c)) : b.citas;
+    if (b.citas === null) { b.citas = []; correcciones.push("lista_nula_vaciada"); }
+    if (b.se_basa_en === null) { b.se_basa_en = []; correcciones.push("lista_nula_vaciada"); }
+    b.citas = Array.isArray(b.citas) ? b.citas.map((c) => (esObj(c) ? limpiarCita(c, correcciones) : c)) : b.citas;
     return b;
   });
   contenido.hipotesis = contenido.hipotesis.map((h) => (esObj(h) && !("alternativa_a" in h) ? (completados.push("alternativa_a"), { ...h, alternativa_a: null }) : h));
   if (completados.length) avisos.push(`Campos opcionales ausentes que se dejaron vacíos: ${[...new Set(completados)].join(", ")}.`);
+  const unicas = [...new Set(correcciones)];
+  if (unicas.length) avisos.push(`Correcciones de forma aplicadas (no cambian el significado y quedan registradas): ${unicas.map((c) => ETIQUETA_CORRECCION[c] ?? c).join("; ")}.`);
+  correcciones.splice(0, correcciones.length, ...unicas);
   return fin({ contenido, modelo_en_respuesta: enRespuesta });
+}
+
+/** Cita tal cual la trajo el modelo → cita comparable: sin el prefijo [Ln] de la solicitud ni comillas externas. */
+function limpiarCita(c, correcciones) {
+  const d = { ...c };
+  if (!("ubicacion" in d)) d.ubicacion = null;
+  if (typeof d.ubicacion === "number") { d.ubicacion = String(d.ubicacion); correcciones.push("ubicacion_convertida_a_texto"); }
+  if (typeof d.extracto === "string") {
+    let e = d.extracto;
+    // Primero las comillas que envuelven todo el extracto, después el prefijo [Ln] de la solicitud.
+    const env = /^\s*(["“])(.+)(["”])\s*$/s.exec(e);
+    if (env && env[2].trim()) { e = env[2]; correcciones.push("comillas_envolventes_quitadas"); }
+    const m = /^\s*\[L\d+\]\s+/.exec(e);
+    if (m) { e = e.slice(m[0].length); correcciones.push("prefijo_linea_quitado"); }
+    d.extracto = e;
+  }
+  return d;
 }
 
 /**
@@ -268,7 +386,9 @@ export async function continuarConRespuesta(x, texto, { declarado_por, modelo = 
   if (!encargo) return { ok: false, errores: ["Este trabajo no está esperando una respuesta manual."], avisos: [] };
   const sol = await solicitudManual(x);
   const r = await importarRespuesta(texto, { encargo, encargo_sha256: sol.encargo_sha256, solicitud_sha256: sol.solicitud_sha256, declarado_por, modelo, proveedor, metodo, ahora, ya_importadas });
-  x.importaciones = [...L(x.importaciones), { en: ahora, rol: encargo.rol, encargo_id: encargo.id, respuesta_sha256: r.respuesta_sha256, aceptada: r.ok, errores: r.errores.slice(0, 10), avisos: r.avisos.slice(0, 10), declarado_por: String(declarado_por ?? "").slice(0, 80) }];
+  x.importaciones = [...L(x.importaciones), { en: ahora, rol: encargo.rol, encargo_id: encargo.id, respuesta_sha256: r.respuesta_sha256, aceptada: r.ok, errores: r.errores.slice(0, 10), avisos: r.avisos.slice(0, 10), declarado_por: String(declarado_por ?? "").slice(0, 80),
+    // fase 3.1: códigos y categorías (sin fragmentos del texto) para el diagnóstico; correcciones de forma aplicadas
+    fallos: L(r.detalles).slice(0, 10).map((d) => ({ codigo: d.codigo, categoria: d.categoria, recuperable: d.recuperable })), correcciones: L(r.correcciones) }];
   if (!r.ok) return r;
   const antes = x.trabajo.estado;
   await avanzar(x, { adaptador: crearAdaptadorManual(new Map([[encargo.rol, r.respuesta]]), { modelo: r.respuesta.autor.modelo ?? "no declarado" }), reloj });
