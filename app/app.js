@@ -84,7 +84,8 @@ function avisarVista(texto, { reintentar = false } = {}) {
 
 function vistaDeseada() {
   if ($("#bajo-consumo").checked) return "2d";
-  if (new URLSearchParams(location.search).has("auto")) return "3d"; // la medición automática siempre es en 3D
+  const q = new URLSearchParams(location.search);
+  if (q.has("auto") || q.has("recorrido")) return "3d"; // la medición automática (y el recorrido medido) siempre es en 3D
   return leerPreferencia("cauce.vista") === "2d" ? "2d" : "3d";
 }
 
@@ -153,6 +154,7 @@ async function iniciar() {
   });
   for (const b of document.querySelectorAll("[data-vista]")) {
     b.addEventListener("click", () => {
+      cerrarSecciones(); // «Edificio 3D» o «Plano» también vuelven a las oficinas desde una sección especial
       guardarPreferencia("cauce.vista", b.dataset.vista);
       if (b.dataset.vista === "3d" && $("#bajo-consumo").checked) aplicarBajoConsumo(false);
       if (b.dataset.vista === "2d") avisarVista(null);
@@ -189,7 +191,7 @@ async function iniciar() {
   estado.actual = estado.proyectos.find((p) => p.id === pedido) ?? estado.proyectos.find((p) => p.id === guardado) ?? estado.proyectos[0];
   dibujarPestanas();
   await actualizar();
-  const medicionAuto = new URLSearchParams(location.search).has("auto"); // medición automática: sin sala encima
+  const medicionAuto = ["auto", "recorrido"].some((k) => new URLSearchParams(location.search).has(k)); // medición automática: sin sala encima
   if (medicionAuto) { /* nada encima del edificio */ }
   else if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
   else if (new URLSearchParams(location.search).get("nexus") === "1") ponerNexus(true);
@@ -208,18 +210,36 @@ async function iniciar() {
   });
 }
 
+// Si una sección especial se abrió desde Inmersivo (teclas S, N o I), al cerrarla se vuelve a Inmersivo.
+let inmersivoAntesDeSeccion = false;
+function recordarInmersivo() { if (enInmersivo()) inmersivoAntesDeSeccion = true; }
+function alCerrarSeccion() {
+  if (salaAbierta() || nexusAbierto() || csiAbierto()) return;
+  vista?.pausar?.(false);
+  if (inmersivoAntesDeSeccion) { inmersivoAntesDeSeccion = false; ponerInmersivo(true); }
+}
+
+/** Cierra la sala de control, Nexus y CSI (la que esté abierta). Devuelve true si había alguna abierta. */
+function cerrarSecciones() {
+  const habia = salaAbierta() || nexusAbierto() || csiAbierto();
+  if (habia) { ponerSala(false); ponerNexus(false); ponerCSI(false); }
+  return habia;
+}
+
 // ---------- Sala de control (fase K) ----------
 const salaAbierta = () => !$("#sala-control").hidden;
 
 /** Abre o cierra la sala. Mientras está abierta, la vista 3D se pausa (no gasta tarjeta gráfica). */
 function ponerSala(abrir) {
   if (abrir === salaAbierta()) return;
-  if (abrir) { ponerInmersivo(false); ponerNexus(false); ponerCSI(false); }
+  // Primero se cierran las otras (eso podría devolver a Inmersivo) y luego se sale de Inmersivo.
+  if (abrir) { recordarInmersivo(); ponerNexus(false); ponerCSI(false); recordarInmersivo(); ponerInmersivo(false); }
   $("#sala-control").hidden = !abrir;
   document.documentElement.classList.toggle("sala-abierta", abrir);
   $("#boton-sala").setAttribute("aria-pressed", abrir ? "true" : "false");
   guardarPreferencia("cauce.sala", abrir ? "1" : "0");
   vista?.pausar?.(abrir || nexusAbierto() || csiAbierto());
+  if (!abrir) alCerrarSeccion();
   if (abrir) { dibujarSalaSiAbierta(); $("#sala-titulo")?.focus({ preventScroll: true }); }
   else if (document.activeElement === document.body || $("#sala-control").contains(document.activeElement)) $("#boton-sala").focus({ preventScroll: true });
 }
@@ -231,11 +251,13 @@ let nexusDocs = null;
 
 function ponerNexus(abrir) {
   if (abrir === nexusAbierto()) return;
-  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerCSI(false); }
+  // Primero se cierran las otras (eso podría devolver a Inmersivo) y luego se sale de Inmersivo.
+  if (abrir) { recordarInmersivo(); ponerSala(false); ponerCSI(false); recordarInmersivo(); ponerInmersivo(false); }
   $("#nexus").hidden = !abrir;
   document.documentElement.classList.toggle("nexus-abierto", abrir);
   $("#boton-nexus").setAttribute("aria-pressed", abrir ? "true" : "false");
   vista?.pausar?.(abrir || salaAbierta() || csiAbierto());
+  if (!abrir) alCerrarSeccion();
   if (abrir) {
     if (!nexusDocs) dibujarNexus($("#nexus"), null, { alCerrar: () => ponerNexus(false) });
     leerYDibujarNexus().then(() => $("#nexus-titulo")?.focus({ preventScroll: true }));
@@ -282,11 +304,13 @@ const csiAbierto = () => !$("#csi").hidden;
 
 function ponerCSI(abrir) {
   if (abrir === csiAbierto()) return;
-  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerNexus(false); }
+  // Primero se cierran las otras (eso podría devolver a Inmersivo) y luego se sale de Inmersivo.
+  if (abrir) { recordarInmersivo(); ponerSala(false); ponerNexus(false); recordarInmersivo(); ponerInmersivo(false); }
   $("#csi").hidden = !abrir;
   document.documentElement.classList.toggle("csi-abierto", abrir);
   $("#boton-csi").setAttribute("aria-pressed", abrir ? "true" : "false");
   vista?.pausar?.(abrir || salaAbierta() || nexusAbierto());
+  if (!abrir) alCerrarSeccion();
   if (abrir) {
     dibujarCSI($("#csi"), null, { alCerrar: () => ponerCSI(false) });
     $("#csi-titulo")?.focus({ preventScroll: true });
@@ -436,7 +460,14 @@ function dibujarPestanas() {
 }
 
 async function elegirProyecto(p) {
+  // Elegir un piso desde la sala de control, Nexus o CSI vuelve a las oficinas (aunque sea el piso que ya estaba).
+  // Antes la sección seguía abierta y su clase en <html> dejaba #oficina con display:none: el edificio no volvía
+  // hasta recargar o pasar por Inmersivo (ponerInmersivo(true) es lo único que cerraba esas secciones).
+  const veniaDeSeccion = cerrarSecciones();
   if (p === estado.actual) return;
+  // Bloque D: en la vista 3D la cámara sube o baja hasta el piso elegido (ascensor). En el plano 2D, cambio directo.
+  // Al volver de una sección especial no hay ascensor: el piso anterior no estaba a la vista.
+  if (!veniaDeSeccion) vista?.viajarAPiso?.({ orden: estado.proyectos.map((x) => x.id), destino: p.id, nombre: p.nombre });
   estado.actual = p;
   estado.seleccion = null;
   seguidor.reiniciar(); // la primera lectura del otro piso no cuenta como cambio observado
@@ -587,7 +618,39 @@ function dibujar() {
 }
 
 /** Alto disponible para la vista: lo que queda de la ventana debajo de cabecera y franjas (sin desplazar la página). */
+// Franjas de estado (DEMO, conexión, aviso, diagnóstico): cambian de alto de un piso a otro (con o sin la franja
+// DEMO, una o dos líneas de motivo, con o sin avisos del archivo) y antes movían el edificio 25–75 px al cambiar de
+// proyecto. Se reserva debajo de ellas la diferencia con el alto mayor visto en este ancho de ventana: el edificio
+// queda en su sitio y nada se oculta. En Inmersivo y en las secciones especiales las franjas no van encima: sin reserva.
+let franjasMax = 0, franjasAncho = 0;
+function altoFranjas() {
+  const alto = (sel) => { const e = $(sel); if (!e || e.hidden) return 0; const cs = getComputedStyle(e); if (cs.display === "none" || cs.position === "fixed") return 0;
+    const h = e.matches("details[open]") ? (e.querySelector("summary")?.getBoundingClientRect().height ?? 0) : e.getBoundingClientRect().height; // el diagnóstico abierto a mano no cuenta
+    return h + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom); };
+  return ["#banda-demo", "#conexion", "#aviso-vista", "#diagnostico"].reduce((a, s) => a + alto(s), 0);
+}
+function reservarFranjas() {
+  const raiz = document.documentElement;
+  // Celular horizontal (≤ 500 px de alto): una sola línea de estado y muy poco alto; ahí manda el espacio del edificio.
+  const sinReserva = ["inmersivo", "sala-abierta", "nexus-abierto", "csi-abierto"].some((c) => raiz.classList.contains(c))
+    || (innerHeight <= 500 && innerWidth > innerHeight);
+  if (innerWidth !== franjasAncho) { franjasAncho = innerWidth; franjasMax = 0; }
+  const ahora = sinReserva ? 0 : altoFranjas();
+  if (!sinReserva) {
+    // Se cuenta también lo que otro piso puede mostrar y este no: la franja DEMO y la línea del diagnóstico (se
+    // destapan un instante, sin pintarse, solo para medirlas). Así el primer cambio de piso tampoco salta.
+    // En celular solo la franja DEMO: la línea del diagnóstico le quitaría al edificio un alto que ahí no sobra.
+    const tapadas = (innerWidth < 600 ? ["#banda-demo"] : ["#banda-demo", "#diagnostico"]).map((x) => $(x)).filter((e) => e && e.hidden);
+    for (const e of tapadas) e.hidden = false;
+    const posible = tapadas.length ? altoFranjas() : ahora;
+    for (const e of tapadas) e.hidden = true;
+    franjasMax = Math.max(franjasMax, ahora, posible);
+  }
+  raiz.style.setProperty("--reserva-franjas", `${sinReserva ? 0 : Math.round(franjasMax - ahora)}px`);
+}
+
 function medirArriba() {
+  reservarFranjas();
   const o = $("#oficina");
   if (!o) return;
   const arriba = Math.round(o.getBoundingClientRect().top + window.scrollY);
@@ -597,7 +660,7 @@ window.addEventListener("resize", medirArriba);
 // Lo de arriba cambia de alto sin que cambie la ventana (fuentes, avisos, el tablero al llegar los datos).
 if (typeof ResizeObserver === "function") {
   const vigia = new ResizeObserver(() => medirArriba());
-  for (const sel of [".cabecera", "#banda-demo", "#conexion", "#aviso-vista", "#llegada"]) { const e = document.querySelector(sel); if (e) vigia.observe(e); }
+  for (const sel of [".cabecera", "#banda-demo", "#conexion", "#aviso-vista", "#diagnostico", "#llegada"]) { const e = document.querySelector(sel); if (e) vigia.observe(e); }
 }
 
 function dibujarEstado(m) {

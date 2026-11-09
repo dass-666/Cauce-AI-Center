@@ -9,7 +9,7 @@ Nada de esto toca Compago, Ek Chuah, Tezcatlipoca ni Nexus real. Todo es local y
    - Predicciones: `pred-bc-facilidad` aparece **Fallida** y su corrección posterior dice «no cuenta»; `pred-regulador` aparece «Vencida sin evaluar».
    - Propuesta a Nexus → «Preparar H-B»: Nexus dice «con_objeciones» y la decisión humana queda «pendiente». No hay botón para aprobar.
 5. **Nueva investigación**: en la última pestaña crea una de práctica (deja marcada «Práctica»), agrega una fuente con fecha, un hecho que la cite, una hipótesis con condición de refutación y una predicción con horizonte futuro (formato `2027-01-01T10:00`). Pulsa «Propuesta H1 → Nexus». Descarga los dos archivos si quieres conservarlos.
-6. **Volver**: Esc o «Ir al edificio». La 3D debe seguir fluida; cambia a Compago y a Ek Chuah para confirmar que no cambió nada.
+6. **Volver**: Esc, «‹ Volver a oficinas» o cualquier pestaña de piso. La 3D debe seguir fluida; cambia a Compago y a Ek Chuah para confirmar que no cambió nada.
 7. **Pruebas**: abre `http://127.0.0.1:8765/pruebas.html`. Debe decir «359 pasaron, 0 fallaron».
 
 Envíame: los cps de los pasos 2–3 (CSI y Compago) y cualquier cosa que se vea mal o confusa.

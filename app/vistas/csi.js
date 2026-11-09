@@ -74,7 +74,7 @@ export function dibujarCSI(nodo, csi, op) {
   const cabeza = el("div", { clase: "sala-cabeza" },
     el("div", {}, el("h2", { id: "csi-titulo", tabindex: "-1" }, "Inteligencia Estratégica (CSI) · laboratorio"),
       el("p", { clase: "sala-sub" }, "CSI investiga · Nexus cuestiona · Diego decide. Estudia incentivos y decisiones posibles; no afirma intenciones ocultas ni conoce el futuro.")),
-    el("button", { type: "button", clase: "boton", onclick: op.alCerrar, title: "Cerrar CSI y volver al edificio (I o Esc)" }, "Ir al edificio ›"));
+    el("button", { type: "button", clase: "boton", onclick: op.alCerrar, title: "Cerrar CSI y volver al edificio (I o Esc)" }, "‹ Volver a oficinas"));
   if (!csi) { nodo.replaceChildren(cabeza, el("p", { clase: "sala-vacio" }, "Leyendo CSI…")); return; }
   if (!lab.inv) restaurarBorrador();
   const fuente = csi.es_demo

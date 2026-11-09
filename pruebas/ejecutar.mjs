@@ -18,6 +18,8 @@ import { registrarCasosCSI } from "./casos-csi.js";
 import { registrarCasosCSIFase2 } from "./casos-csi-fase2.js";
 import { registrarCasosCierre } from "./casos-cierre.js";
 import { registrarCasosEstaciones } from "./casos-estaciones.js";
+import { registrarCasosAscensor } from "./casos-ascensor.js";
+import { registrarCasosVida } from "./casos-vida.js";
 import { ejecutar } from "./mini.js";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -37,6 +39,8 @@ registrarCasosCSI(leer);
 registrarCasosCSIFase2();
 registrarCasosCierre(leer);
 registrarCasosEstaciones(leer);
+registrarCasosAscensor(leer);
+registrarCasosVida();
 
 const r = await ejecutar();
 for (const p of r.resultados) console.log(`${p.ok ? "OK   " : "FALLA"} ${p.nombre}${p.ok ? "" : "\n      " + p.error}`);
