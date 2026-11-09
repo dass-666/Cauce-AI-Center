@@ -27,6 +27,7 @@ import { crearCatalogoKenney, cuerpoEstacion } from "./kenney.js";
 import { Recursos } from "./recursos.js";
 import { crearMedidor, firmaMedicion } from "./medidor.js";
 import { registrarEnSerie, resumenSerie } from "./medicion-serie.js";
+import { correrRecorrido } from "./medicion-recorrido.js";
 import { crearMobiliario } from "./mobiliario.js";
 import { crearHistorialCamara, claveSeleccion } from "./camara-historial.js";
 import { texturaDuela as duelaM, texturaAlfombra, texturaConcreto, texturaVinil, texturaAtlasPantallas, texturaResplandor } from "./texturas.js";
@@ -266,7 +267,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let destruida = false;
   // Con ?quieta=0 o en la medición automática (?auto) se dibuja cada cuadro: en una escena quieta el ahorro deja de
   // contar segundos y la medición no terminaba nunca (visto en la MSI el 2026-11-08).
-  const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0" && !new URLSearchParams(location.search).has("auto");
+  const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0" && !new URLSearchParams(location.search).has("auto") && !new URLSearchParams(location.search).has("recorrido");
   let redibujar = true;      // algo cambió fuera del ciclo (datos, tamaño, luz, brillo): dibujar el próximo cuadro
   let ultimoRender = 0;
   let cuadrosOmitidos = 0;
@@ -1079,6 +1080,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
   }
   if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara, estaciones: estacionesAhora, proyectarEstacion };
+  // ?medir=1&recorrido=1 (PR #35): recorrido medido del ascensor y de «Un cuarto» (medicion-recorrido.js), una vez.
+  if (medir && new URLSearchParams(location.search).has("recorrido")) {
+    correrRecorrido({ api: window.__cauce3d, entregar, avisar: (fase) => avisarEstado(fase) })
+      .then((i) => { window.__cauceRecorrido = i; medidasTexto.textContent = i.texto; })
+      .catch((e) => { medidasTexto.textContent = `Recorrido interrumpido: ${e?.message ?? e}`; avisarEstado("recorrido interrumpido", { error: String(e?.message ?? e) }); });
+  }
 
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {

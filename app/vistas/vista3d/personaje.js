@@ -15,6 +15,8 @@ import { camino, longitudCamino, puntoEnCamino, huella } from "./disposicion.js"
 import { aspecto, COLOR_ESTADO } from "./paleta.js";
 
 const VELOCIDAD = 1.3; // m/s al caminar
+// ?vida=0 (solo para medir en la MSI cuánto cuesta la vida en reposo): la apaga. Sin `location` (Node) queda encendida.
+const VIDA_ENCENDIDA = typeof location === "undefined" || new URLSearchParams(location.search).get("vida") !== "0";
 // Fase L: la celebración es un gesto breve de satisfacción (1.4 s, sin saltos), no una fiesta.
 const DURACION = { sentarse: 0.6, levantarse: 0.6, celebrar: 1.4, reaccion_error: 1.4, llamar_atencion: 1.8 };
 const GIRO = 8; // qué tan rápido gira hacia donde camina o hacia el escritorio (1/s)
@@ -295,7 +297,7 @@ export class Personaje {
       pose.o = quieto ? 0 : gestoOcasional(reloj, v);
       if (this.bucle === "teclear" && !quieto) Object.assign(pose, faseTrabajo(reloj, v)); // fase L: pausas para leer, mirar, acomodarse
       // Vida en reposo: sentado y sin trabajo con evidencia, micro movimientos (maquina.js → faseVida).
-      if (!quieto && this.postura === "sentado" && BUCLES_CON_VIDA.has(this.bucle)) pose.vida = faseVida(reloj, v);
+      if (VIDA_ENCENDIDA && !quieto && this.postura === "sentado" && BUCLES_CON_VIDA.has(this.bucle)) pose.vida = faseVida(reloj, v);
     }
     this.fase = pose.gesto === "teclear" ? pose.fase : null;
     // De pie en su lugar (error, celebración) se hace a un lado de la silla, deslizándose.

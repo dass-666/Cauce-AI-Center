@@ -4,6 +4,7 @@
 import { prueba, igual, verdadero } from "./mini.js";
 import { faseVida, FASES_VIDA, BUCLES_CON_VIDA, variacion } from "../app/vistas/vista3d/maquina.js";
 import { huella } from "../app/vistas/vista3d/disposicion.js";
+import { resumirCuadros, resumirViaje } from "../app/vistas/vista3d/medicion-recorrido.js";
 
 export function registrarCasosVida() {
   const ids = ["investigador", "importacion", "evaluador", "macro", "geopolitico", "riesgos", "importador"];
@@ -53,5 +54,23 @@ export function registrarCasosVida() {
   prueba("Vida · solo en bucles sin trabajo con evidencia (reposo, consultar, atención)", () => {
     igual([...BUCLES_CON_VIDA].sort(), ["atencion", "consultar", "reposo"]);
     verdadero(!BUCLES_CON_VIDA.has("teclear"));
+  });
+
+  prueba("Recorrido medido · resumen de cuadros: cps, peor cuadro y cuadros lentos", () => {
+    const r = resumirCuadros([...Array(58).fill(1000 / 60), 40, 60]);
+    igual(r.cuadros, 60); igual(r.peor_cuadro_ms, 60); igual(r.sobre_33_ms, 2); igual(r.sobre_50_ms, 1);
+    verdadero(r.cps_promedio > 55 && r.cps_promedio < 60, String(r.cps_promedio));
+    igual(resumirCuadros([]).cps_promedio, null);
+  });
+
+  prueba("Recorrido medido · un viaje gradual se distingue de un cambio de golpe", () => {
+    // Gradual: el corrimiento pasa por 20 valores y el edificio se mueve en pantalla antes de que el velo tape.
+    const gradual = Array.from({ length: 20 }, (_, k) => ({ dt: 16.7, desplaza: k * 0.3, velo: Math.min(1, k / 10), cy: 400 - k * 12 }));
+    const g = resumirViaje(gradual, 400);
+    verdadero(g.gradual, JSON.stringify(g)); verdadero(g.movimiento_visible_px >= 20 && g.valores_intermedios >= 8);
+    // De golpe: la escena cambia sin corrimiento ni movimiento visible.
+    const golpe = Array.from({ length: 20 }, () => ({ dt: 16.7, desplaza: 0, velo: 0, cy: 400 }));
+    const d = resumirViaje(golpe, 400);
+    verdadero(!d.gradual); igual(d.movimiento_visible_px, 0); igual(d.valores_intermedios, 1);
   });
 }

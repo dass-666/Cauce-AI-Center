@@ -84,7 +84,8 @@ function avisarVista(texto, { reintentar = false } = {}) {
 
 function vistaDeseada() {
   if ($("#bajo-consumo").checked) return "2d";
-  if (new URLSearchParams(location.search).has("auto")) return "3d"; // la medición automática siempre es en 3D
+  const q = new URLSearchParams(location.search);
+  if (q.has("auto") || q.has("recorrido")) return "3d"; // la medición automática (y el recorrido medido) siempre es en 3D
   return leerPreferencia("cauce.vista") === "2d" ? "2d" : "3d";
 }
 
@@ -189,7 +190,7 @@ async function iniciar() {
   estado.actual = estado.proyectos.find((p) => p.id === pedido) ?? estado.proyectos.find((p) => p.id === guardado) ?? estado.proyectos[0];
   dibujarPestanas();
   await actualizar();
-  const medicionAuto = new URLSearchParams(location.search).has("auto"); // medición automática: sin sala encima
+  const medicionAuto = ["auto", "recorrido"].some((k) => new URLSearchParams(location.search).has(k)); // medición automática: sin sala encima
   if (medicionAuto) { /* nada encima del edificio */ }
   else if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
   else if (new URLSearchParams(location.search).get("nexus") === "1") ponerNexus(true);

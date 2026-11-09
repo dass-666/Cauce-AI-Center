@@ -15,7 +15,11 @@
 #  4. Deja los resultados en mediciones\<fecha>\ (también busca en Descargas), muestra el avance mientras mide y el
 #     resumen al final. Cierra ese Edge (solo ese).
 # No instala nada, no cambia datos, no sube nada a internet. Durante la medición no hay que tocar la computadora.
-param([int]$Segundos = 30, [int]$Puerto = 8779)
+#
+# Con -Recorrido (herramientas\medir-recorrido.bat) mide en cambio el recorrido del PR #35: viajes de ascensor
+# entre pisos, «Un cuarto» quieto con la vida en reposo y cambios de cuarto (?medir=1&recorrido=1, unos 3 minutos);
+# con -SinVida, lo mismo con la vida en reposo apagada (?vida=0), para comparar su costo. Resultado: cauce-recorrido.json.
+param([int]$Segundos = 30, [int]$Puerto = 8779, [switch]$Recorrido, [switch]$SinVida)
 $ErrorActionPreference = "Stop"
 $raiz = Split-Path -Parent $PSScriptRoot
 Set-Location $raiz
@@ -56,24 +60,31 @@ try {
              profile = @{ exit_type = "Normal"; content_settings = @{ exceptions = @{ automatic_downloads = @{ $sitio = @{ setting = 1 } } } } } }
   # Sin BOM: Windows PowerShell 5.1 pone BOM con -Encoding UTF8 y Edge puede tomar el archivo por dañado.
   [IO.File]::WriteAllText("$perfil\Default\Preferences", ($pref | ConvertTo-Json -Depth 10), (New-Object Text.UTF8Encoding $false))
-  $url = "$base/?medir=1&auto=$Segundos&serie=1"
-  Write-Host "Midiendo $url  (no toques la computadora; unos $([math]::Ceiling(5 * ($Segundos + 20) / 60)) minutos)"
+  if ($Recorrido) {
+    $url = "$base/?medir=1&recorrido=1&proyecto=compago$(if ($SinVida) { '&vida=0' })"
+    $patronFinal = "cauce-recorrido*.json"
+    Write-Host "Midiendo $url  (no toques la computadora; unos 3 minutos)"
+  } else {
+    $url = "$base/?medir=1&auto=$Segundos&serie=1"
+    $patronFinal = "cauce-medicion-serie*.json"
+    Write-Host "Midiendo $url  (no toques la computadora; unos $([math]::Ceiling(5 * ($Segundos + 20) / 60)) minutos)"
+  }
   Start-Process -FilePath $edge -ArgumentList @("--user-data-dir=$perfil", "--disable-sync", "--no-first-run", "--no-default-browser-check", "--start-maximized", "--new-window", $url) | Out-Null
 
   # 4. Espera el archivo final (en la carpeta de resultados o, si Edge no hizo caso, en Descargas)
   $descargas = Join-Path $env:USERPROFILE "Downloads"
-  $limite = $inicio.AddSeconds(5 * (3 * $Segundos + 75) + 60)   # el mismo tope que se pone la pagina por caso
+  $limite = if ($Recorrido) { $inicio.AddSeconds(420) } else { $inicio.AddSeconds(5 * (3 * $Segundos + 75) + 60) }   # el mismo tope que se pone la pagina por caso
   $final = $null
   $estadoArchivo = Join-Path $salida "estado.json"; $ultimo = ""
   while ((Get-Date) -lt $limite -and -not $final) {
     Start-Sleep -Seconds 3
-    $final = Get-ChildItem -Path $salida, $descargas -Filter "cauce-medicion-serie*.json" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $inicio } | Select-Object -First 1
+    $final = Get-ChildItem -Path $salida, $descargas -Filter $patronFinal -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $inicio } | Select-Object -First 1
     if (Test-Path $estadoArchivo) {
       try { $e = Get-Content -Raw -Encoding UTF8 $estadoArchivo | ConvertFrom-Json; $linea = "  $($e.hora)  $($e.caso): $($e.fase)$(if ($e.errores) { '  errores: ' + ($e.errores -join ' | ') })" } catch { $linea = "" }
       if ($linea -and $linea -ne $ultimo) { Write-Host $linea; $ultimo = $linea }
     }
   }
-  Get-ChildItem -Path $descargas -Filter "cauce-medicion-*.json" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $inicio } | Copy-Item -Destination $salida -Force
+  Get-ChildItem -Path $descargas -Filter "cauce-*.json" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $inicio } | Copy-Item -Destination $salida -Force
 } finally {
   # Primero la GPU (lo más importante de dejar como estaba); cada paso por separado para que un fallo no salte el resto.
   try { if ($anterior) { Set-ItemProperty -Path $claveGpu -Name $edge -Value $anterior } else { Remove-ItemProperty -Path $claveGpu -Name $edge -ErrorAction SilentlyContinue } }
@@ -86,7 +97,7 @@ try {
   if ($servidor) { Stop-Process -Id $servidor.Id -ErrorAction SilentlyContinue }
 }
 
-$serie = Get-ChildItem -Path $salida -Filter "cauce-medicion-serie*.json" | Select-Object -First 1
+$serie = Get-ChildItem -Path $salida -Filter $(if ($Recorrido) { "cauce-recorrido*.json" } else { "cauce-medicion-serie*.json" }) | Select-Object -First 1
 if (-not $serie) {
   Write-Host "No llego el resultado final. Lo que haya quedado esta en $salida"
   if (Test-Path (Join-Path $salida "estado.json")) { Write-Host "Ultimo estado que informo la pagina:"; Get-Content -Raw -Encoding UTF8 (Join-Path $salida "estado.json") | Write-Host }
