@@ -154,6 +154,7 @@ async function iniciar() {
   });
   for (const b of document.querySelectorAll("[data-vista]")) {
     b.addEventListener("click", () => {
+      cerrarSecciones(); // «Edificio 3D» o «Plano» también vuelven a las oficinas desde una sección especial
       guardarPreferencia("cauce.vista", b.dataset.vista);
       if (b.dataset.vista === "3d" && $("#bajo-consumo").checked) aplicarBajoConsumo(false);
       if (b.dataset.vista === "2d") avisarVista(null);
@@ -209,18 +210,36 @@ async function iniciar() {
   });
 }
 
+// Si una sección especial se abrió desde Inmersivo (teclas S, N o I), al cerrarla se vuelve a Inmersivo.
+let inmersivoAntesDeSeccion = false;
+function recordarInmersivo() { if (enInmersivo()) inmersivoAntesDeSeccion = true; }
+function alCerrarSeccion() {
+  if (salaAbierta() || nexusAbierto() || csiAbierto()) return;
+  vista?.pausar?.(false);
+  if (inmersivoAntesDeSeccion) { inmersivoAntesDeSeccion = false; ponerInmersivo(true); }
+}
+
+/** Cierra la sala de control, Nexus y CSI (la que esté abierta). Devuelve true si había alguna abierta. */
+function cerrarSecciones() {
+  const habia = salaAbierta() || nexusAbierto() || csiAbierto();
+  if (habia) { ponerSala(false); ponerNexus(false); ponerCSI(false); }
+  return habia;
+}
+
 // ---------- Sala de control (fase K) ----------
 const salaAbierta = () => !$("#sala-control").hidden;
 
 /** Abre o cierra la sala. Mientras está abierta, la vista 3D se pausa (no gasta tarjeta gráfica). */
 function ponerSala(abrir) {
   if (abrir === salaAbierta()) return;
-  if (abrir) { ponerInmersivo(false); ponerNexus(false); ponerCSI(false); }
+  // Primero se cierran las otras (eso podría devolver a Inmersivo) y luego se sale de Inmersivo.
+  if (abrir) { recordarInmersivo(); ponerNexus(false); ponerCSI(false); recordarInmersivo(); ponerInmersivo(false); }
   $("#sala-control").hidden = !abrir;
   document.documentElement.classList.toggle("sala-abierta", abrir);
   $("#boton-sala").setAttribute("aria-pressed", abrir ? "true" : "false");
   guardarPreferencia("cauce.sala", abrir ? "1" : "0");
   vista?.pausar?.(abrir || nexusAbierto() || csiAbierto());
+  if (!abrir) alCerrarSeccion();
   if (abrir) { dibujarSalaSiAbierta(); $("#sala-titulo")?.focus({ preventScroll: true }); }
   else if (document.activeElement === document.body || $("#sala-control").contains(document.activeElement)) $("#boton-sala").focus({ preventScroll: true });
 }
@@ -232,11 +251,13 @@ let nexusDocs = null;
 
 function ponerNexus(abrir) {
   if (abrir === nexusAbierto()) return;
-  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerCSI(false); }
+  // Primero se cierran las otras (eso podría devolver a Inmersivo) y luego se sale de Inmersivo.
+  if (abrir) { recordarInmersivo(); ponerSala(false); ponerCSI(false); recordarInmersivo(); ponerInmersivo(false); }
   $("#nexus").hidden = !abrir;
   document.documentElement.classList.toggle("nexus-abierto", abrir);
   $("#boton-nexus").setAttribute("aria-pressed", abrir ? "true" : "false");
   vista?.pausar?.(abrir || salaAbierta() || csiAbierto());
+  if (!abrir) alCerrarSeccion();
   if (abrir) {
     if (!nexusDocs) dibujarNexus($("#nexus"), null, { alCerrar: () => ponerNexus(false) });
     leerYDibujarNexus().then(() => $("#nexus-titulo")?.focus({ preventScroll: true }));
@@ -283,11 +304,13 @@ const csiAbierto = () => !$("#csi").hidden;
 
 function ponerCSI(abrir) {
   if (abrir === csiAbierto()) return;
-  if (abrir) { ponerInmersivo(false); ponerSala(false); ponerNexus(false); }
+  // Primero se cierran las otras (eso podría devolver a Inmersivo) y luego se sale de Inmersivo.
+  if (abrir) { recordarInmersivo(); ponerSala(false); ponerNexus(false); recordarInmersivo(); ponerInmersivo(false); }
   $("#csi").hidden = !abrir;
   document.documentElement.classList.toggle("csi-abierto", abrir);
   $("#boton-csi").setAttribute("aria-pressed", abrir ? "true" : "false");
   vista?.pausar?.(abrir || salaAbierta() || nexusAbierto());
+  if (!abrir) alCerrarSeccion();
   if (abrir) {
     dibujarCSI($("#csi"), null, { alCerrar: () => ponerCSI(false) });
     $("#csi-titulo")?.focus({ preventScroll: true });
@@ -437,9 +460,14 @@ function dibujarPestanas() {
 }
 
 async function elegirProyecto(p) {
+  // Elegir un piso desde la sala de control, Nexus o CSI vuelve a las oficinas (aunque sea el piso que ya estaba).
+  // Antes la sección seguía abierta y su clase en <html> dejaba #oficina con display:none: el edificio no volvía
+  // hasta recargar o pasar por Inmersivo (ponerInmersivo(true) es lo único que cerraba esas secciones).
+  const veniaDeSeccion = cerrarSecciones();
   if (p === estado.actual) return;
   // Bloque D: en la vista 3D la cámara sube o baja hasta el piso elegido (ascensor). En el plano 2D, cambio directo.
-  vista?.viajarAPiso?.({ orden: estado.proyectos.map((x) => x.id), destino: p.id, nombre: p.nombre });
+  // Al volver de una sección especial no hay ascensor: el piso anterior no estaba a la vista.
+  if (!veniaDeSeccion) vista?.viajarAPiso?.({ orden: estado.proyectos.map((x) => x.id), destino: p.id, nombre: p.nombre });
   estado.actual = p;
   estado.seleccion = null;
   seguidor.reiniciar(); // la primera lectura del otro piso no cuenta como cambio observado

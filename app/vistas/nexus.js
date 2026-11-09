@@ -46,7 +46,7 @@ export function dibujarNexus(nodo, resumen, { alCerrar, fuente = "demo", docLecc
     el("div", {},
       el("h2", { id: "nexus-titulo", tabindex: "-1" }, "Oficina Nexus · supervisión"),
       el("p", { clase: "sala-sub" }, "Observa, conserva evidencia, detecta errores y propone. No controla motores ni toma decisiones: aprueba una persona.")),
-    el("button", { type: "button", clase: "boton", onclick: alCerrar, title: "Cerrar Nexus y volver al edificio (N o Esc)" }, "Ir al edificio ›"));
+    el("button", { type: "button", clase: "boton", onclick: alCerrar, title: "Cerrar Nexus y volver al edificio (N o Esc)" }, "‹ Volver a oficinas"));
   if (!resumen) { nodo.replaceChildren(cabeza, el("p", { clase: "sala-vacio" }, "Leyendo el registro de Nexus…")); return; }
 
   const c = resumen.cifras;

@@ -28,7 +28,7 @@ export function dibujarSala(nodo, empresa, { alIrProyecto, alIrDepartamento, alC
     el("div", {},
       el("h2", { id: "sala-titulo", tabindex: "-1" }, "Sala de control"),
       el("p", { clase: "sala-sub" }, `Estado de los ${empresa.proyectos} proyectos registrados · solo lectura · revisado a las ${hora(new Date(ahoraMs).toISOString())}`)),
-    el("button", { type: "button", clase: "boton", "data-cerrar-sala": "", onclick: alCerrar, title: "Cerrar la sala y volver al piso (S o Esc)" }, "Ir al edificio ›"));
+    el("button", { type: "button", clase: "boton", "data-cerrar-sala": "", onclick: alCerrar, title: "Cerrar la sala y volver al piso (S o Esc)" }, "‹ Volver a oficinas"));
 
   const cifras = el("div", { clase: "sala-cifras", role: "list", "aria-label": "Resumen" },
     cifra(empresa.real, "con datos reales vigentes", "c-real"),

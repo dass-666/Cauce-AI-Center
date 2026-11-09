@@ -54,7 +54,7 @@ function compagoReal(base, cambiar = null) {
   ok('sala: Repacar no se da por uno ni dos proyectos (lo dice su nota)', /uno o dos proyectos/.test(await p.locator('.sala-tarjeta[data-proyecto="repacar"]').innerText()));
   ok('sala: DEMO y REAL no se suman (0 trabajando REAL; los de DEMO aparte y marcados «simulado»)', /0\s*procesos trabajando \(REAL\)/.test(texto) && /trabajando en DEMO \(simulado\)/.test(texto));
   ok('sala: los asuntos de DEMO llevan la insignia DEMO', (await p.locator('.sala-item .tablero-insignia.es-demo').count()) > 0);
-  ok('sala: sin botones que actúen sobre sistemas (solo Ir/Ver/Cerrar)', (await p.locator('#sala-control button').allInnerTexts()).every((t) => /^(Ir al edificio|Ir al piso|Volver a este piso|Ver departamento|Ver piso|Ver)\b/.test(t.trim())));
+  ok('sala: sin botones que actúen sobre sistemas (solo Ir/Ver/Cerrar)', (await p.locator('#sala-control button').allInnerTexts()).every((t) => /^(‹ Volver a oficinas|Ir al edificio|Ir al piso|Volver a este piso|Ver departamento|Ver piso|Ver)\b/.test(t.trim())));
   ok('sala: el contador del botón no cuenta asuntos de DEMO', await p.locator('#boton-sala .sala-contador').isHidden());
   const c0 = await cuadros(); await p.waitForTimeout(1200); const c1 = await cuadros();
   ok('con la sala abierta la 3D no dibuja (no gasta tarjeta gráfica)', c1 === c0, `${c0}→${c1}`);
