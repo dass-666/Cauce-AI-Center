@@ -594,6 +594,11 @@ function medirArriba() {
   document.documentElement.style.setProperty("--arriba-oficina", `${arriba}px`);
 }
 window.addEventListener("resize", medirArriba);
+// Lo de arriba cambia de alto sin que cambie la ventana (fuentes, avisos, el tablero al llegar los datos).
+if (typeof ResizeObserver === "function") {
+  const vigia = new ResizeObserver(() => medirArriba());
+  for (const sel of [".cabecera", "#banda-demo", "#conexion", "#aviso-vista", "#llegada"]) { const e = document.querySelector(sel); if (e) vigia.observe(e); }
+}
 
 function dibujarEstado(m) {
   requestAnimationFrame(medirArriba); // las franjas (DEMO, avisos) cambian lo que queda arriba

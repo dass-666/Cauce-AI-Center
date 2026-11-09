@@ -36,15 +36,18 @@ herramientas\medir-estaciones.bat
 
 No toques la computadora durante unos 5 minutos. El guion:
 
-1. arranca el servidor si no está corriendo (y lo detiene al terminar);
+1. arranca su propio servidor en `127.0.0.1:8779` (no hace falta tener `iniciar.bat` abierto; lo detiene al
+   terminar), que recibe cada informe directamente en la carpeta de resultados, sin depender de las descargas de Edge;
 2. pide a Windows que **Edge use la GPU de ahorro de energía (Intel UHD)**, la misma preferencia que
    Configuración › Sistema › Pantalla › Gráficos, y **la restaura** al terminar;
 3. abre un Edge aparte (perfil temporal, sin tus pestañas), maximizado, que mide solo cinco casos de 30 s:
    A Compago sin estaciones · B Compago con estaciones · C Ek Chuah sin · D Ek Chuah con · E Compago sin la fusión
    de geometría del edificio (para saber cuánto aporta);
-4. deja los resultados en `mediciones\<fecha>\` (fuera de git) y muestra el resumen.
+4. deja los resultados en `mediciones\<fecha>\` (fuera de git) y muestra el resumen;
+5. al terminar cierra solo ese Edge y **borra su perfil temporal** (Edge puede iniciar sesión solo con tu cuenta de
+   Windows; se abre con `--disable-sync`, pero por si acaso no queda nada guardado).
 
-Envía `mediciones\<fecha>\cauce-medicion-serie.json`. Trae, por caso: GPU que usó el navegador (debe decir Intel),
+Mientras mide, la ventana muestra en qué caso va. Envía `mediciones\<fecha>\cauce-medicion-serie.json`. Trae, por caso: GPU que usó el navegador (debe decir Intel),
 cps promedio y mínimo, 1 % más lento, cuadros p50/p95/p99 en ms, segundos bajo 50 cps, llamadas de dibujo,
 texturas, geometrías y memoria JS.
 

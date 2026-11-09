@@ -29,7 +29,7 @@ const URL = 'http://127.0.0.1:' + (process.env.PUERTO || 8765) + '/?medir=1';
     const despues = await area(p);
     ok('escritorio: entra al modo inmersivo y oculta la cabecera', await inm(p) && !(await visible(p, '.cabecera')));
     ok('escritorio: el edificio crece al menos 30 %', despues >= antes * 1.3, `${antes} → ${despues} px²`);
-    ok('escritorio: siguen a la vista DEMO, conexión y alertas', await visible(p, '#conexion .tablero-insignia') && /En línea/.test(await p.locator('#conexion').innerText()) && await visible(p, '[data-k="alertas"] summary'));
+    ok('escritorio: siguen a la vista DEMO, conexión y alertas', await visible(p, '#conexion .tablero-insignia') && /Demostración vigente/.test(await p.locator('#conexion').innerText()) && await visible(p, '[data-k="alertas"] summary'));
     ok('escritorio: indicadores secundarios ocultos (estados, cambios, minimapa)', !(await visible(p, '.tablero-estados')) && !(await visible(p, '[data-k="cambios"]')) && !(await visible(p, '.vista3d-minimapa')));
     ok('escritorio: botón Salir visible, con foco y aria-pressed', await visible(p, '#salir-inmersivo') && await p.evaluate(() => document.activeElement?.id === 'salir-inmersivo') && (await p.locator('.boton-inmersivo').getAttribute('aria-pressed')) === 'true');
     ok('escritorio: la franja de estado no tapa el botón Salir', !(await choque(p, '#conexion', '#salir-inmersivo')));

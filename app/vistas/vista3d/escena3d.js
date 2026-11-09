@@ -238,7 +238,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let depMostrado = null;
   let mitadAlto = 4;
   let destruida = false;
-  const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0";
+  // Con ?quieta=0 o en la medición automática (?auto) se dibuja cada cuadro: en una escena quieta el ahorro deja de
+  // contar segundos y la medición no terminaba nunca (visto en la MSI el 2026-11-08).
+  const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0" && !new URLSearchParams(location.search).has("auto");
   let redibujar = true;      // algo cambió fuera del ciclo (datos, tamaño, luz, brillo): dibujar el próximo cuadro
   let ultimoRender = 0;
   let cuadrosOmitidos = 0;
@@ -666,7 +668,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let ultimoDibujo = 0;
   let reloj = 0;
   let ultimaZona = 0;
-  const medidor = crearMedidor({ ventana: 20 });
+  // Con ?auto=N la ventana debe abarcar los N segundos (antes era fija en 20 y ?auto=30 no terminaba nunca).
+  const medidor = crearMedidor({ ventana: Math.max(20, Math.min(120, Number(new URLSearchParams(location.search).get("auto")) || 0)) });
   const tiempoGpu = medir ? crearTiempoGpu(renderer.getContext()) : null; // solo con ?medir=1
   let brilloApagadoSolo = null;
 
@@ -774,48 +777,77 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     medidasTexto.textContent = textoMedicion(i);
     revisarAuto(t, i);
   }
+  // Entrega de un informe: al servidor local si herramientas\medir-msi.ps1 lo arrancó con --recibir-mediciones
+  // (no depende de los permisos de descarga del navegador) y, además, como descarga. Ninguna de las dos es obligatoria.
+  function entregar(nombre, doc) {
+    const cuerpo = JSON.stringify(doc, null, 2);
+    const envio = fetch(`__medicion/${nombre}.json`, { method: "POST", headers: { "Content-Type": "application/json" }, body: cuerpo }).catch(() => null);
+    try {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([cuerpo], { type: "application/json" }));
+      a.download = `${nombre}.json`;
+      document.body.append(a); a.click(); a.remove();
+    } catch { /* sin descargas: el texto queda en pantalla */ }
+    return envio;
+  }
+  // Progreso para el guion de Windows (qué paso va y qué errores hubo); si nadie lo recibe, no pasa nada.
+  const erroresPagina = [];
+  if (medir && new URLSearchParams(location.search).has("auto")) {
+    addEventListener("error", (e) => erroresPagina.push(String(e.message ?? e).slice(0, 200)));
+    addEventListener("unhandledrejection", (e) => erroresPagina.push(String(e.reason?.message ?? e.reason).slice(0, 200)));
+  }
+  function avisarEstado(fase, extra = {}) {
+    fetch("__medicion/estado.json", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fase, caso: parametros.get("caso") ?? "", direccion: location.href, hora: new Date().toISOString(), errores: erroresPagina.slice(0, 10), ...extra }) }).catch(() => {});
+  }
   // ?medir=1&auto=30&serie=1: la serie A/B completa (medicion-serie.js) en la MISMA pestaña, un caso tras otro.
-  function siguienteDeSerie(informe) {
+  async function siguienteDeSerie(informe) {
     const siguiente = registrarEnSerie(informe, location.href);
     if (siguiente) { location.replace(siguiente); return; }
     const r = resumenSerie();
     medidasTexto.textContent = r.texto;
-    try {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(r, null, 2)], { type: "application/json" }));
-      a.download = "cauce-medicion-serie.json";
-      document.body.append(a); a.click(); a.remove();
-    } catch { /* el resumen queda en pantalla */ }
     window.__cauceSerie = r;
+    await entregar("cauce-medicion-serie", r);
+    avisarEstado("serie terminada");
   }
   // ?medir=1&auto=30[&caso=A]: medición automática para la MSI. Espera 5 s a que el piso se asiente, mide `auto`
   // segundos sin tocar nada y descarga cauce-medicion-<caso>-<proyecto>.json (a la carpeta Descargas). Una vez.
   const parametros = new URLSearchParams(location.search);
   const autoSeg = medir ? Math.min(120, Math.max(10, Number(parametros.get("auto")) || 0)) : 0;
   const autoActiva = medir && parametros.has("auto");
-  let autoInicio = null, autoHecha = false;
+  let autoInicio = null, autoHecha = false, autoPrimero = null, autoReinicios = 0, autoIncompleta = false;
+  // Además del ciclo de dibujo, una revisión por segundo: así el tope se cumple aunque no se completen segundos.
+  const relojAuto = autoActiva ? setInterval(() => { if (autoHecha || destruida) clearInterval(relojAuto); else revisarAuto(performance.now(), metricas()); }, 1000) : 0;
   function revisarAuto(t, i) {
-    if (!autoActiva || autoHecha || !escenario || recienConstruido) return;
-    if (autoInicio === null) { autoInicio = t; return; }
-    if (t - autoInicio < 5000) return;
-    if (autoInicio > 0) { medidor.reiniciar(t, "medición automática"); autoInicio = -1; return; }
-    if (i.segundos_medidos < autoSeg || i.reiniciado_por !== "medición automática") return;
+    if (!autoActiva || autoHecha) return;
+    autoPrimero ??= t;
+    // Tope: si algo impide medir (la ventana cambia de tamaño una y otra vez, el piso no termina de construirse),
+    // se entrega lo que haya, marcado como incompleto, para que la serie siga y el guion no espere en vano.
+    const tope = t - autoPrimero > (autoSeg * 3 + 60) * 1000;
+    if (!tope) {
+      if (!escenario || recienConstruido) return;
+      if (autoInicio === null) { autoInicio = t; avisarEstado("asentando"); return; }
+      if (autoInicio > 0 && t - autoInicio < 5000) return;
+      if (autoInicio > 0) { medidor.reiniciar(t, "medición automática"); autoInicio = -1; avisarEstado("midiendo"); return; }
+      // Otro cambio reinició la ventana (p. ej. la ventana se maximizó): se vuelve a asentar y a empezar.
+      if (i.reiniciado_por !== "medición automática") { autoReinicios++; autoInicio = t; return; }
+      if (i.segundos_medidos < autoSeg) return;
+    } else autoIncompleta = true;
     autoHecha = true;
     const informe = {
       herramienta: "Cauce 3D · medición automática", fecha: new Date().toISOString(), caso: parametros.get("caso") ?? "",
       direccion: location.href, proyecto: modelo?.proyecto.id ?? null, estaciones: parametros.get("estaciones") !== "0",
       fusion: parametros.get("fusion") !== "0", navegador: navigator.userAgent,
-      pantalla: { ancho: screen.width, alto: screen.height, escala: devicePixelRatio, ventana: [innerWidth, innerHeight] }, ...i,
+      pantalla: { ancho: screen.width, alto: screen.height, escala: devicePixelRatio, ventana: [innerWidth, innerHeight] },
+      segundos_pedidos: autoSeg, incompleta: autoIncompleta, reinicios_por_cambios: autoReinicios, errores_pagina: erroresPagina.slice(0, 10), ...i,
     };
-    medidasTexto.textContent = `MEDICIÓN TERMINADA (${autoSeg} s): se descargó el archivo.\n` + textoMedicion(i);
-    try {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(informe, null, 2)], { type: "application/json" }));
-      a.download = `cauce-medicion-${informe.caso || "sin-caso"}-${informe.proyecto}.json`;
-      document.body.append(a); a.click(); a.remove();
-    } catch { /* sin descargas: el texto queda en pantalla y en window.__cauceMedicion */ }
+    medidasTexto.textContent = `MEDICIÓN ${autoIncompleta ? "INCOMPLETA" : "TERMINADA"} (${i.segundos_medidos} de ${autoSeg} s): se entregó el archivo.\n` + textoMedicion(i);
     window.__cauceMedicion = informe;
-    if (parametros.has("serie")) setTimeout(() => siguienteDeSerie(informe), 1500); // deja terminar la descarga
+    const nombre = `cauce-medicion-${(informe.caso || "sin-caso").toLowerCase().replace(/[^a-z0-9-]/g, "-")}-${informe.proyecto}`;
+    entregar(nombre, informe).then(() => {
+      avisarEstado("caso entregado", { incompleta: autoIncompleta });
+      if (parametros.has("serie")) setTimeout(() => siguienteDeSerie(informe), 1500); // deja terminar la descarga
+    });
   }
   function textoMedicion(i) {
     const vista = i.modo !== "edificio" ? `un cuarto (${i.departamento_nombre})` : i.enfocado ? `edificio, enfocado: ${i.enfocado_nombre}` : "edificio completo";

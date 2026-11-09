@@ -24,6 +24,7 @@ export function direccionPaso(base, paso) {
   u.searchParams.set("caso", c.caso);
   u.searchParams.set("proyecto", c.proyecto);
   u.searchParams.set("modo3d", "edificio");
+  u.searchParams.set("quieta", "0"); // cada cuadro se dibuja en todos los casos (ya lo implica ?auto; queda explícito)
   if (!c.estaciones) u.searchParams.set("estaciones", "0");
   if (!c.fusion) u.searchParams.set("fusion", "0");
   return u.href;

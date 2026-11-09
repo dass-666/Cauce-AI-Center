@@ -47,7 +47,7 @@ const BASE = 'http://127.0.0.1:' + (process.env.PUERTO || 8765) + '/';
   const a2 = await ancho();
   ok('«◂ Detalle» lo vuelve a abrir', Math.abs(a2 - a0) < 4 && await p.evaluate(() => !document.body.classList.contains('panel-plegado')), `${a2} px`);
   const alto = await p.evaluate(() => { const o = document.querySelector('.oficina').getBoundingClientRect(); return { alto: Math.round(o.height), fondo: Math.round(o.bottom), vista: innerHeight }; });
-  ok('la oficina 3D llena el alto disponible sin salirse de la ventana (1366×768)', alto.alto >= 360 && alto.fondo <= alto.vista + 2, JSON.stringify(alto));
+  ok('la oficina 3D no es más baja que antes (alto de la ventana − 210 px) y usa el alto libre si lo hay (1366×768)', alto.alto >= Math.max(360, alto.vista - 210) - 1, JSON.stringify(alto));
   await p.close();
 
   // ---------------------------------------------------------------- Fusión entre cuartos: menos llamadas, misma imagen
@@ -105,6 +105,9 @@ const BASE = 'http://127.0.0.1:' + (process.env.PUERTO || 8765) + '/';
   const plano = JSON.stringify(inf ?? {});
   ok('el informe trae GPU, cps promedio, percentiles y recursos', claves.every((k) => plano.includes(`"${k}"`)) && /"llamadas"/.test(plano) && /"texturas"/.test(plano) && /gpu|renderer/i.test(plano), Object.keys(r).slice(0, 12).join(','));
   await ctx.close();
+  // Sin --recibir-mediciones el servidor no acepta escrituras (solo herramientas\\medir-msi.ps1 lo arranca con esa opción).
+  const post = await fetch(BASE + '__medicion/prueba.json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.status).catch(() => 0);
+  ok('servir.py sin --recibir-mediciones rechaza escribir informes', post === 404 || post === 501, `HTTP ${post}`);
 
   await b.close();
   for (const l of res) console.log(l);

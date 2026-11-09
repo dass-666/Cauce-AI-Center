@@ -108,6 +108,28 @@ Qué se cambió (sin reescribir el renderizador ni perder calidad visible):
 - Sin luces, sombras ni partículas nuevas; el tablero se redibuja solo si cambia lo que muestra; recorrer los pisos
   varias veces no deja geometrías ni texturas de más (prueba de 4 idas y vueltas).
 
+### Medición real en la Intel UHD de la MSI (2026-11-08, commit ac81e6c)
+
+Edge 157, GPU «ANGLE Intel UHD Graphics 0x9A68, Direct3D11» (no SwiftShader), pantalla 1280×720, lienzo 3D
+1175×361, edificio completo, sin brillo, 20 s por caso tras 5 s de asentamiento, cada cuadro dibujado (`quieta=0`):
+
+| Caso | cps prom. / mín. / 1 % más lento | s bajo 50 | Llamadas | Texturas | GPU por cuadro (peor) |
+|---|---|---|---|---|---|
+| A Compago sin estaciones | 61 / 61 / 60 | 0 | 78 | 26 | 0.53 ms (1.06) |
+| B Compago con estaciones | 61 / 61 / 60 | 0 | 89 | 32 | 0.77 ms (1.51) |
+| C Ek Chuah sin estaciones | 61 / 61 / 60 | 0 | 60 | 21 | 0.40 ms (0.61) |
+| D Ek Chuah con estaciones | 61 / 61 / 60 | 0 | 71 | 29 | 0.57 ms (0.68) |
+| E Compago con estaciones, sin fusión | 61 / 61 / 60 | 0 | 108 | 32 | 0.60 ms (0.87) |
+
+Criterio (≤ 3 cps de diferencia y sin segundos nuevos bajo 50): **cumple** en Compago y en Ek Chuah (0 cps). Los 61
+cps son el tope del limitador de 60 de la página, no el de la tarjeta: el margen real se ve en el tiempo de GPU,
+menos de 1 ms de los 16.7 ms de un cuadro. Las estaciones cuestan +11 llamadas y ~0.2 ms de GPU. Peor cuadro entre
+16.7 y 16.9 ms y p99 16.6 ms en todos los casos. Límites: 20 s por caso, una sola corrida, ventana de 1280×720 (no a
+pantalla más grande) y sin recorrer pisos durante la medición.
+
+Esa medición la hice esquivando a mano tres defectos de la herramienta que ya están corregidos (ver
+`docs/VALIDAR-ESTACIONES.md`): con 30 s por caso nunca terminaba (ventana del medidor fija en 20 s), Edge bloqueaba
+la segunda descarga automática y, si fallaba el cierre de Edge, no se restauraba la preferencia de GPU.
+
 `?medir=1` muestra además cuadro p50/p95/p99, cps del 1 % más lento y memoria JS; `?fusion=0` apaga la fusión para
-comparar. **No se ha medido en la Intel UHD de Diego**: `herramientas\medir-estaciones.bat` lo hace solo
-(`docs/VALIDAR-ESTACIONES.md`).
+comparar. Para repetir la medición en la MSI: `herramientas\medir-estaciones.bat` (`docs/VALIDAR-ESTACIONES.md`).

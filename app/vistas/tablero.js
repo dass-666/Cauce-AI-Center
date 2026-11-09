@@ -3,7 +3,7 @@
 // Todo sale del modelo de vista (contrato v1); aquí no se calcula ni se inventa nada.
 
 import { ESTADOS } from "../nucleo/estados.js";
-import { describirDuracion } from "../nucleo/modelo.js";
+import { describirDuracion, ETIQUETA_DEMO_VIGENTE } from "../nucleo/modelo.js";
 import { el, fecha, hora } from "./dom.js";
 
 const NIVELES = { critica: "Crítica", advertencia: "Advertencia", info: "Información" };
@@ -59,7 +59,10 @@ export function dibujarTablero(nodo, m, cambios, { alElegirDepartamento }) {
   nodo.replaceChildren(...[
     el("div", { clase: "tablero-fila" },
       insignia,
-      el("strong", {}, m.conexion_etiqueta),
+      // En celular, junto a la insignia DEMO basta «vigente» (la barra no debe crecer y tapar el edificio).
+      m.conexion_etiqueta === ETIQUETA_DEMO_VIGENTE
+        ? el("strong", { "aria-label": ETIQUETA_DEMO_VIGENTE }, el("span", { clase: "ocultar-movil" }, "Demostración "), "vigente")
+        : el("strong", {}, m.conexion_etiqueta),
       edad,
       m.fuente ? el("span", { clase: "tablero-suave tablero-fuente" }, m.fuente.nombre) : null,
       el("span", { clase: "tablero-estados" }, ...agentes),

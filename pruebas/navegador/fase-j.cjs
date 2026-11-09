@@ -108,7 +108,7 @@ const EK = (n) => `contrato/ejemplos/ek-chuah-pr2/${n}.json`;
   compago = demoViva(Date.now() - 60_000);
   await actualizar(2500);
   t = await tablero();
-  ok('piloto DEMO recién exportado en datos/reales/: insignia DEMO, franja DEMO y «En línea»', /DEMO/.test(t) && /En línea/.test(t) && await p.locator('#banda-demo').isVisible(), t.split('\n')[0]);
+  ok('piloto DEMO recién exportado en datos/reales/: insignia DEMO, franja DEMO y «Demostración vigente» (no «En línea»: no es el proyecto real funcionando)', /DEMO/.test(t) && /Demostración vigente/.test(t) && !/En línea/.test(t) && await p.locator('#banda-demo').isVisible(), t.split('\n')[0]);
   compago = demoViva(Date.now() - 2 * 3600_000);
   await actualizar(2500);
   t = await tablero();
