@@ -150,6 +150,75 @@ export function faseTrabajo(reloj, v) {
   return { fase: "teclear", k: 1 };
 }
 
+// ---------- Vida mínima en su puesto (reposo, consultar, atención, relajado) ----------
+// Antes, sentado y sin teclear, el personaje solo movía la cabeza 0.06 rad cada ~18 s y el torso 0.012 rad: a la
+// distancia de la cámara se veía inmóvil (visto por Diego en «Un cuarto» el 2026-11-09). Esto es lo que hace
+// cualquier persona sentada esperando: respira, mira alrededor y, cada tantos segundos, un gesto corto (revisar la
+// pantalla, voltear a un lado, acomodarse, girar un poco la silla, estirarse). No teclea: no sugiere un proceso
+// que trabaja; solo dice que el puesto está ocupado. Determinista por personaje (mismo id + reloj = misma pose).
+export const MICRO_GESTOS = Object.freeze(["mirar_pantalla", "mirar_lado", "acomodarse", "girar_silla", "estirarse"]);
+export const BUCLES_CON_VIDA = Object.freeze(new Set(["reposo", "relajado", "consultar", "atencion"]));
+const DURACION_MICRO = 2.4; // s que dura cada gesto corto (entra y sale suave)
+const QUIETA = Object.freeze({ respira: 0, cabezaX: 0, cabezaY: 0, micro: null, k: 0, lado: 1, giro: 0 });
+
+/**
+ * Pose de vida en el instante `reloj` (s) para la variación `v` (variacion()).
+ * @returns {{respira:number, cabezaX:number, cabezaY:number, micro:string|null, k:number, lado:number, giro:number}}
+ *   respira −1..1 (ciclo de ~4.5 s); cabezaX/cabezaY en rad (mirada que deambula, ≤ 0.22); micro: gesto corto
+ *   actual (o null) con intensidad k 0..1 y lado ±1; giro: rad que gira la silla (solo en «girar_silla», ≤ 0.24).
+ *   Con «reducir movimiento» (quieto) todo es 0: postura fija.
+ */
+export function vidaEnReposo(reloj, v, quieto = false) {
+  if (quieto) return QUIETA;
+  const r = reloj * v.ritmo + v.fase;
+  const respira = Math.sin(r * 1.4);
+  const cabezaY = Math.sin(r * 0.31) * 0.15 + Math.sin(r * 0.83 + 1.3) * 0.06;
+  const cabezaX = Math.sin(r * 0.57 + 0.4) * 0.05;
+  // Un gesto corto cada 0.8 × periodo (5.6–10.4 s), elegido por el número de ciclo: no se repite siempre el mismo.
+  const cada = v.periodo * 0.8;
+  const tt = reloj + v.fase * 3;
+  const n = Math.floor(tt / cada);
+  const dentro = tt - n * cada;
+  const semilla = Math.floor(v.fase * 1000);
+  const micro = MICRO_GESTOS[((n * 3 + semilla) % MICRO_GESTOS.length + MICRO_GESTOS.length) % MICRO_GESTOS.length];
+  const lado = ((n + semilla) & 1) ? 1 : -1;
+  let k = 0;
+  if (dentro < DURACION_MICRO) { const x = Math.sin((dentro / DURACION_MICRO) * Math.PI); k = x * x * (3 - 2 * x); }
+  return { respira, cabezaX, cabezaY, micro: k > 0 ? micro : null, k, lado, giro: micro === "girar_silla" ? 0.24 * k * lado : 0 };
+}
+
+/** Gesto corto que de verdad se hace con ese bucle: con la mano levantada («atención») no se estira (se leería
+ *  como otra señal); se acomoda en la silla. */
+export function microDe(vida, gesto) {
+  return vida?.micro === "estirarse" && gesto === "atencion" ? "acomodarse" : vida?.micro ?? null;
+}
+
+/**
+ * Suma la vida (vidaEnReposo) a la postura del bucle. `c` tiene torso, cabeza, brazoD y brazoI con .rotation (las
+ * piezas del cuerpo provisional o los huesos del modelo de Kenney). Sin tecleo: en «reposo», «consultar»,
+ * «atención» o «relajado» no se sugiere un proceso que trabaja. «teclear» y «alerta» ya tienen su movimiento:
+ * solo respiran.
+ */
+export function aplicarVida(c, vida, gesto) {
+  if (!vida || vida === QUIETA) return;
+  const { respira, cabezaX, cabezaY, k, lado } = vida;
+  c.torso.rotation.x -= 0.035 * respira; // el pecho sube y baja (visible a la distancia de la cámara)
+  if (!BUCLES_CON_VIDA.has(gesto)) return;
+  const micro = microDe(vida, gesto);
+  c.cabeza.rotation.y += cabezaY;
+  c.cabeza.rotation.x += cabezaX;
+  if (!micro) return;
+  if (micro === "mirar_pantalla") { c.torso.rotation.x += 0.14 * k; c.cabeza.rotation.x += 0.16 * k; } // se inclina a revisar
+  else if (micro === "mirar_lado") { c.cabeza.rotation.y += 0.55 * k * lado; c.torso.rotation.y += 0.14 * k * lado; }
+  else if (micro === "acomodarse") { c.torso.rotation.x -= 0.2 * k; c.torso.rotation.z += 0.06 * k * lado; }
+  else if (micro === "girar_silla") { c.cabeza.rotation.y += 0.15 * k * lado; } // el cuerpo lo gira Personaje (vida.giro)
+  else if (micro === "estirarse") {
+    c.brazoD.rotation.x -= 1.5 * k; c.brazoI.rotation.x -= 1.5 * k;
+    c.brazoD.rotation.z += 0.25 * k; c.brazoI.rotation.z -= 0.25 * k;
+    c.torso.rotation.x -= 0.12 * k; c.cabeza.rotation.x -= 0.15 * k;
+  }
+}
+
 /** Ángulo intermedio por el camino corto (para girar sin dar la vuelta completa). */
 export function girarHacia(actual, objetivo, k) {
   let d = objetivo - actual;

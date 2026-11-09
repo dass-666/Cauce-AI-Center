@@ -658,9 +658,13 @@ html.sala-abierta .principal { grid-template-columns: 1fr !important; }
 @media (max-width: 760px), (pointer: coarse) { .atajos { display: none; } }
 
 /* ---------- Fase L ---------- */
-/* Fundido corto al cambiar de piso o de modo (sin él con «reducir movimiento»). */
-.vista3d canvas { transition: opacity 0.35s ease; }
-@media (prefers-reduced-motion: reduce) { .vista3d canvas { transition: none; } }
+/* Cambio de piso o de cuarto: lo anima escena3d.js cuadro a cuadro (transicion-piso.js). Antes había aquí una
+   transición CSS de opacidad que nunca se veía (0 y 1 en el mismo cuadro); ya no hace falta. */
+/* «Cámara instantánea»: en pantallas medianas se muestra la forma corta. */
+.vista3d-barra .texto-c { display: none; }
+@media (max-width: 1180px) { .vista3d-barra .texto-l { display: none; } .vista3d-barra .texto-c { display: inline; } }
+.principal:has(.panel:not([hidden])) .vista3d-barra .texto-l { display: none; }
+.principal:has(.panel:not([hidden])) .vista3d-barra .texto-c { display: inline; }
 
 /* Tarjeta flotante del personaje o puesto elegido: solo texto, no recibe clics (el panel tiene las acciones). */
 .vista3d-tarjeta {

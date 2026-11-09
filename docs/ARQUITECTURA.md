@@ -28,7 +28,8 @@ Misma interfaz que la 2D: `crearVista3D(contenedor, { alSeleccionar, alFallar })
 | Archivo | Qué hace | ¿Usa three.js? |
 |---|---|---|
 | `disposicion.js` | Tamaño del cuarto, lugar de cada escritorio, puerta y camino de la puerta a la silla | No (se prueba en Node) |
-| `maquina.js` | Máquina de estados: de `animacion3d` (de `estados.js`) a una cola de acciones. Gestos de transición (`entrar`, `celebrar`, `reaccion_error`, `llamar_atencion`, `salir`) **solo** ante un cambio observado entre dos lecturas; la primera lectura aparece en su postura. Variación determinista por id (`variacion`, `gestoOcasional`) | No |
+| `maquina.js` | Máquina de estados: de `animacion3d` (de `estados.js`) a una cola de acciones. Gestos de transición (`entrar`, `celebrar`, `reaccion_error`, `llamar_atencion`, `salir`) **solo** ante un cambio observado entre dos lecturas; la primera lectura aparece en su postura. Variación determinista por id (`variacion`, `gestoOcasional`). Vida mínima en su puesto (`vidaEnReposo`, `aplicarVida`): respira, mira alrededor y cada 6–10 s un gesto corto (revisar la pantalla, voltear, acomodarse, girar un poco la silla, estirarse); sin tecleo, así no sugiere un proceso que trabaja | No |
+| `transicion-piso.js` | Transición al cambiar de piso (ascensor: el piso actual se va, el nuevo llega desde arriba al subir o desde abajo al bajar, según el orden de las pestañas) o de cuarto en «Un cuarto» (entrada breve). Sin animación con datos nuevos del mismo piso, con «reducir movimiento» o con «Cámara instantánea» | No |
 | `paleta.js` | Colores por estado (los mismos que la 2D) y aspecto estable de cada personaje | No |
 | `recursos.js` | Lleva la cuenta de geometrías, materiales y texturas para liberarlos de la tarjeta gráfica | No |
 | `personaje.js` | Controlador del personaje (cola de acciones, caminos) y cuerpo provisional hecho con código | Sí |

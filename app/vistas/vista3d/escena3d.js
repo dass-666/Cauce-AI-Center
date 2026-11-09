@@ -34,6 +34,7 @@ import { intensidadAmbiente } from "./estilo-visual.js";
 import { duracionViaje, suavizarViaje, anguloEncuadre } from "./viaje-camara.js";
 import { ICONOS_ESTACION, burbujasEstacion } from "./estacion3d.js";
 import { firmaEstaciones } from "../../nucleo/estaciones.js";
+import { planTransicion, poseTransicion } from "./transicion-piso.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
 const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométrica clásica)
@@ -41,7 +42,7 @@ const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométric
 function leer(clave) { try { return localStorage.getItem(clave); } catch { return null; } }
 function guardar(clave, valor) { try { localStorage.setItem(clave, valor); } catch { /* sin almacenamiento */ } }
 
-export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, tapan = () => [], alSala = null }) {
+export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, tapan = () => [], alSala = null, ordenPisos = () => [] }) {
   const movil = matchMedia("(max-width: 760px), (pointer: coarse)").matches;
   const menosMovimiento = matchMedia("(prefers-reduced-motion: reduce)");
   const medir = new URLSearchParams(location.search).has("medir");
@@ -71,6 +72,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   const irAnterior = el("button", { type: "button", clase: "boton boton-chico", "data-ir": "anterior", hidden: true, title: "Volver a la vista anterior de la cámara (Retroceso)", "aria-label": "Vista anterior" }, el("span", { "aria-hidden": "true" }, "↶"), el("span", { clase: "texto-k" }, " Anterior"));
   const irAlerta = el("button", { type: "button", clase: "boton boton-chico boton-alerta", "data-ir": "alerta", hidden: true, title: "Ir al siguiente departamento con alertas, errores o revisiones (A)", "aria-label": "Siguiente alerta" }, el("span", { "aria-hidden": "true" }, "⚠"), el("span", { clase: "texto-k" }, " Siguiente alerta"));
   const luzFija = el("input", { type: "checkbox" });
+  // «Cámara instantánea»: sin viajes de cámara ni transición entre pisos (como «reducir movimiento», pero solo para la
+  // cámara; los personajes siguen vivos). Se recuerda; ?camara=instantanea lo fuerza en esta visita.
+  const camaraInstantanea = el("input", { type: "checkbox", "data-camara-instantanea": "" });
+  camaraInstantanea.checked = new URLSearchParams(location.search).get("camara") === "instantanea" || leer("cauce.camara3d") === "instantanea";
+  camaraInstantanea.addEventListener("change", () => guardar("cauce.camara3d", camaraInstantanea.checked ? "instantanea" : "suave"));
   const minimapa = crearMinimapa({ alElegir: (id) => (id ? alSeleccionar({ tipo: "departamento", id }) : volverAlPiso()) });
   const botonModo = (valor, texto) => el("button", { type: "button", clase: "boton boton-chico", "data-modo3d": valor }, texto);
   const modoDom = el("div", { clase: "segmentado", role: "group", "aria-label": "Vista 3D" },
@@ -109,6 +115,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       fuente, modoDom, volverPiso, irAnterior, irRecepcion, irAlerta, selector,
       movil ? null : el("label", { clase: "interruptor", title: "Resplandor de letreros y pantallas" }, brillo, "Brillo"),
       el("label", { clase: "interruptor luz-fija", title: "Sin luz de la hora: la escena siempre igual de iluminada" }, luzFija, "Luz fija"),
+      movil ? null : el("label", { clase: "interruptor", title: "Cámara instantánea: sin viajes de cámara ni transición al cambiar de piso o de cuarto" },
+        camaraInstantanea, el("span", { clase: "texto-l" }, "Cámara instantánea"), el("span", { clase: "texto-c" }, "Al instante")),
       centrar),
     aviso, tarjeta, personajesDom, minimapa.nodo, barraMovil?.nodo ?? null, medidasDom);
   if (movil) raiz.classList.add("es-movil");
@@ -518,7 +526,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     if (!p) { siguiendo = null; return; }
     seguido.set(p.x, 0.6, p.z);
     const destino = centrarEnZona(seguido, camara.zoom);
-    const k = menosMovimiento.matches ? 1 : 1 - Math.exp(-dt * 4);
+    const k = sinViajes() ? 1 : 1 - Math.exp(-dt * 4);
     const nuevo = controles.target.clone().lerp(destino, k);
     camara.position.add(nuevo.clone().sub(controles.target));
     controles.target.copy(nuevo);
@@ -566,12 +574,63 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   }
   document.addEventListener("keydown", alTeclear);
 
+  /** «Reducir movimiento» del sistema o «Cámara instantánea»: la cámara y el cambio de piso no se animan. */
+  function sinViajes() { return menosMovimiento.matches || camaraInstantanea.checked; }
+
+  // --- Transición entre pisos y cuartos (transicion-piso.js) ---
+  // «ascensor»: el piso actual se va (salida) y luego llega el nuevo (llegada); «cuarto»: solo llegada corta.
+  // Se mueve el grupo del escenario (no la cámara: así el encuadre final ya es el correcto) y la opacidad del
+  // lienzo. No crea geometrías, materiales ni texturas; mientras dura, las etiquetas HTML se ocultan.
+  let transicion = null;  // { fase: "salida" | "llegada", plan, t, alto, esperando }
+  let vistaActual = null; // { proyecto, modo, dep } de lo que se ve ahora (para saber si se cambió de piso)
+  let transicionesHechas = 0;
+  const altoAscensor = () => 1.35 * mitadAlto / Math.max(0.5, camara.zoom);
+  function aplicarTransicion() {
+    const p = poseTransicion(transicion.fase, transicion.plan, transicion.t, transicion.alto);
+    if (escenario) escenario.grupo.position.y = p.y;
+    lienzo.style.opacity = transicion.esperando ? "0" : String(Math.round(p.opacidad * 1000) / 1000);
+    return p;
+  }
+  function empezarTransicion(fase, plan) {
+    transicion = { fase, plan, t: 0, alto: altoAscensor(), esperando: false };
+    etiquetasDom.style.visibility = "hidden";
+    aplicarTransicion();
+    redibujar = true;
+  }
+  /** Avanza la transición; devuelve true si hay que dibujar este cuadro. */
+  function pasoTransicion(dt) {
+    if (!transicion) return false;
+    if (transicion.esperando) return false; // el piso nuevo aún descarga sus personajes
+    transicion.t += dt;
+    const p = aplicarTransicion();
+    if (!p.terminada) return true;
+    if (transicion.fase === "salida") {
+      // El piso actual ya se fue: se construye el nuevo, que llega desde el otro lado.
+      transicion = { ...transicion, fase: "llegada", t: 0, esperando: true };
+      quitarOficina();
+      if (modelo) dibujar(modelo, seleccion);
+      return true;
+    }
+    terminarTransicion();
+    return true;
+  }
+  function terminarTransicion() {
+    if (!transicion) return;
+    transicion = null;
+    transicionesHechas++;
+    if (escenario) escenario.grupo.position.y = 0;
+    lienzo.style.opacity = "";
+    etiquetasDom.style.visibility = "";
+    redibujar = true;
+    if (escenario?.modo === "edificio") colocarEtiquetas();
+  }
+
   function moverCamara(dt) {
     if (!animCam) return;
     // Fase M: la duración depende de la distancia y del cambio de acercamiento (0.45–0.9 s), con arranque y
     // frenado suaves. «Reducir movimiento» del sistema: sin viaje de cámara.
     animCam.duracion ??= duracionViaje(animCam.desde.distanceTo(animCam.hacia), animCam.zoomDesde, animCam.zoomHacia);
-    animCam.t = menosMovimiento.matches ? 1 : Math.min(1, animCam.t + dt / animCam.duracion);
+    animCam.t = sinViajes() ? 1 : Math.min(1, animCam.t + dt / animCam.duracion);
     const k = suavizarViaje(animCam.t);
     const nuevo = animCam.desde.clone().lerp(animCam.hacia, k);
     camara.position.add(nuevo.clone().sub(controles.target));
@@ -684,6 +743,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     moverCamara(dt);
     seguirCamara(dt);
     const camaraCambio = controles.update() || camaraAnimada;
+    if (pasoTransicion(dt)) redibujar = true; // piso o cuarto entrando/saliendo: se dibuja cada cuadro
     if (escenario) ultimoAnimados = escenario.paso(dt, reloj, hzDe);
     // Rendimiento UHD: si nada se mueve (sin personajes a la vista, cámara quieta, sin torreta que parpadee y sin
     // cambios de datos, tamaño o luz), la imagen sería idéntica: no se vuelve a dibujar. Por seguridad se
@@ -707,7 +767,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       colocarTarjeta();
       if (escenario.modo === "edificio") {
         // Las etiquetas solo dependen de la cámara y de la zona libre: si no cambiaron, se quedan donde están.
-        if (camaraCambio || forzado) colocarEtiquetas();
+        // Durante una transición están ocultas (el edificio se mueve): se colocan al terminar.
+        if ((camaraCambio || forzado) && !transicion) colocarEtiquetas();
         if (t - ultimoMinimapa > 250) { ultimoMinimapa = t; dibujarMinimapa(); }
       }
     }
@@ -945,8 +1006,21 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   // Solo con ?medir=1 (pruebas): qué hace cada personaje ahora mismo.
   const personajesAhora = () => (escenario?.personajes() ?? []).map((p) => ({
     id: p.id, estado: p.estado, accion: p.accion, cola: [...p.cola], bucle: p.bucle, postura: p.postura, visible: p.raiz.visible,
-    fase: p.fase ?? null, x: p.raiz.position.x, z: p.raiz.position.z, giro: p.raiz.rotation.y,
+    fase: p.fase ?? null, x: p.raiz.position.x, z: p.raiz.position.z, giro: p.raiz.rotation.y, vida: p.vida?.micro ?? null,
   }));
+  // Solo con ?medir=1: pose de cada personaje (agentes y estaciones) como lista de giros de todas sus piezas. Si
+  // cambia entre dos muestras, el personaje se movió en pantalla (respira, mira, gesto corto…).
+  const posesAhora = () => [...(escenario?.personajes() ?? []), ...(escenario?.personajesEstacion() ?? [])].map((p) => {
+    const firma = [];
+    p.raiz.traverse((o) => { firma.push(o.rotation.x, o.rotation.y, o.rotation.z, o.position.y); });
+    return { id: p.id ?? null, puesto: p.puestoEstacion ?? null, visible: p.raiz.visible, bucle: p.bucle, vida: p.vida?.micro ?? null, firma };
+  });
+  const transicionAhora = () => ({
+    activa: Boolean(transicion), fase: transicion?.fase ?? null, tipo: transicion?.plan?.tipo ?? null,
+    direccion: transicion?.plan?.direccion ?? null, esperando: Boolean(transicion?.esperando),
+    y: escenario?.grupo.position.y ?? null, opacidad: lienzo.style.opacity, hechas: transicionesHechas,
+    sinViajes: sinViajes(), vista: vistaActual,
+  });
   // Solo con ?medir=1 (fase L): punto en pantalla del escritorio de un agente (aunque no tenga personaje) y cámara.
   function proyectarPuesto(id) {
     const l = escenario?.posicionPuesto(id);
@@ -984,7 +1058,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const r = lienzo.getBoundingClientRect();
     return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
   }
-  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara, estaciones: estacionesAhora, proyectarEstacion };
+  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara, estaciones: estacionesAhora, proyectarEstacion, poses: posesAhora, transicion: transicionAhora };
 
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {
@@ -1005,6 +1079,15 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     fuente.title = { demo: "Datos de demostración: no es actividad real", real: "Datos reales del sistema", sin: "No hay archivo de estado de este proyecto" }[origen];
 
     if (deps.length === 0) {
+      // Piso sin oficinas (proyecto pendiente o sin datos): el piso anterior se va igual (ascensor) y aquí no llega nada.
+      const ahoraVista = { proyecto: m.proyecto.id, modo, dep: null };
+      if (transicion?.fase === "salida") return;
+      if (!transicion && escenario) {
+        const plan = planTransicion({ antes: vistaActual, ahora: ahoraVista, orden: ordenPisos(), sinMovimiento: sinViajes() });
+        if (plan?.tipo === "ascensor") { empezarTransicion("salida", plan); return; }
+      }
+      terminarTransicion();
+      vistaActual = ahoraVista;
       quitarOficina();
       selector.replaceChildren();
       selector.hidden = true;
@@ -1051,6 +1134,13 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     for (const d of visibles) for (const e of d.estaciones ?? []) e.puestos.forEach((p, i) => { p.cuerpo = cuerpoEstacion(i); });
     const ids = visibles.flatMap((d) => [...d.agentes.map((a) => a.id), ...(d.estaciones ?? []).flatMap((e) => e.puestos.map((p) => p.cuerpo))]);
     if (clave !== claveOficina) {
+      const ahoraVista = { proyecto: m.proyecto.id, modo, dep: dep.id };
+      if (transicion?.fase === "salida") return; // el piso actual aún se va: se construye al terminar (pasoTransicion)
+      if (transicion?.fase === "llegada" && !transicion.esperando) terminarTransicion(); // otro cambio a media llegada
+      // ¿Cambio de piso (ascensor), de cuarto o de modo? Con datos nuevos del mismo piso no hay animación.
+      const plan = transicion ? transicion.plan
+        : planTransicion({ antes: vistaActual, ahora: ahoraVista, orden: ordenPisos(), sinMovimiento: sinViajes() });
+      if (!transicion && plan?.tipo === "ascensor" && escenario) { empezarTransicion("salida", plan); return; }
       if (escenario) quitarOficina();
       if (compartido.catalogo.listos(ids)) {
         escenario = crearEscenario(visibles, m, compartido, { modo });
@@ -1059,11 +1149,13 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
         crearEtiquetas(visibles);
         historial.vaciar(); // escena nueva (otro piso, modo o datos): las vistas guardadas ya no aplican
         irAnterior.hidden = true;
-        lienzo.style.opacity = "0"; // fase L: el piso nuevo aparece con un fundido corto (sin él con «reducir movimiento»)
-        requestAnimationFrame(() => { lienzo.style.opacity = ""; });
         encuadrar();
         recienConstruido = true;
         aplicarLuz();
+        vistaActual = ahoraVista;
+        // El piso (o cuarto) nuevo llega: desde arriba o abajo (ascensor) o subiendo un poco (cuarto).
+        if (transicion) { transicion.esperando = false; transicion.t = 0; transicion.alto = altoAscensor(); aplicarTransicion(); }
+        else if (plan) empezarTransicion("llegada", plan);
         enfocado = null; // se vuelve a enfocar abajo, ya con la cámara en su lugar
       } else if (claveCargando !== clave) {
         // Primero se descargan los modelos de sus personajes (solo los que se van a ver).

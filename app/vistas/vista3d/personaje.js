@@ -3,7 +3,7 @@
 // (cola de acciones, caminos, posturas) queda igual.
 
 import * as THREE from "three";
-import { planDeTransicion, variacion, gestoOcasional, faseTrabajo, girarHacia } from "./maquina.js";
+import { planDeTransicion, variacion, gestoOcasional, faseTrabajo, girarHacia, vidaEnReposo, aplicarVida, BUCLES_CON_VIDA } from "./maquina.js";
 
 /** Gira hacia `objetivo` sin pasar de GIRO_MAXIMO rad/s. */
 function girar(actual, objetivo, dt) {
@@ -104,7 +104,12 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
 }
 
 /** Traduce la pose pedida por el controlador a las piezas del personaje provisional. */
-function aplicarProvisional(c, { base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false }) {
+function aplicarProvisional(c, pose) {
+  posturaProvisional(c, pose);
+  if (pose.vida && (pose.base === "sentado" || pose.base === "de_pie")) aplicarVida(c, pose.vida, pose.gesto);
+}
+
+function posturaProvisional(c, { base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false }) {
   reposo(c);
   if (base === "caminar") return caminar(c, quieto ? 0 : t);
   if (base === "sentandose") return sentar(c, suave(s));
@@ -238,6 +243,8 @@ export class Personaje {
     }
     if (this.accion === "entrar") this.raiz.visible = true;
     if (!this.raiz.visible) return;
+    // El giro corto de la silla (vida en reposo) se suma encima de la orientación; se quita antes de recalcularla.
+    if (this.giroVida) { this.raiz.rotation.y -= this.giroVida; this.giroVida = 0; }
     const a = this.accion;
     this.t += dt;
     let terminada = false;
@@ -281,7 +288,16 @@ export class Personaje {
       pose.gesto = this.bucle;
       pose.o = quieto ? 0 : gestoOcasional(reloj, v);
       if (this.bucle === "teclear" && !quieto) Object.assign(pose, faseTrabajo(reloj, v)); // fase L: pausas para leer, mirar, acomodarse
+      // Vida mínima: respira y mira alrededor; sentado y sin teclear, además un gesto corto cada 6–10 s.
+      if (!quieto && this.bucle) {
+        pose.vida = vidaEnReposo(reloj, v);
+        if (pose.base === "sentado" && BUCLES_CON_VIDA.has(this.bucle) && pose.vida.giro) {
+          this.giroVida = pose.vida.giro;
+          this.raiz.rotation.y += this.giroVida;
+        }
+      }
     }
+    this.vida = pose.vida ?? null; // para las pruebas (?medir=1): qué gesto corto hace ahora
     this.fase = pose.gesto === "teclear" ? pose.fase : null;
     // De pie en su lugar (error, celebración) se hace a un lado de la silla, deslizándose.
     const objetivo = pose.base === "de_pie" && a !== "entrar" && a !== "salir" ? 1 : 0;

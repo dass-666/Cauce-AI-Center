@@ -67,6 +67,8 @@ const opcionesVista = {
   alSala: () => ponerSala(true),
   /** Nexus fase 1: oficina de supervisión. */
   alNexus: () => ponerNexus(true),
+  /** Orden de los pisos (pestañas): la vista 3D decide si el ascensor sube o baja al cambiar de proyecto. */
+  ordenPisos: () => estado.proyectos.map((p) => p.id),
   alFallar(motivo) {
     // La 3D dejó de funcionar: seguimos en el plano 2D sin perder datos, y se puede volver a intentar.
     avisarVista(`${motivo} Se muestra el plano 2D.`, { reintentar: true });

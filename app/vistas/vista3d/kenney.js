@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
 import { huella } from "./disposicion.js";
+import { aplicarVida } from "./maquina.js";
 
 const CARPETA = "vendor/kenney-mini-characters/";
 export const MODELOS_KENNEY = Object.freeze([
@@ -162,7 +163,8 @@ function crearCuerpoKenney(gltf, recursos) {
 
   let gestoAnterior = null;
   let baseAnterior = null;
-  function aplicar({ base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false }, dt) {
+  function aplicar(pose, dt) {
+    const { base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false } = pose;
     modelo.position.y = 0;
     if (gesto !== gestoAnterior || base !== baseAnterior) {
       if (gesto !== gestoAnterior && CLIP_GESTO[gesto] && acciones[CLIP_GESTO[gesto]]) acciones[CLIP_GESTO[gesto]].time = 0; // empieza desde el inicio
@@ -251,6 +253,8 @@ function crearCuerpoKenney(gltf, recursos) {
       const kk = Math.sin(Math.min(1, t / 1.4) * Math.PI);
       h.brazoD.rotation.set(-2.4 * kk, 0, 0.25 * kk);
     }
+    // Vida mínima en su puesto (maquina.js): respira, mira alrededor y, sin teclear, un gesto corto de vez en cuando.
+    if (pose.vida && (base === "sentado" || base === "de_pie")) aplicarVida(h, pose.vida, gesto);
 
     // Mezcla entre la postura del gesto anterior y la del actual.
     if (mezcla < 1) {
