@@ -52,9 +52,12 @@ const BASE = 'http://127.0.0.1:' + (process.env.PUERTO || 8765) + '/';
     const n = await p.evaluate(() => document.querySelectorAll('#pisos .piso[role="tab"]').length);
     const vistas = [await medir()];
     for (let v = 0; v < 2; v++) for (let i = 0; i < n; i++) { await ir(i); vistas.push(await medir()); }
-    const arribas = vistas.map((x) => x.arriba), altos = vistas.map((x) => x.alto);
+    // En celular no se reserva de antemano la línea del diagnóstico (le quitaría alto al edificio): puede bajar una
+    // vez, la primera vez que un piso la muestra. Desde la 2.ª vuelta, ya no se mueve.
+    const tramo = w < 600 ? vistas.slice(n + 1) : vistas;
+    const arribas = tramo.map((x) => x.arriba), altos = tramo.map((x) => x.alto);
     const salto = Math.max(...arribas) - Math.min(...arribas);
-    ok(`${nombre}: cambiar entre los ${n} pisos (2 vueltas) no mueve el visor (≤ 4 px)`, salto <= 4 && Math.max(...altos) - Math.min(...altos) <= 4, `arriba ${Math.min(...arribas)}–${Math.max(...arribas)} px, alto ${Math.min(...altos)}–${Math.max(...altos)} px`);
+    ok(`${nombre}: cambiar entre los ${n} pisos ${w < 600 ? '(2.ª vuelta; la 1.ª puede bajar una vez la línea del diagnóstico)' : '(2 vueltas)'} no mueve el visor (≤ 4 px)`, salto <= 4 && Math.max(...altos) - Math.min(...altos) <= 4, `arriba ${Math.min(...arribas)}–${Math.max(...arribas)} px, alto ${Math.min(...altos)}–${Math.max(...altos)} px; 1.ª vuelta ${Math.min(...vistas.map((x) => x.arriba))}–${Math.max(...vistas.map((x) => x.arriba))} px`);
     const demo = vistas.filter((x) => /Compago|Ek Chuah/.test(x.piso ?? ''));
     ok(`${nombre}: la información sigue a la vista (conexión en todos; franja DEMO en Compago y Ek Chuah) y sin desplazamiento horizontal`,
       vistas.every((x) => x.conexion && !x.horizontal) && demo.length > 0 && demo.every((x) => /DEMOSTRACI/.test(x.banda)), JSON.stringify(vistas.find((x) => !x.conexion || x.horizontal) ?? demo.find((x) => !/DEMOSTRACI/.test(x.banda)) ?? ''));

@@ -631,13 +631,16 @@ function altoFranjas() {
 }
 function reservarFranjas() {
   const raiz = document.documentElement;
-  const sinReserva = ["inmersivo", "sala-abierta", "nexus-abierto", "csi-abierto"].some((c) => raiz.classList.contains(c));
+  // Celular horizontal (≤ 500 px de alto): una sola línea de estado y muy poco alto; ahí manda el espacio del edificio.
+  const sinReserva = ["inmersivo", "sala-abierta", "nexus-abierto", "csi-abierto"].some((c) => raiz.classList.contains(c))
+    || (innerHeight <= 500 && innerWidth > innerHeight);
   if (innerWidth !== franjasAncho) { franjasAncho = innerWidth; franjasMax = 0; }
   const ahora = sinReserva ? 0 : altoFranjas();
   if (!sinReserva) {
     // Se cuenta también lo que otro piso puede mostrar y este no: la franja DEMO y la línea del diagnóstico (se
     // destapan un instante, sin pintarse, solo para medirlas). Así el primer cambio de piso tampoco salta.
-    const tapadas = ["#banda-demo", "#diagnostico"].map((x) => $(x)).filter((e) => e && e.hidden);
+    // En celular solo la franja DEMO: la línea del diagnóstico le quitaría al edificio un alto que ahí no sobra.
+    const tapadas = (innerWidth < 600 ? ["#banda-demo"] : ["#banda-demo", "#diagnostico"]).map((x) => $(x)).filter((e) => e && e.hidden);
     for (const e of tapadas) e.hidden = false;
     const posible = tapadas.length ? altoFranjas() : ahora;
     for (const e of tapadas) e.hidden = true;
