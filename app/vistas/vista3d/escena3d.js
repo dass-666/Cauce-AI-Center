@@ -634,6 +634,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   function moverAscensor(dt) {
     if (!ascensor.activo) return false;
     const evento = ascensor.paso(dt);
+    // El piso guardado puede haber dejado de ser el destino (redirección a media salida): entonces se espera al nuevo.
+    if (pendientePiso && pendientePiso.m.proyecto.id !== ascensor.destino) pendientePiso = null;
     if (evento === "salida_terminada" && pendientePiso) {
       const p = pendientePiso;
       pendientePiso = null;
@@ -1093,6 +1095,14 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {
     // Bloque D: mientras la cámara sale del piso actual, el piso nuevo espera (se dibuja al terminar la salida).
+    // Un piso que ya no es el destino (se eligió otro a media salida y sus datos llegaron antes) se descarta: antes
+    // se dibujaba al terminar la salida y el edificio pasaba un instante por el piso equivocado (ascensor.cjs,
+    // «redirigir a media salida», fallaba cuando los datos del destino nuevo tardaban más que la salida).
+    const viajando = ascensor.fase === "salida" || ascensor.fase === "espera";
+    if (viajando && modelo && m.proyecto.id !== modelo.proyecto.id && ascensor.destino && m.proyecto.id !== ascensor.destino) {
+      if (pendientePiso?.m.proyecto.id !== ascensor.destino) pendientePiso = null;
+      return;
+    }
     if (ascensor.fase === "salida" && modelo && m.proyecto.id !== modelo.proyecto.id) { pendientePiso = { m, sel }; return; }
     const llegando = ascensor.fase === "espera" && modelo && m.proyecto.id !== modelo.proyecto.id;
     modelo = m;

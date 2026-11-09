@@ -99,12 +99,25 @@ if (SAL) fs.mkdirSync(SAL, { recursive: true });
   await p.keyboard.press('Escape'); await p.keyboard.press('0'); await p.waitForTimeout(1200);
 
   // ---------------------------------------------------------------- cambiar de destino durante la animación
-  await p.locator('#pisos .piso', { hasText: 'Ek Chuah' }).first().click();
-  await p.waitForTimeout(120);
-  const medio = await cam(p);
-  const redir = await viaje(p, 'Montambre', 2200);
+  // La redirección se hace DENTRO de la página, en el mismo cuadro en que se comprueba que la cámara sigue saliendo.
+  // Antes se comprobaba la salida desde la prueba y el segundo clic llegaba ~100–300 ms después: bajo carga la salida
+  // (0.3 s) ya había terminado, Ek Chuah se dibujaba legítimamente y la prueba fallaba sin que hubiera defecto.
+  const redirigir = (q, ms) => q.evaluate(async (ms) => {
+    const boton = (t) => [...document.querySelectorAll('#pisos .piso')].find((b) => b.textContent.includes(t));
+    const foto = () => ({ ...window.__cauce3d.camara(), letrero: document.querySelector('.vista3d-ascensor-letrero')?.textContent ?? '' });
+    boton('Ek Chuah').click();
+    // Espera (cuadro a cuadro) a que la salida esté en marcha; con los datos de Ek Chuah ya recibidos si llegan a tiempo.
+    const t0 = performance.now();
+    while (performance.now() - t0 < 1500) { const c = foto(); if (c.ascensor === 'salida' && (c.pendiente === 'ek-chuah' || performance.now() - t0 > 150)) break; await new Promise((r) => requestAnimationFrame(r)); }
+    const medio = foto();
+    boton('Montambre').click();
+    const m = []; const t1 = performance.now();
+    while (performance.now() - t1 < ms) { m.push({ t: performance.now() - t1, ...foto() }); await new Promise((r) => setTimeout(r, 25)); }
+    return { medio, redir: m };
+  }, ms);
+  const { medio, redir } = await redirigir(p, 2200);
   const pisosVistos = [...new Set(redir.map((s) => s.piso))];
-  ok('redirigir a media salida (Ek Chuah → Montambre): un solo viaje que termina en Montambre', medio.ascensor === 'salida' && redir[redir.length - 1].piso === 'montambre' && redir[redir.length - 1].ascensor === null && !pisosVistos.includes('ek-chuah'), `medio: ${medio.ascensor}, pisos dibujados: ${pisosVistos.join(' → ')}`);
+  ok('redirigir a media salida (Ek Chuah → Montambre): un solo viaje que termina en Montambre', medio.ascensor === 'salida' && redir[redir.length - 1].piso === 'montambre' && redir[redir.length - 1].ascensor === null && !pisosVistos.includes('ek-chuah'), `medio: ${medio.ascensor}/${medio.pendiente}, pisos dibujados: ${pisosVistos.join(' → ')}`);
   ok('redirigir: el letrero cambia al nuevo destino (Piso 4)', redir.some((s) => /Piso 4 · Montambre/.test(s.letrero)));
   // Ráfaga: cinco pisos seguidos en menos de un segundo.
   for (const n of ['Compago', 'Ek Chuah', 'Montambre', 'Compago', 'Ek Chuah']) { await p.locator('#pisos .piso', { hasText: n }).first().click(); await p.waitForTimeout(90); }
@@ -113,6 +126,17 @@ if (SAL) fs.mkdirSync(SAL, { recursive: true });
   ok('ráfaga de 5 cambios: termina en el último piso elegido, quieto y sin modelo pendiente', rafaga.piso === 'ek-chuah' && rafaga.ascensor === null && rafaga.pendiente === null && rafaga.desplaza === 0, JSON.stringify({ piso: rafaga.piso, a: rafaga.ascensor, pend: rafaga.pendiente }));
   const rafs1 = await rafsPorSegundo(p);
   ok('sin bucles duplicados: tras los viajes se pide a lo más un cuadro por refresco de pantalla (≤ 70 por segundo; dos ciclos darían ~120)', rafs0 <= 70 && rafs1 <= 70, `${rafs0} al inicio (Compago) → ${rafs1} por segundo (Ek Chuah)`);
+
+  // Defecto real (2026-11-09): si los datos del piso nuevo tardan más que la salida, se dibujaba el piso ya descartado.
+  {
+    const lento = await abrir();
+    await lento.p.unroute('**/datos/reales/*');
+    await lento.p.route('**/datos/reales/*', async (r) => { if (/montambre/.test(r.request().url())) await new Promise((x) => setTimeout(x, 900)); r.fulfill({ status: 404, body: '' }); });
+    const { medio: m2, redir: r2 } = await redirigir(lento.p, 3000);
+    const vistos2 = [...new Set(r2.map((s) => s.piso))];
+    ok('redirigir con los datos del destino lentos (900 ms): nunca se dibuja el piso descartado', m2.ascensor === 'salida' && r2[r2.length - 1].piso === 'montambre' && r2[r2.length - 1].ascensor === null && !vistos2.includes('ek-chuah'), `medio: ${m2.ascensor}/${m2.pendiente}, pisos dibujados: ${vistos2.join(' → ')}`);
+    await lento.ctx.close();
+  }
 
   // ---------------------------------------------------------------- cancelación: volver al piso actual a media salida
   await p.locator('#pisos .piso', { hasText: 'Compago' }).first().click();
