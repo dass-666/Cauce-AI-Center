@@ -68,6 +68,8 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brillo); outlin
 
 /* Distribución principal */
 .principal { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+/* Reserva bajo las franjas de estado (app.js → reservarFranjas): el edificio no salta al cambiar de proyecto. */
+.principal { margin-top: var(--reserva-franjas, 0px); }
 .principal:has(.panel:not([hidden])) { grid-template-columns: minmax(0, 1fr) 340px; }
 
 /* Plano */

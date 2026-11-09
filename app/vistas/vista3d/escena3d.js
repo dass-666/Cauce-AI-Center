@@ -137,7 +137,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   escena.add(sol);
 
   // Luz ambiental según la hora local (decoración) o fija. Se revisa una vez por minuto.
-  luzFija.checked = leer("cauce.luz3d") === "fija";
+  // Luz fija ENCENDIDA por defecto (2026-11-09); si la persona ya eligió «hora» o «fija», manda lo guardado.
+  // ?hora=N (capturas y pruebas de la luz por hora) sin preferencia guardada sigue usando la luz de esa hora.
+  const luzGuardada = leer("cauce.luz3d");
+  luzFija.checked = luzGuardada ? luzGuardada === "fija" : !new URLSearchParams(location.search).has("hora");
   luzFija.addEventListener("change", () => { guardar("cauce.luz3d", luzFija.checked ? "fija" : "hora"); aplicarLuz(); });
   let luzActual = null;
   function aplicarLuz() {

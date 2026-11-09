@@ -618,7 +618,36 @@ function dibujar() {
 }
 
 /** Alto disponible para la vista: lo que queda de la ventana debajo de cabecera y franjas (sin desplazar la página). */
+// Franjas de estado (DEMO, conexión, aviso, diagnóstico): cambian de alto de un piso a otro (con o sin la franja
+// DEMO, una o dos líneas de motivo, con o sin avisos del archivo) y antes movían el edificio 25–75 px al cambiar de
+// proyecto. Se reserva debajo de ellas la diferencia con el alto mayor visto en este ancho de ventana: el edificio
+// queda en su sitio y nada se oculta. En Inmersivo y en las secciones especiales las franjas no van encima: sin reserva.
+let franjasMax = 0, franjasAncho = 0;
+function altoFranjas() {
+  const alto = (sel) => { const e = $(sel); if (!e || e.hidden) return 0; const cs = getComputedStyle(e); if (cs.display === "none" || cs.position === "fixed") return 0;
+    const h = e.matches("details[open]") ? (e.querySelector("summary")?.getBoundingClientRect().height ?? 0) : e.getBoundingClientRect().height; // el diagnóstico abierto a mano no cuenta
+    return h + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom); };
+  return ["#banda-demo", "#conexion", "#aviso-vista", "#diagnostico"].reduce((a, s) => a + alto(s), 0);
+}
+function reservarFranjas() {
+  const raiz = document.documentElement;
+  const sinReserva = ["inmersivo", "sala-abierta", "nexus-abierto", "csi-abierto"].some((c) => raiz.classList.contains(c));
+  if (innerWidth !== franjasAncho) { franjasAncho = innerWidth; franjasMax = 0; }
+  const ahora = sinReserva ? 0 : altoFranjas();
+  if (!sinReserva) {
+    // Se cuenta también lo que otro piso puede mostrar y este no: la franja DEMO y la línea del diagnóstico (se
+    // destapan un instante, sin pintarse, solo para medirlas). Así el primer cambio de piso tampoco salta.
+    const tapadas = ["#banda-demo", "#diagnostico"].map((x) => $(x)).filter((e) => e && e.hidden);
+    for (const e of tapadas) e.hidden = false;
+    const posible = tapadas.length ? altoFranjas() : ahora;
+    for (const e of tapadas) e.hidden = true;
+    franjasMax = Math.max(franjasMax, ahora, posible);
+  }
+  raiz.style.setProperty("--reserva-franjas", `${sinReserva ? 0 : Math.round(franjasMax - ahora)}px`);
+}
+
 function medirArriba() {
+  reservarFranjas();
   const o = $("#oficina");
   if (!o) return;
   const arriba = Math.round(o.getBoundingClientRect().top + window.scrollY);
@@ -628,7 +657,7 @@ window.addEventListener("resize", medirArriba);
 // Lo de arriba cambia de alto sin que cambie la ventana (fuentes, avisos, el tablero al llegar los datos).
 if (typeof ResizeObserver === "function") {
   const vigia = new ResizeObserver(() => medirArriba());
-  for (const sel of [".cabecera", "#banda-demo", "#conexion", "#aviso-vista", "#llegada"]) { const e = document.querySelector(sel); if (e) vigia.observe(e); }
+  for (const sel of [".cabecera", "#banda-demo", "#conexion", "#aviso-vista", "#diagnostico", "#llegada"]) { const e = document.querySelector(sel); if (e) vigia.observe(e); }
 }
 
 function dibujarEstado(m) {
