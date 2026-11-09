@@ -38,7 +38,7 @@ Rama `claude/ascensor-y-vida-cuarto`, base PR #34. Commits:
   - `ascensor.cjs` 32/32;
   - `vida-cuarto.cjs` 10/10;
   - `recorrido.cjs` 10/10;
-  - **batería completa sobre adf51ef: **34/34 guiones en verde****.
+  - **batería completa sobre adf51ef: 34/34 guiones en verde**.
 
 ## 4. Medido en tu Intel UHD
 
