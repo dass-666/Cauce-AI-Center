@@ -10,6 +10,8 @@ import { ESTADOS, CONEXION, estadoResumen } from "./estados.js";
  * aunque sea inválido o viejo (así se ve el problema). La demostración solo se usa cuando
  * el adaptador todavía no ha generado ningún archivo real.
  */
+export const ETIQUETA_DEMO_VIGENTE = "Demostración vigente";
+
 export function elegirCarga(real, demo) {
   if (real.tipo === "no_encontrado" && demo && demo.tipo !== "no_encontrado") {
     // Separación estricta: lo que se lee del lugar de la demostración tiene que decir que es demostración.
@@ -127,7 +129,8 @@ export function construirModeloVista({ proyecto, carga, distribucion = null, aho
     fuente: doc.fuente,
     version_contrato: doc.version,
     conexion,
-    conexion_etiqueta: CONEXION[conexion].etiqueta,
+    // Una demostración vigente NO dice «En línea»: eso sugeriría que el proyecto real está funcionando.
+    conexion_etiqueta: doc.es_demo && conexion === "en_linea" ? ETIQUETA_DEMO_VIGENTE : CONEXION[conexion].etiqueta,
     motivo,
     avisos: r.avisos,
     departamentos,

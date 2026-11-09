@@ -7,12 +7,21 @@ import { describirDuracion } from "../nucleo/modelo.js";
 import { ESTADOS } from "../nucleo/estados.js";
 import { clasificarEvento } from "../nucleo/sala.js";
 import { textoCambio } from "./tablero.js";
+import { ESTADOS_ESTACION } from "../nucleo/estaciones.js";
 
 /**
  * @param extra.historial  cambios observados en esta sesión (bitácora de la sala), del más nuevo al más viejo
  * @param extra.ahoraMs    hora de la computadora (para "reciente")
  */
-export function dibujarPanel(contenedor, modelo, seleccion, alCerrar, { historial = [], ahoraMs = Date.now() } = {}) {
+/** Pliega (true) o despliega el panel de detalle. Se recuerda entre visitas. */
+export function plegarPanel(plegado) {
+  document.body.classList.toggle("panel-plegado", plegado);
+  try { localStorage.setItem("cauce.panelPlegado", plegado ? "1" : "0"); } catch { /* sin almacenamiento: solo esta visita */ }
+  window.dispatchEvent(new Event("resize"));
+}
+try { if (localStorage.getItem("cauce.panelPlegado") === "1") document.body.classList.add("panel-plegado"); } catch { /* nada */ }
+
+export function dibujarPanel(contenedor, modelo, seleccion, alCerrar, { historial = [], ahoraMs = Date.now(), alSeleccionar = null } = {}) {
   contenedor.replaceChildren();
   if (!seleccion) {
     contenedor.hidden = true;
@@ -27,13 +36,20 @@ export function dibujarPanel(contenedor, modelo, seleccion, alCerrar, { historia
       if (a) { agente = a; depDelAgente = d; }
     }
   }
-  if (!dep && !agente) {
+  const estacion = seleccion.tipo === "estacion" ? (modelo.estaciones ?? []).find((e) => e.id === seleccion.id) ?? null : null;
+  if (!dep && !agente && !estacion) {
     contenedor.hidden = true;
     return;
   }
   contenedor.hidden = false;
-  const cerrar = el("button", { clase: "panel-cerrar", type: "button", onclick: alCerrar, "aria-label": "Cerrar detalle" }, "×");
-  const contexto = { historial, ahoraMs };
+  const cerrar = el("div", { clase: "panel-botones" },
+    // Plegar deja la selección y la cámara como están; solo da el ancho del panel al edificio (se recuerda).
+    el("button", { clase: "panel-plegar", type: "button", onclick: () => plegarPanel(!document.body.classList.contains("panel-plegado")),
+      "aria-label": "Plegar o desplegar el detalle", title: "Plegar el detalle (más espacio para el edificio)" },
+      el("span", { clase: "panel-plegar-abierto", "aria-hidden": "true" }, "⇥"), el("span", { clase: "panel-plegar-cerrado" }, "◂ Detalle")),
+    el("button", { clase: "panel-cerrar", type: "button", onclick: alCerrar, "aria-label": "Cerrar detalle" }, "×"));
+  const contexto = { historial, ahoraMs, alSeleccionar };
+  if (estacion) { contenedor.append(cerrar, detalleEstacion(estacion, seleccion.puesto ?? null, modelo, contexto)); return; }
   contenedor.append(cerrar, agente ? detalleAgente(agente, depDelAgente, modelo, contexto) : detalleDepartamento(dep, modelo, contexto));
 }
 
@@ -121,7 +137,7 @@ function detalleAgente(a, dep, modelo, { historial, ahoraMs }) {
   );
 }
 
-function detalleDepartamento(dep, modelo, { historial, ahoraMs }) {
+function detalleDepartamento(dep, modelo, { historial, ahoraMs, alSeleccionar }) {
   // Qué hay en el departamento, por naturaleza (si el proyecto la tiene clasificada).
   const porNaturaleza = new Map();
   for (const a of dep.agentes) if (a.naturaleza) porNaturaleza.set(a.naturaleza, (porNaturaleza.get(a.naturaleza) ?? 0) + 1);
@@ -137,6 +153,12 @@ function detalleDepartamento(dep, modelo, { historial, ahoraMs }) {
           fila(i.etiqueta, `${i.valor === null ? "—" : i.valor}${i.unidad ? " " + i.unidad : ""}${i.nota ? " · " + i.nota : ""}`)))
       : null,
     el("dl", { clase: "datos" }, filaFuente(modelo), composicion ? fila("Puestos", composicion) : null),
+    ...(dep.estaciones?.length ? [
+      el("h3", {}, "Estaciones de trabajo"),
+      el("ul", { clase: "lista" }, dep.estaciones.map((e) => el("li", {},
+        alSeleccionar ? el("button", { type: "button", clase: "enlace-estacion", onclick: () => alSeleccionar({ tipo: "estacion", id: e.id }) }, e.nombre) : el("strong", {}, e.nombre),
+        `: ${e.apariencia.etiqueta}${e.es_demo ? " (DEMO)" : ""}`))),
+    ] : []),
     el("h3", {}, "Personajes"),
     dep.agentes.length
       ? el("ul", { clase: "lista" }, dep.agentes.map((a) => el("li", {}, `${a.nombre}${a.naturaleza ? ` (${NATURALEZAS[a.naturaleza].corta.toLowerCase()})` : ""}: ${a.apariencia.etiqueta}`)))
@@ -157,4 +179,66 @@ function detalleDepartamento(dep, modelo, { historial, ahoraMs }) {
       : el("p", { clase: "detalle-nota" }, "Sin resultados publicados."),
     ...seccionHistorial(eventos, ahoraMs),
   );
+}
+
+/**
+ * Detalle de una estación de trabajo (estaciones.js): qué función tiene, en qué estado está cada puesto, qué datos
+ * hay y cuáles faltan, de dónde salen y el enlace con la otra oficina. Siempre dice qué es demostración y que los
+ * personajes son funciones del sistema, no agentes de IA.
+ */
+function detalleEstacion(e, puestoId, modelo, { alSeleccionar }) {
+  const dep = modelo.departamentos.find((d) => d.id === e.departamento);
+  const origen = e.es_demo ? "demo" : e.vigente ? "real" : "sin";
+  const insignia = el("span", { clase: `tablero-insignia ${origen === "demo" ? "es-demo" : origen === "real" ? "es-real" : ""}` }, { demo: "DEMO", real: "REAL", sin: "SIN DATOS" }[origen]);
+  const filas = [
+    fila("Oficina", `${modelo.proyecto.nombre} · ${dep?.nombre ?? e.departamento}`),
+    fila("Función", e.funcion ?? "No descrita"),
+    fila("Estado", e.apariencia.etiqueta),
+  ];
+  if (e.origen_funcion) filas.push(fila("De dónde sale la función", e.origen_funcion));
+  if (e.contrato_origen) filas.push(fila("Contrato de origen", e.contrato_origen));
+  filas.push(fila("Fuente", e.generado_en
+    ? `${e.fuente?.nombre ?? "Archivo de estaciones"} · generado ${e.edad_segundos !== null ? `hace ${describirDuracion(e.edad_segundos)}` : ""}${e.hora_simulada ? " (hora simulada)" : ""}${e.vigencia_segundos ? `, vigencia ${describirDuracion(e.vigencia_segundos)}` : ""}`
+    : "Sin archivo de estado de la estación"));
+  if (e.motivo) filas.push(fila("Por qué no hay datos", e.motivo));
+  const enlace = e.enlace ? textoEnlace(e.enlace, e.es_demo) : null;
+  return el("article", { clase: "detalle detalle-estacion" },
+    el("p", { clase: "detalle-tipo" }, `${modelo.proyecto.nombre} · Estación de trabajo `, insignia),
+    el("h2", {}, e.nombre),
+    el("p", { clase: "etiqueta-estado estado-estacion", style: `--color-estado:#${e.apariencia.color.toString(16).padStart(6, "0")}` }, `${e.apariencia.icono} ${e.apariencia.etiqueta}`),
+    el("p", { clase: "detalle-nota" }, e.apariencia.descripcion),
+    el("div", { clase: "caja-aviso", role: "note" },
+      el("strong", {}, "Qué representan los personajes"),
+      el("p", {}, "Cada personaje es una FUNCIÓN del sistema, no un agente de IA ni un proceso encendido. Teclean solo si un proceso registrado está en curso (con evidencia); con una señal o investigación guardada consultan; sin datos vigentes la silla queda vacía.")),
+    e.nota ? el("p", { clase: "detalle-nota" }, e.nota) : null,
+    el("dl", { clase: "datos" }, filas),
+    el("h3", {}, "Puestos"),
+    el("ul", { clase: "lista lista-puestos-estacion" }, e.puestos.map((p) => el("li", { clase: p.id === puestoId ? "puesto-elegido" : "" },
+      alSeleccionar ? el("button", { type: "button", clase: "enlace-estacion", onclick: () => alSeleccionar({ tipo: "estacion", id: e.id, puesto: p.id }) }, p.funcion) : el("strong", {}, p.funcion),
+      p.detalle ? el("small", {}, ` (${p.detalle})`) : null,
+      ` · ${p.apariencia.etiqueta}`,
+      p.ultimo_estado_conocido ? el("small", {}, ` · último reportado: ${ESTADOS_ESTACION[p.ultimo_estado_conocido].etiqueta} (no confiable)`) : null,
+      p.nota ? el("p", { clase: "detalle-nota" }, p.nota) : null,
+      p.evidencia ? el("p", { clase: "detalle-nota" }, `Evidencia: ${p.evidencia.origen} · ${p.evidencia.referencia}${p.evidencia.observado_en ? " · " + fecha(p.evidencia.observado_en) : ""}`) : null,
+      p.notas.length ? el("p", { clase: "detalle-nota" }, `Correcciones del visualizador: ${p.notas.join(" ")}`) : null))),
+    el("h3", {}, "Datos disponibles"),
+    e.conteos.length
+      ? el("dl", { clase: "datos" }, e.conteos.map((c) => fila(c.etiqueta, `${c.valor === null ? "— (no disponible)" : c.valor}${c.nota ? " · " + c.nota : ""}`)))
+      : el("p", { clase: "detalle-nota" }, "Ninguno."),
+    el("h3", {}, "Datos que faltan"),
+    e.datos_faltantes.length ? el("ul", { clase: "lista" }, e.datos_faltantes.map((t) => el("li", {}, t))) : el("p", { clase: "detalle-nota" }, e.vigente ? "El archivo no declara faltantes." : "Sin datos vigentes."),
+    enlace ? el("h3", {}, "Relación con la otra oficina") : null,
+    enlace ? el("p", { clase: `detalle-nota enlace-${e.enlace.estado}` }, enlace) : null,
+    el("p", { clase: "detalle-nota" }, "Cauce solo muestra lo que el archivo registra: no evalúa oportunidades, no calcula rentabilidad y no inventa noticias, proveedores ni transferencias."),
+  );
+}
+
+function textoEnlace(x, esDemo = false) {
+  const otro = x.nombre ?? x.proyecto;
+  const dir = x.sentido === "salida" ? `Envía señales a ${otro}` : `Recibe señales de ${otro}`;
+  if (x.estado === "confirmado" && esDemo) return `${dir}. Transferencia de DEMOSTRACIÓN: las dos demostraciones registran ${x.confirmadas.join(", ")}. No es una comunicación real entre los proyectos.`;
+  if (x.estado === "confirmado") return `${dir}. Transferencia confirmada por las dos partes: ${x.confirmadas.join(", ")}.`;
+  if (x.estado === "sin_confirmar") return `${dir}. Registrada solo de este lado (${x.solo_aqui.join(", ")}): sin confirmar. ${x.motivo ?? "La otra estación no registra la misma señal."}`;
+  if (x.estado === "ninguno") return `${dir}. Sin transferencias registradas.`;
+  return `${dir}. ${x.motivo ?? "Sin datos vigentes para comprobar el enlace."}`;
 }

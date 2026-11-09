@@ -80,8 +80,12 @@ const agente = (d, id) => d.departamentos.flatMap((x) => x.agentes).find((a) => 
   await p.keyboard.press('Escape'); await p.keyboard.press('Escape'); await p.waitForTimeout(800);
   await p.locator('.etiqueta-dep', { hasText: 'Evaluación' }).first().click(); await p.waitForTimeout(1800);
   const antesVis = (await per(p)).filter((x) => x.visible).length;
+  // El recuadro de ?medir=1 queda encima del lienzo: se oculta para que no reciba el clic (con la estación de
+  // Compago el cuarto crece y el escritorio cae debajo del recuadro). Nada de esto existe sin ?medir=1.
+  await p.evaluate(() => { const m = document.querySelector('.vista3d-medidas'); if (m) m.hidden = true; });
   const puesto = await p.evaluate(() => window.__cauce3d.proyectarPuesto('evaluador'));
   if (puesto) { await p.mouse.click(puesto.x, puesto.y); await p.waitForTimeout(1500); }
+  await p.evaluate(() => { const m = document.querySelector('.vista3d-medidas'); if (m) m.hidden = false; });
   const textoT = await tarjeta.innerText().catch(() => '');
   ok('puesto vacío: tocar el escritorio (sin personaje) lo selecciona y la tarjeta lo explica', /Puesto sin personaje/.test(textoT) && (await tarjeta.getAttribute('data-puesto')) === 'vacio' && (await p.locator('#panel').innerText()).includes((await tarjeta.locator('strong').innerText().catch(() => '¿?'))), textoT.replace(/\n/g, ' / '));
   ok('puesto vacío: no aparece ningún personaje al consultarlo', (await per(p)).filter((x) => x.visible).length === antesVis && !(await per(p)).some((x) => x.id === 'evaluador' && x.visible));

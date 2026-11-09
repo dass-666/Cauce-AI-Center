@@ -24,3 +24,6 @@ datos/csi/registro/*
 # CSI fase 2: el caso histórico real es local hasta que Diego autorice publicarlo (el repositorio es público).
 datos/csi/historico/*
 !datos/csi/historico/LEEME.md
+
+# Mediciones locales de herramientas/medir-msi.ps1
+mediciones/

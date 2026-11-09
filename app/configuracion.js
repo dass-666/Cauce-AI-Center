@@ -22,5 +22,8 @@ export function leerConfiguracion(url) {
     base: rutaBase(u.href),
     // Para mostrarse dentro de otra página (iframe del futuro portal): sin marca ni pie, el resto igual.
     incrustado: q.get("incrustado") === "1",
+    // Estaciones de trabajo dentro de las oficinas (estaciones.js). ?estaciones=0 las quita para medir A/B el
+    // rendimiento en la computadora de Diego (mismo edificio con y sin estaciones). Por omisión, encendidas.
+    estaciones: q.get("estaciones") !== "0",
   };
 }

@@ -10,5 +10,37 @@
     "margenes":      { "x": 1, "y": 1, "ancho": 1, "alto": 1 },
     "auditoria":     { "x": 2, "y": 1, "ancho": 1, "alto": 1 },
     "supervision":   { "x": 3, "y": 1, "ancho": 1, "alto": 1 }
+  },
+  "estaciones": {
+    "internacional": {
+      "nombre": "Oportunidades Internacionales",
+      "departamento": "oportunidades",
+      "equipo": "comercio",
+      "funcion": "Recibe señales externas, abre investigaciones de países, proveedores y productos para México y las evalúa solo con datos suficientes. Una señal es una alerta, no una oportunidad confirmada.",
+      "origen": "Compago PR #26–#28 (borradores, sin fusionar): apps/internacional; lee ek-chuah.senales-economicas 0.2.0 (PR #27) y tiene una salida estado_internacional 0.1.1 (PR #28) que aún no escribe archivo. Sin exportador hacia Cauce todavía.",
+      "puestos": [
+        {
+          "id": "investigador",
+          "funcion": "Investigador de países y proveedores",
+          "detalle": "País de la señal, proveedores y productos posibles"
+        },
+        {
+          "id": "importacion",
+          "funcion": "Analista de importación, logística y aranceles",
+          "detalle": "Arancel, DTA, flete, despacho y logística"
+        },
+        {
+          "id": "evaluador",
+          "funcion": "Evaluador de costos, márgenes y viabilidad",
+          "detalle": "Solo con datos completos; reutiliza el calculador de Compago"
+        }
+      ],
+      "enlace": {
+        "proyecto": "ek-chuah",
+        "estacion": "observatorio",
+        "sentido": "entrada",
+        "nombre": "Observatorio (Ek Chuah)"
+      }
+    }
   }
 }

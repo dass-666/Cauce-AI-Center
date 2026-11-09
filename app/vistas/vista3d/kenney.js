@@ -21,8 +21,18 @@ const CLIP_GESTO = { celebrar: "emote-yes", reaccion_error: "emote-no" };
 
 /** Modelo que le toca a un agente: siempre el mismo para el mismo id. */
 export function modeloDe(id) {
+  if (id.startsWith("modelo:") && MODELOS_KENNEY.includes(id.slice(7))) return id.slice(7); // cuerpo elegido a propósito
   return MODELOS_KENNEY[huella(id) % MODELOS_KENNEY.length];
 }
+
+/**
+ * Cuerpos de los personajes de estación: un conjunto FIJO de tres modelos, uno por puesto (el mismo en todas las
+ * estaciones). Así cada función se distingue de sus compañeras, y recorrer los pisos no sube a la GPU modelos
+ * nuevos después del primero que tenga estación (texturas y geometrías estables). character-male-c ya lo usan los
+ * agentes que trabajan en las demos de Compago y Ek Chuah; los otros dos son +2 texturas de 512×512 como máximo.
+ */
+export const MODELOS_ESTACION = Object.freeze(["character-female-d", "character-male-a", "character-male-c"]);
+export const cuerpoEstacion = (indice) => `modelo:${MODELOS_ESTACION[indice % MODELOS_ESTACION.length]}`;
 
 /** 0..1: cuánto teclea en el instante r. Ráfagas de 3–6 s con pausas cortas; distinto para cada personaje (r ya trae su fase). */
 export function rafagaDe(r) {
@@ -90,16 +100,27 @@ export function crearCatalogoKenney(recursos) {
   };
 }
 
+/** ¿Dos esqueletos mueven los mismos huesos con las mismas matrices inversas? (entonces pueden ser uno) */
+export function mismoEsqueleto(a, b) {
+  return a.bones.length === b.bones.length && a.bones.every((h, i) => h === b.bones[i]) &&
+    a.boneInverses.every((m, i) => m.equals(b.boneInverses[i]));
+}
+
 function crearCuerpoKenney(gltf, recursos) {
+  let primeraUnion = null;
   const raiz = new THREE.Group();
   const modelo = clone(gltf.scene);
   modelo.scale.setScalar(gltf.userData.escala);
   raiz.add(modelo);
+  // Rendimiento UHD: cuerpo y cabeza traen cada uno su esqueleto (mismos 7 huesos, mismas matrices). Si coinciden,
+  // comparten uno solo: una textura de huesos y una actualización por personaje y cuadro en vez de dos.
+  let esqueleto = null;
   modelo.traverse((o) => {
-    if (o.isSkinnedMesh) {
-      o.frustumCulled = false; // con animación, la caja original no sirve para recortar
-      recursos.agregar(o.skeleton); // cada clon tiene su propio esqueleto (textura de huesos)
-    }
+    if (!o.isSkinnedMesh) return;
+    o.frustumCulled = false; // con animación, la caja original no sirve para recortar
+    if (esqueleto && mismoEsqueleto(esqueleto, o.skeleton) && o.bindMatrix.equals(primeraUnion)) { o.skeleton.dispose(); o.skeleton = esqueleto; return; }
+    if (!esqueleto) { esqueleto = o.skeleton; primeraUnion = o.bindMatrix; }
+    recursos.agregar(o.skeleton); // cada clon tiene su propio esqueleto (textura de huesos)
   });
   const hueso = (n) => modelo.getObjectByName(n);
   const h = { brazoD: hueso("arm-right"), brazoI: hueso("arm-left"), cabeza: hueso("head"), torso: hueso("torso") };
@@ -210,6 +231,15 @@ function crearCuerpoKenney(gltf, recursos) {
       h.cabeza.rotation.y += Math.sin(r * 5) * 0.22 * o;
     } else if (gesto === "reaccion_error") {
       h.brazoD.rotation.set(-2.5 * Math.min(1, t / 0.4), 0, 0.6);
+    } else if (gesto === "consultar") {
+      // Estaciones: inclinado sobre el escritorio, la vista baja a un documento y vuelve a la pantalla; de vez en
+      // cuando pasa una hoja. Sin golpeteo de teclado: representa consultar un registro guardado, no un proceso.
+      const leer = quieto ? 0.5 : 0.5 + 0.5 * Math.sin(r * 0.45);
+      h.torso.rotation.x += 0.1;
+      h.cabeza.rotation.x += 0.08 + 0.2 * leer;
+      h.cabeza.rotation.y += quieto ? 0 : Math.sin(r * 0.2) * 0.08;
+      h.brazoI.rotation.set(-0.95, 0, -0.2);
+      h.brazoD.rotation.set(-0.95 - 0.35 * o, 0, 0.2 + 0.15 * o); // pasa la hoja (gesto ocasional)
     } else if (gesto === "atencion") {
       // Fase L: sentado con la mano levantada mientras pida revisión (no la baja hasta que cambie la evidencia);
       // de vez en cuando la sube del todo.

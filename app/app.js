@@ -2,6 +2,8 @@
 // tiempo y se los pasa a la vista (3D o plano 2D; las dos usan el mismo modelo de vista).
 // La vista 3D y three.js solo se descargan si se usan; "Bajo consumo" fuerza el plano 2D.
 
+import { normalizarCargaEstaciones } from "./nucleo/estaciones-compago.js";
+import { inicioDeSerie } from "./vistas/vista3d/medicion-serie.js";
 import { cargarJSON, cargarEstado, cargarRegistro } from "./cargador.js";
 import { construirModeloVista, elegirCarga, resumenDe } from "./nucleo/modelo.js";
 import { crearVista2D } from "./vistas/vista2d.js";
@@ -20,6 +22,7 @@ import { evaluarLeccion } from "./nexus/gerente.js";
 import { dibujarNexus } from "./vistas/nexus.js";
 import { dibujarCSI, olvidarCalculosCSI } from "./vistas/csi.js";
 import { leerCSI } from "./csi/registro.js";
+import { leerDisposicionEstaciones, construirEstaciones, cruzarEnlace, aplicarEstaciones } from "./nucleo/estaciones.js";
 
 const INTERVALO_MS = 30_000;
 const $ = (s) => document.querySelector(s);
@@ -81,6 +84,7 @@ function avisarVista(texto, { reintentar = false } = {}) {
 
 function vistaDeseada() {
   if ($("#bajo-consumo").checked) return "2d";
+  if (new URLSearchParams(location.search).has("auto")) return "3d"; // la medición automática siempre es en 3D
   return leerPreferencia("cauce.vista") === "2d" ? "2d" : "3d";
 }
 
@@ -170,17 +174,24 @@ async function iniciar() {
     if (e.key === "i" || e.key === "I") { e.preventDefault(); ponerCSI(!csiAbierto()); }
   });
 
+  // ?medir=1&auto=30&serie=1: la serie A/B empieza por su primer caso (medicion-serie.js).
+  const inicioSerie = inicioDeSerie(location.href);
+  if (inicioSerie) { location.replace(inicioSerie); return; }
   const registro = await cargarRegistro();
   estado.proyectos = registro.proyectos;
   if (estado.proyectos.length === 0) {
     $("#oficina").replaceChildren(el("p", { clase: "plano-vacio" }, "No se encontró datos/proyectos.json."));
     return;
   }
+  // ?proyecto=<id> (enlaces de medición y de revisión) manda sobre el último piso visitado.
+  const pedido = new URLSearchParams(location.search).get("proyecto");
   const guardado = leerPreferencia("cauce.proyecto");
-  estado.actual = estado.proyectos.find((p) => p.id === guardado) ?? estado.proyectos[0];
+  estado.actual = estado.proyectos.find((p) => p.id === pedido) ?? estado.proyectos.find((p) => p.id === guardado) ?? estado.proyectos[0];
   dibujarPestanas();
   await actualizar();
-  if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
+  const medicionAuto = new URLSearchParams(location.search).has("auto"); // medición automática: sin sala encima
+  if (medicionAuto) { /* nada encima del edificio */ }
+  else if (new URLSearchParams(location.search).get("sala") === "1" || leerPreferencia("cauce.sala") === "1") ponerSala(true);
   else if (new URLSearchParams(location.search).get("nexus") === "1") ponerNexus(true);
   else if (["1", "historico", "demo", "registro"].includes(new URLSearchParams(location.search).get("csi") ?? "")) ponerCSI(true);
   estado.temporizador = setInterval(() => { if (!document.hidden) actualizar(); }, INTERVALO_MS);
@@ -476,8 +487,10 @@ async function actualizar() {
   // La demostración solo se pide si no existe el archivo real.
   const demo = real.tipo === "no_encontrado" && p.demo ? await cargarJSON(p.demo) : null;
   const clasificacion = await clasificacionDe(p);
-  if (p !== estado.actual || numero !== lecturaNumero) return; // cambió de piso o llegó una lectura más nueva
   const eleccion = elegirCarga(real, demo);
+  const esDemoPiso = eleccion.carga.tipo === "ok" && eleccion.carga.datos?.es_demo === true;
+  const estaciones = await estacionesDe(p, dist.tipo === "ok" ? dist.datos : null, eleccion.origen, esDemoPiso);
+  if (p !== estado.actual || numero !== lecturaNumero) return; // cambió de piso o llegó una lectura más nueva
   estado.modelo = construirModeloVista({
     proyecto: p,
     carga: eleccion.carga,
@@ -486,6 +499,11 @@ async function actualizar() {
     distribucion: dist.tipo === "ok" ? dist.datos : null,
     ahora: new Date(),
   });
+  // Estaciones de trabajo dentro de las oficinas existentes (contrato aparte cauce.estaciones; el v1 no cambia).
+  if (estaciones) {
+    aplicarEstaciones(estado.modelo, estaciones.estaciones.map((e) => ({ ...e })));
+    for (const t of [...estaciones.errores, ...estaciones.avisos]) console.warn(`estaciones de ${p.id}: ${t}`);
+  }
   registroCambios.leer(estado.modelo); // solo compara con la lectura anterior de esta página
   modelosPisos.set(p.id, estado.modelo);
   bitacora.leer(estado.modelo);
@@ -496,6 +514,43 @@ async function actualizar() {
   dibujarSalaSiAbierta();
   if (nexusAbierto()) leerYDibujarNexus();
   revisarOtrosPisos();
+}
+
+// Escenas de otros pisos (solo para saber qué estación está al otro lado de un enlace). Son estructura: se leen una vez.
+const escenasOtros = new Map();
+async function escenaDe(p) {
+  if (!p?.distribucion) return null;
+  if (!escenasOtros.has(p.id)) { const r = await cargarJSON(p.distribucion); escenasOtros.set(p.id, r.tipo === "ok" ? r.datos : null); }
+  return escenasOtros.get(p.id);
+}
+
+/**
+ * Estado de las estaciones del piso (y del otro lado de su enlace, para confirmar transferencias). Lee de la
+ * misma carpeta que el piso: si el piso muestra la demostración, datos/demo/; si no, datos/reales/. Nunca cae
+ * a la demostración en silencio cuando el piso es REAL. Sin "estaciones" en la escena no se pide nada.
+ */
+async function estacionesDe(p, dist, origen, esDemo) {
+  if (!leerConfiguracion(location.href).estaciones) return null; // ?estaciones=0: medición A/B sin estaciones
+  const disposicion = leerDisposicionEstaciones(dist);
+  if (disposicion.length === 0) return null;
+  const ruta = (q) => (origen === "demo" ? q.estaciones?.demo : q.estaciones?.estado);
+  const ahora = new Date();
+  // normalizarCargaEstaciones: si el archivo es la salida de Compago (estado_internacional), se traduce aquí.
+  const carga = normalizarCargaEstaciones(ruta(p) ? await cargarJSON(ruta(p)) : { tipo: "no_encontrado" });
+  const r = construirEstaciones({ disposicion, carga, origen, esDemo, ahora, proyectoId: p.id });
+  // Enlaces con estaciones de otros pisos: se lee la estación del otro lado con la misma regla (DEMO con DEMO).
+  for (const est of r.estaciones) {
+    if (!est.enlace) continue;
+    const otro = estado.proyectos.find((q) => q.id === est.enlace.proyecto);
+    const dispOtro = otro ? leerDisposicionEstaciones(await escenaDe(otro)).filter((e) => e.id === est.enlace.estacion) : [];
+    let otra = null;
+    if (otro && dispOtro.length && ruta(otro)) {
+      const c = normalizarCargaEstaciones(await cargarJSON(ruta(otro)));
+      otra = construirEstaciones({ disposicion: dispOtro, carga: c, origen, esDemo, ahora, proyectoId: otro.id }).estaciones[0] ?? null;
+    }
+    cruzarEnlace(est, p.id, otra, otro?.id ?? null);
+  }
+  return r;
 }
 
 async function clasificacionDe(p) {
@@ -526,12 +581,27 @@ function dibujar() {
   if (!m || !vista) return;
   // Primero el panel: así la vista 3D ya sabe cuánto tapa (en celular se abre encima del edificio).
   dibujarPanel($("#panel"), m, estado.seleccion, () => { estado.seleccion = null; dibujar(); },
-    { historial: bitacora.eventos({ proyecto_id: m.proyecto.id }), ahoraMs: Date.now() });
+    { historial: bitacora.eventos({ proyecto_id: m.proyecto.id }), ahoraMs: Date.now(), alSeleccionar: (sel) => { estado.seleccion = sel; dibujar(); } });
   vista.dibujar(m, estado.seleccion);
   dibujarEstado(m);
 }
 
+/** Alto disponible para la vista: lo que queda de la ventana debajo de cabecera y franjas (sin desplazar la página). */
+function medirArriba() {
+  const o = $("#oficina");
+  if (!o) return;
+  const arriba = Math.round(o.getBoundingClientRect().top + window.scrollY);
+  document.documentElement.style.setProperty("--arriba-oficina", `${arriba}px`);
+}
+window.addEventListener("resize", medirArriba);
+// Lo de arriba cambia de alto sin que cambie la ventana (fuentes, avisos, el tablero al llegar los datos).
+if (typeof ResizeObserver === "function") {
+  const vigia = new ResizeObserver(() => medirArriba());
+  for (const sel of [".cabecera", "#banda-demo", "#conexion", "#aviso-vista", "#llegada"]) { const e = document.querySelector(sel); if (e) vigia.observe(e); }
+}
+
 function dibujarEstado(m) {
+  requestAnimationFrame(medirArriba); // las franjas (DEMO, avisos) cambian lo que queda arriba
   $("#banda-demo").hidden = !m.es_demo;
   if (m.es_demo) {
     // En celular se ocultan "DATOS DE" y la hora (sigue en el tablero) para que la franja no quede cortada.

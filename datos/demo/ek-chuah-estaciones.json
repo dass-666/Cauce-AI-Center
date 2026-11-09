@@ -1,0 +1,35 @@
+{
+  "contrato": "cauce.estaciones",
+  "version": "0.1.0",
+  "proyecto": { "id": "ek-chuah" },
+  "generado_en": "2026-11-03T16:28:00Z",
+  "vigencia_segundos": 900,
+  "es_demo": true,
+  "demo": { "ahora_simulado": "2026-11-03T16:30:00Z" },
+  "fuente": { "tipo": "demo", "nombre": "Demostración sintética escrita a mano en Cauce (no viene de Ek Chuah ni de ninguna fuente real)" },
+  "estaciones": [
+    {
+      "id": "observatorio",
+      "contrato_origen": "ek-chuah.senales-economicas 0.2.0 (forma usada como referencia; datos inventados)",
+      "nota": "[DEMO] Ningún acontecimiento de esta demostración es real.",
+      "puestos": [
+        { "id": "macro", "estado": "sin_actividad", "nota": "[DEMO] Sin señales de divisas ni de inflación en esta demostración." },
+        { "id": "geopolitico", "estado": "senal_recibida", "nota": "[DEMO] Señal sintética de aranceles registrada (SEN-DEMO-ARANCEL-01). Es una alerta, no una conclusión.",
+          "evidencia": { "origen": "demo", "referencia": "SEN-DEMO-ARANCEL-01", "observado_en": "2026-11-03T16:20:00Z" } },
+        { "id": "riesgos", "estado": "riesgo_detectado", "nota": "[DEMO] La señal tiene una sola fuente: no es utilizable como hecho (utilizable_como_hecho = false).",
+          "evidencia": { "origen": "demo", "referencia": "verificacion una_fuente", "observado_en": "2026-11-03T16:21:00Z" } }
+      ],
+      "conteos": [
+        { "etiqueta": "Señales registradas", "valor": 3, "nota": "sintéticas" },
+        { "etiqueta": "Utilizables como hecho", "valor": 0 },
+        { "etiqueta": "Hipótesis e inferencias", "valor": 1, "nota": "nunca se presentan como hechos" },
+        { "etiqueta": "Fuentes sin acceso", "valor": null }
+      ],
+      "datos_faltantes": ["magnitud del cambio", "dirección del cambio", "fuentes ligadas a cada acontecimiento"],
+      "enlaces": [
+        { "senal_id": "SEN-DEMO-ARANCEL-01", "sentido": "emitida", "contraparte": "compago", "registrado_en": "2026-11-03T16:22:00Z",
+          "evidencia": { "origen": "demo", "referencia": "archivo senales-economicas sintético" } }
+      ]
+    }
+  ]
+}

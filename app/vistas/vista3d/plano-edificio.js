@@ -13,13 +13,14 @@ export const EDIFICIO = Object.freeze({
 });
 
 /** Fondo que necesita un cuarto para sus escritorios. */
-export function fondoNecesario(ancho, numPuestos) {
-  const filas = Math.max(1, Math.ceil(Math.max(1, numPuestos) / puestosPorFila(ancho)));
+export function fondoNecesario(ancho, numPuestos, filasExtra = 0) {
+  // filasExtra: una fila por estación de trabajo del departamento (disposicion.js › lugaresEstaciones).
+  const filas = Math.max(1, Math.ceil(Math.max(1, numPuestos) / puestosPorFila(ancho))) + filasExtra;
   return MEDIDAS.margen * 2 + MEDIDAS.pasillo + filas * MEDIDAS.profundidadFila;
 }
 
 /**
- * @param {{id: string, posicion: {x:number,y:number,ancho:number,alto:number}, puestos: number}[]} deps
+ * @param {{id: string, posicion: {x:number,y:number,ancho:number,alto:number}, puestos: number, filasExtra?: number}[]} deps
  * @returns {{cuartos: {id:string,x:number,z:number,ancho:number,fondo:number}[], recepcion: {x:number,z:number,ancho:number,fondo:number}|null, ancho:number, fondo:number, pasillos:{x:number,z:number,ancho:number,fondo:number}[]}}
  *   x, z = centro de cada cuarto; el edificio queda centrado en el origen.
  */
@@ -46,7 +47,7 @@ export function distribuirEdificio(deps) {
   const fondoFila = Array(totalFilas).fill(E.fondoMinimo);
   for (const d of deps) {
     const p = d.posicion;
-    const porFila = (fondoNecesario(anchoDe(p.ancho), d.puestos) - (p.alto - 1) * E.pasilloFilas) / p.alto;
+    const porFila = (fondoNecesario(anchoDe(p.ancho), d.puestos, d.filasExtra ?? 0) - (p.alto - 1) * E.pasilloFilas) / p.alto;
     for (let f = p.y; f < p.y + p.alto; f++) fondoFila[f] = Math.max(fondoFila[f], porFila);
   }
   const inicioFila = [];

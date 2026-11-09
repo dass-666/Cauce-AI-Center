@@ -23,14 +23,17 @@ import { crearTiempoGpu } from "./tiempo-gpu.js";
 import { escucharDeslizar } from "./gestos.js";
 import { calcularEncuadre, aPixeles, dentro } from "./encuadre.js";
 import { crearCapaEtiquetas } from "./etiquetas-dom.js";
-import { crearCatalogoKenney } from "./kenney.js";
+import { crearCatalogoKenney, cuerpoEstacion } from "./kenney.js";
 import { Recursos } from "./recursos.js";
 import { crearMedidor, firmaMedicion } from "./medidor.js";
+import { registrarEnSerie, resumenSerie } from "./medicion-serie.js";
 import { crearMobiliario } from "./mobiliario.js";
 import { crearHistorialCamara, claveSeleccion } from "./camara-historial.js";
 import { texturaDuela as duelaM, texturaAlfombra, texturaConcreto, texturaVinil, texturaAtlasPantallas, texturaResplandor } from "./texturas.js";
 import { intensidadAmbiente } from "./estilo-visual.js";
 import { duracionViaje, suavizarViaje, anguloEncuadre } from "./viaje-camara.js";
+import { ICONOS_ESTACION, burbujasEstacion } from "./estacion3d.js";
+import { firmaEstaciones } from "../../nucleo/estaciones.js";
 
 const ANGULO_BASE = Math.PI / 4;     // vista isométrica: 45° alrededor del cuarto
 const INCLINACION = 0.955;          // ≈ 35.3° sobre el horizonte (isométrica clásica)
@@ -170,9 +173,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   const compartido = {
     geoPersonaje: crearGeometriasPersonaje(compartidos),
     texturaSombra,
-    matSombra: compartidos.agregar(Object.assign(new THREE.MeshBasicMaterial({ map: texturaSombra, transparent: true, depthWrite: false, opacity: 0.4 }), { userData: { sinBrillo: true } })),
+    // Antes el degradado era negro con alfa 0.85; ahora es blanco con alfa 1: negro y 0.4 × 0.85 = mismo resultado.
+    matSombra: compartidos.agregar(Object.assign(new THREE.MeshBasicMaterial({ map: texturaSombra, color: 0x000000, transparent: true, depthWrite: false, opacity: 0.34 }), { userData: { sinBrillo: true } })),
     geoSombraEscritorio: compartidos.agregar(new THREE.PlaneGeometry(1.8, 1.4).rotateX(-Math.PI / 2)),
-    burbujas: crearBurbujas(compartidos, ESTADOS),
+    burbujas: crearBurbujas(compartidos, ESTADOS, ICONOS_ESTACION), // un atlas: iconos v1 y de estación
     catalogo: crearCatalogoKenney(compartidos),
     // Placa «HUMANO» de los puestos de personas (una textura para todo el edificio).
     matPlacaHumano: compartidos.agregar(new THREE.MeshBasicMaterial({ map: compartidos.agregar(texturaPlaca("HUMANO")), toneMapped: false })),
@@ -195,7 +199,14 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     geoToque: compartidos.agregar(new THREE.BoxGeometry(1.4, 1.1, 1.9)),
     matToque: compartidos.agregar(new THREE.MeshBasicMaterial({ visible: false })),
     quieto: () => menosMovimiento.matches,
+    // Estaciones de trabajo (estacion3d.js): iconos por estado de estación y un material (color de vértice)
+    // para las pantallas de todas las estaciones: cambiar de estado no crea materiales nuevos.
+    // ?fusion=0: lo estático queda por cuarto (como antes) para comparar A/B la fusión del edificio.
+    fusionEdificio: new URLSearchParams(location.search).get("fusion") !== "0",
+
+    matPantallasEstacion: compartidos.agregar(new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })),
   };
+  compartido.burbujasEstacion = burbujasEstacion(compartido.burbujas);
   compartido.matPiso = compartido.pisos.duela; // el piso de siempre (cuartos sin tipo de piso)
   // Fase M: resplandor de la pantalla sobre el escritorio, solo cuando la pantalla está encendida por evidencia
   // (mismo color que la pantalla). Un material por color, compartido por todo el edificio.
@@ -211,11 +222,14 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
 
   let escenario = null;    // edificio completo o un solo cuarto (edificio.js)
   let claveOficina = "";
-  let modo = leer("cauce.modo3d") === "individual" ? "individual" : "edificio";
+  // ?modo3d=edificio|individual (enlaces de medición) manda sobre lo recordado.
+  const modoPedido = new URLSearchParams(location.search).get("modo3d");
+  let modo = (modoPedido ?? leer("cauce.modo3d")) === "individual" ? "individual" : "edificio";
   let enfocado = null;     // departamento enfocado: se anima siempre a cuadro completo
   let animCam = null;      // movimiento suave de la cámara al enfocar
   let ultimoAnimados = 0;
   let ultimoAgente = null;
+  let ultimaEstacion = null; // estación elegida la última vez (la cámara se acerca una vez por elección)
   let recienConstruido = false;
   let ultimoMinimapa = 0;
   let claveCargando = null;
@@ -224,7 +238,9 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let depMostrado = null;
   let mitadAlto = 4;
   let destruida = false;
-  const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0";
+  // Con ?quieta=0 o en la medición automática (?auto) se dibuja cada cuadro: en una escena quieta el ahorro deja de
+  // contar segundos y la medición no terminaba nunca (visto en la MSI el 2026-11-08).
+  const ahorroQuietud = new URLSearchParams(location.search).get("quieta") !== "0" && !new URLSearchParams(location.search).has("auto");
   let redibujar = true;      // algo cambió fuera del ciclo (datos, tamaño, luz, brillo): dibujar el próximo cuadro
   let ultimoRender = 0;
   let cuadrosOmitidos = 0;
@@ -428,6 +444,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       zoomHacia: THREE.MathUtils.clamp(mitadAlto / 3.6, 1, controles.maxZoom),
     };
     animCam.hacia = centrarEnZona(new THREE.Vector3(p.x, 0.6, p.z), animCam.zoomHacia);
+  }
+  function acercarEstacion(id) {
+    const r = escenario?.estaciones().find((x) => x.e.id === id);
+    if (!r) return;
+    animCam = { t: 0, desde: controles.target.clone(), zoomDesde: camara.zoom, zoomHacia: THREE.MathUtils.clamp(mitadAlto / 4.6, 1, controles.maxZoom) };
+    animCam.hacia = centrarEnZona(new THREE.Vector3(r.x, 0.6, r.z), animCam.zoomHacia);
   }
   function volverAlPiso() {
     recordar();
@@ -646,7 +668,8 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
   let ultimoDibujo = 0;
   let reloj = 0;
   let ultimaZona = 0;
-  const medidor = crearMedidor({ ventana: 20 });
+  // Con ?auto=N la ventana debe abarcar los N segundos (antes era fija en 20 y ?auto=30 no terminaba nunca).
+  const medidor = crearMedidor({ ventana: Math.max(20, Math.min(120, Number(new URLSearchParams(location.search).get("auto")) || 0)) });
   const tiempoGpu = medir ? crearTiempoGpu(renderer.getContext()) : null; // solo con ?medir=1
   let brilloApagadoSolo = null;
 
@@ -750,11 +773,85 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       aplicarBrillo();
     }
     if (!medir) return;
-    medidasTexto.textContent = textoMedicion(metricas());
+    const i = metricas();
+    medidasTexto.textContent = textoMedicion(i);
+    revisarAuto(t, i);
+  }
+  // Entrega de un informe: al servidor local si herramientas\medir-msi.ps1 lo arrancó con --recibir-mediciones
+  // (no depende de los permisos de descarga del navegador) y, además, como descarga. Ninguna de las dos es obligatoria.
+  function entregar(nombre, doc) {
+    const cuerpo = JSON.stringify(doc, null, 2);
+    const envio = fetch(`__medicion/${nombre}.json`, { method: "POST", headers: { "Content-Type": "application/json" }, body: cuerpo }).catch(() => null);
+    try {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([cuerpo], { type: "application/json" }));
+      a.download = `${nombre}.json`;
+      document.body.append(a); a.click(); a.remove();
+    } catch { /* sin descargas: el texto queda en pantalla */ }
+    return envio;
+  }
+  // Progreso para el guion de Windows (qué paso va y qué errores hubo); si nadie lo recibe, no pasa nada.
+  const erroresPagina = [];
+  if (medir && new URLSearchParams(location.search).has("auto")) {
+    addEventListener("error", (e) => erroresPagina.push(String(e.message ?? e).slice(0, 200)));
+    addEventListener("unhandledrejection", (e) => erroresPagina.push(String(e.reason?.message ?? e.reason).slice(0, 200)));
+  }
+  function avisarEstado(fase, extra = {}) {
+    fetch("__medicion/estado.json", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fase, caso: parametros.get("caso") ?? "", direccion: location.href, hora: new Date().toISOString(), errores: erroresPagina.slice(0, 10), ...extra }) }).catch(() => {});
+  }
+  // ?medir=1&auto=30&serie=1: la serie A/B completa (medicion-serie.js) en la MISMA pestaña, un caso tras otro.
+  async function siguienteDeSerie(informe) {
+    const siguiente = registrarEnSerie(informe, location.href);
+    if (siguiente) { location.replace(siguiente); return; }
+    const r = resumenSerie();
+    medidasTexto.textContent = r.texto;
+    window.__cauceSerie = r;
+    await entregar("cauce-medicion-serie", r);
+    avisarEstado("serie terminada");
+  }
+  // ?medir=1&auto=30[&caso=A]: medición automática para la MSI. Espera 5 s a que el piso se asiente, mide `auto`
+  // segundos sin tocar nada y descarga cauce-medicion-<caso>-<proyecto>.json (a la carpeta Descargas). Una vez.
+  const parametros = new URLSearchParams(location.search);
+  const autoSeg = medir ? Math.min(120, Math.max(10, Number(parametros.get("auto")) || 0)) : 0;
+  const autoActiva = medir && parametros.has("auto");
+  let autoInicio = null, autoHecha = false, autoPrimero = null, autoReinicios = 0, autoIncompleta = false;
+  // Además del ciclo de dibujo, una revisión por segundo: así el tope se cumple aunque no se completen segundos.
+  const relojAuto = autoActiva ? setInterval(() => { if (autoHecha || destruida) clearInterval(relojAuto); else revisarAuto(performance.now(), metricas()); }, 1000) : 0;
+  function revisarAuto(t, i) {
+    if (!autoActiva || autoHecha) return;
+    autoPrimero ??= t;
+    // Tope: si algo impide medir (la ventana cambia de tamaño una y otra vez, el piso no termina de construirse),
+    // se entrega lo que haya, marcado como incompleto, para que la serie siga y el guion no espere en vano.
+    const tope = t - autoPrimero > (autoSeg * 3 + 60) * 1000;
+    if (!tope) {
+      if (!escenario || recienConstruido) return;
+      if (autoInicio === null) { autoInicio = t; avisarEstado("asentando"); return; }
+      if (autoInicio > 0 && t - autoInicio < 5000) return;
+      if (autoInicio > 0) { medidor.reiniciar(t, "medición automática"); autoInicio = -1; avisarEstado("midiendo"); return; }
+      // Otro cambio reinició la ventana (p. ej. la ventana se maximizó): se vuelve a asentar y a empezar.
+      if (i.reiniciado_por !== "medición automática") { autoReinicios++; autoInicio = t; return; }
+      if (i.segundos_medidos < autoSeg) return;
+    } else autoIncompleta = true;
+    autoHecha = true;
+    const informe = {
+      herramienta: "Cauce 3D · medición automática", fecha: new Date().toISOString(), caso: parametros.get("caso") ?? "",
+      direccion: location.href, proyecto: modelo?.proyecto.id ?? null, estaciones: parametros.get("estaciones") !== "0",
+      fusion: parametros.get("fusion") !== "0", navegador: navigator.userAgent,
+      pantalla: { ancho: screen.width, alto: screen.height, escala: devicePixelRatio, ventana: [innerWidth, innerHeight] },
+      segundos_pedidos: autoSeg, incompleta: autoIncompleta, reinicios_por_cambios: autoReinicios, errores_pagina: erroresPagina.slice(0, 10), ...i,
+    };
+    medidasTexto.textContent = `MEDICIÓN ${autoIncompleta ? "INCOMPLETA" : "TERMINADA"} (${i.segundos_medidos} de ${autoSeg} s): se entregó el archivo.\n` + textoMedicion(i);
+    window.__cauceMedicion = informe;
+    const nombre = `cauce-medicion-${(informe.caso || "sin-caso").toLowerCase().replace(/[^a-z0-9-]/g, "-")}-${informe.proyecto}`;
+    entregar(nombre, informe).then(() => {
+      avisarEstado("caso entregado", { incompleta: autoIncompleta });
+      if (parametros.has("serie")) setTimeout(() => siguienteDeSerie(informe), 1500); // deja terminar la descarga
+    });
   }
   function textoMedicion(i) {
     const vista = i.modo !== "edificio" ? `un cuarto (${i.departamento_nombre})` : i.enfocado ? `edificio, enfocado: ${i.enfocado_nombre}` : "edificio completo";
-    return `${i.fps} cps (prom. ${i.fps_promedio}, mín. ${i.fps_minimo} en ${i.segundos_medidos} s) · peor cuadro ${i.peor_cuadro_ms} ms · ${i.segundos_bajo_50} s bajo 50 cps\n` +
+    return `${i.fps} cps (prom. ${i.fps_promedio}, mín. ${i.fps_minimo}, 1 % más lento ${i.cps_1pct_bajo} en ${i.segundos_medidos} s) · peor cuadro ${i.peor_cuadro_ms} ms · ${i.segundos_bajo_50} s bajo 50 cps\n` +
       `${vista}, ${i.personajes} personajes · ventana reiniciada por: ${i.reiniciado_por}\n` +
       `${i.llamadas} llamadas · ${i.triangulos} triángulos · ${i.geometrias} geometrías · ${i.texturas} texturas\n` +
       `px ${i.pixelRatio} · ${i.tamano.join("×")} · brillo ${i.brillo ? `encendido (${i.brillo_tipo})` : i.brillo_apagado_solo ? `apagado solo (${i.brillo_apagado_solo} cps)` : "apagado"}` +
@@ -772,6 +869,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     } catch { gpu = "desconocida"; }
     return gpu;
   }
+  function texturasHuesos() {
+    const vistos = new Set();
+    escena.traverse((o) => { if (o.isSkinnedMesh && o.skeleton.boneTexture) vistos.add(o.skeleton); });
+    return vistos.size;
+  }
   function metricas() {
     const r = medidor.resumen();
     const nombre = (id) => modelo?.departamentos.find((d) => d.id === id)?.nombre ?? id;
@@ -781,6 +883,12 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       fps_minimo: r.minimo,
       peor_cuadro_ms: r.peor_cuadro_ms,
       segundos_bajo_50: r.segundos_bajo_50,
+      cuadro_p50_ms: r.cuadro_p50_ms,
+      cuadro_p95_ms: r.cuadro_p95_ms,
+      cuadro_p99_ms: r.cuadro_p99_ms,
+      cps_1pct_bajo: r.cps_1pct_bajo,
+      // Solo Chromium/Edge: memoria de JavaScript de la página (no incluye la de la tarjeta gráfica).
+      memoria_js_mb: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
       segundos_medidos: r.segundos,
       reiniciado_por: r.reiniciado_por,
       brillo_apagado_solo: brilloApagadoSolo,
@@ -789,6 +897,10 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       triangulos: renderer.info.render.triangles,
       geometrias: renderer.info.memory.geometries,
       texturas: renderer.info.memory.textures,
+      // De esas, cuántas son texturas de huesos (una por esqueleto animado ya dibujado, ~1 KB cada una): crecen con
+      // los personajes a la vista, no con imágenes. texturas_imagen = el resto (letreros, atlas, modelos).
+      texturas_huesos: texturasHuesos(),
+      texturas_imagen: renderer.info.memory.textures - texturasHuesos(),
       pixelRatio: renderer.getPixelRatio(),
       movil,
       brillo: brilloFx.activo,
@@ -856,7 +968,23 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     }
     return { izq: x0, der: x1, arriba: y0, abajo: y1 };
   }
-  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara };
+  // Solo con ?medir=1: estado de cada estación (lo que dibujó) y su punto en pantalla para tocarla.
+  const estacionesAhora = () => (escenario?.estaciones() ?? []).map((x) => ({ departamento: x.dep, ...x.e.resumen() }));
+  function proyectarEstacion(id, puesto = null) {
+    const x = escenario?.estaciones().find((r) => r.e.id === id);
+    if (!x) return null;
+    let v;
+    if (puesto) {
+      const per = x.e.personajes.find((p) => p.puestoEstacion === puesto);
+      if (!per) return null;
+      v = per.raiz.getWorldPosition(new THREE.Vector3());
+      v.y += 0.6;
+    } else v = x.e.tablero.getWorldPosition(new THREE.Vector3()); // centro del tablero
+    v.project(camara);
+    const r = lienzo.getBoundingClientRect();
+    return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
+  }
+  if (medir) window.__cauce3d = { metricas, proyectar, personajes: personajesAhora, cajaEdificio, proyectarPuesto, camara: estadoCamara, estaciones: estacionesAhora, proyectarEstacion };
 
   // --- Dibujo a partir del modelo de vista ---
   function dibujar(m, sel) {
@@ -898,6 +1026,7 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     let objetivo = null;
     if (sel?.tipo === "departamento") objetivo = sel.id;
     if (sel?.tipo === "agente") objetivo = deps.find((d) => d.agentes.some((a) => a.id === sel.id))?.id ?? null;
+    if (sel?.tipo === "estacion") objetivo = deps.find((d) => (d.estaciones ?? []).some((e) => e.id === sel.id))?.id ?? null;
     const recordado = depMostrado ?? leer(`cauce.depto3d.${m.proyecto.id}`);
     const dep = deps.find((d) => d.id === (objetivo ?? recordado)) ?? deps[0];
     depMostrado = dep.id;
@@ -916,8 +1045,11 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
     const visibles = modo === "edificio" ? deps : [dep];
     // es_demo en la clave: al pasar de DEMO a REAL la escena se reconstruye y nadie "reacciona" a la diferencia.
     const clave = `${modo}/${m.proyecto.id}/${m.es_demo ? "demo" : "real"}/${m.cuadricula.metros_por_celda}/` +
-      visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => `${a.id}/${a.naturaleza ?? ""}`).join(",")}`).join("|");
-    const ids = visibles.flatMap((d) => d.agentes.map((a) => a.id));
+      visibles.map((d) => `${d.id}:${d.posicion.x},${d.posicion.y},${d.posicion.ancho},${d.posicion.alto}:${d.agentes.map((a) => `${a.id}/${a.naturaleza ?? ""}`).join(",")}:${firmaEstaciones(d.estaciones)}`).join("|");
+    // Personajes que hay que descargar: agentes del contrato y funciones de las estaciones del cuarto.
+    // Personajes de estación: un cuerpo fijo por puesto (cuerpoEstacion, kenney.js), distinto entre compañeros.
+    for (const d of visibles) for (const e of d.estaciones ?? []) e.puestos.forEach((p, i) => { p.cuerpo = cuerpoEstacion(i); });
+    const ids = visibles.flatMap((d) => [...d.agentes.map((a) => a.id), ...(d.estaciones ?? []).flatMap((e) => e.puestos.map((p) => p.cuerpo))]);
     if (clave !== claveOficina) {
       if (escenario) quitarOficina();
       if (compartido.catalogo.listos(ids)) {
@@ -961,6 +1093,13 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
       acercarAgente(agenteElegido);
     }
     ultimoAgente = agenteElegido;
+    // Al elegir una estación, la cámara se acerca a ella (una vez por elección; no al refrescar los datos).
+    const estacionElegida = escenario && sel?.tipo === "estacion" ? `${sel.id}/${sel.puesto ?? ""}` : null;
+    if (estacionElegida && estacionElegida !== ultimaEstacion && !restaurando) {
+      if (!guardada) recordar(selAntes, enfocado);
+      acercarEstacion(sel.id);
+    }
+    ultimaEstacion = estacionElegida;
     volverPiso.hidden = !(modo === "edificio" && enfocado);
     irRecepcion.hidden = !(modo === "edificio" && escenario?.recepcion);
     const hayAtencion = Boolean(siguienteConAtencion(deps, null));
@@ -1139,13 +1278,17 @@ function texturaPlaca(texto) {
   return t;
 }
 
+/**
+ * Degradado radial BLANCO (alfa 1 → 0), compartido por las sombras (material negro) y los charcos de luz del
+ * edificio (material cálido): una textura en vez de dos. El color y la intensidad los pone cada material.
+ */
 function texturaRadial() {
   const c = document.createElement("canvas");
   c.width = c.height = 64;
   const ctx = c.getContext("2d");
   const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 32);
-  g.addColorStop(0, "rgba(0,0,0,0.85)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(c);
