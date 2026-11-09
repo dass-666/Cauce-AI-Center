@@ -1161,11 +1161,23 @@ export function crearVista3D(contenedor, { alSeleccionar, alFallar = () => {}, t
           ascensor.llegar(); aplicarAscensor(); recienArmado = true;
           prepararSombreadores = true; // ver moverAscensor: con la vista corrida three.js los prepararía a destiempo
         }
-        else {
-          lienzo.style.opacity = "0"; // fase L: el piso nuevo aparece con un fundido corto (sin él con «reducir movimiento»)
+        else if (!camaraQuieta()) {
+          // Fase L: el piso o cuarto nuevo aparece con un fundido corto. Antes la opacidad bajaba a 0 CON la
+          // transición puesta y volvía a 1 un cuadro después: el lienzo apenas se atenuaba y el cuarto aparecía de
+          // golpe. Ahora pasa a 0 al instante (sin transición) y solo la subida se anima. Sin fundido con «reducir
+          // movimiento» o «Cámara instantánea».
+          lienzo.style.transition = "none";
+          lienzo.style.opacity = "0";
+          void lienzo.offsetWidth; // el navegador fija la opacidad 0 antes de devolverle la transición
+          lienzo.style.transition = "";
           requestAnimationFrame(() => { lienzo.style.opacity = ""; });
         }
         encuadrar();
+        // «Un cuarto»: además del fundido, la cámara se acerca un poco al llegar (0.45–0.9 s), como al entrar.
+        if (modo === "individual" && ascensor.fase === null && !camaraQuieta()) {
+          camara.zoom = 0.84; camara.updateProjectionMatrix();
+          animCam = { t: 0, desde: controles.target.clone(), hacia: controles.target.clone(), zoomDesde: 0.84, zoomHacia: 1 };
+        }
         recienConstruido = true;
         aplicarLuz();
         enfocado = null; // se vuelve a enfocar abajo, ya con la cámara en su lugar

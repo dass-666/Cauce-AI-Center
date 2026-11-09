@@ -3,7 +3,7 @@
 // (cola de acciones, caminos, posturas) queda igual.
 
 import * as THREE from "three";
-import { planDeTransicion, variacion, gestoOcasional, faseTrabajo, girarHacia } from "./maquina.js";
+import { planDeTransicion, variacion, gestoOcasional, faseTrabajo, girarHacia, faseVida, BUCLES_CON_VIDA } from "./maquina.js";
 
 /** Gira hacia `objetivo` sin pasar de GIRO_MAXIMO rad/s. */
 function girar(actual, objetivo, dt) {
@@ -104,7 +104,7 @@ function crearCuerpo(geo, recursos, id, texturaSombra) {
 }
 
 /** Traduce la pose pedida por el controlador a las piezas del personaje provisional. */
-function aplicarProvisional(c, { base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false }) {
+function aplicarProvisional(c, { base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false, vida = null }) {
   reposo(c);
   if (base === "caminar") return caminar(c, quieto ? 0 : t);
   if (base === "sentandose") return sentar(c, suave(s));
@@ -118,6 +118,19 @@ function aplicarProvisional(c, { base, s, gesto, t, r, o = 0, fase = "teclear", 
   else if (gesto === "llamar_atencion") levantarMano(c, t);
   else if (gesto === "consultar") { c.torso.rotation.x = 0.1; c.brazoI.rotation.x = -0.95; c.brazoD.rotation.x = -0.95 - 0.35 * o; c.cabeza.rotation.x = 0.08 + (quieto ? 0.1 : 0.1 + 0.1 * Math.sin(r * 0.45)); } // estaciones: lee, no teclea
   else if (gesto === "atencion") { c.brazoD.rotation.x = -1.6 - 1.2 * o; c.brazoD.rotation.z = 0.15 + 0.1 * o; c.cabeza.rotation.x = -0.1; } // fase L: la mano queda arriba mientras pida revisión
+  if (vida) vidaEnReposo(c, vida, gesto);
+}
+
+/** Vida en reposo (maquina.js → faseVida) sobre piezas con torso, cabeza y brazos; la mano levantada no se toca. */
+export function vidaEnReposo(c, { fase, k, lado }, gesto) {
+  if (k <= 0) return;
+  if (fase === "mirar_pantalla") { c.torso.rotation.x += 0.14 * k; c.cabeza.rotation.x += 0.12 * k; c.cabeza.rotation.y *= 1 - k; }
+  else if (fase === "mirar_lado") { c.cabeza.rotation.y += 0.6 * k * lado; c.torso.rotation.y += 0.14 * k * lado; }
+  else if (fase === "acomodarse") {
+    c.torso.rotation.x -= 0.2 * k;
+    c.cabeza.rotation.z += 0.08 * k * lado;
+    if (gesto !== "atencion") { c.brazoI.rotation.x += 0.35 * k; c.brazoD.rotation.x += 0.35 * k; }
+  } else if (fase === "girar_silla") { c.torso.rotation.y += 0.3 * k * lado; c.cabeza.rotation.y += 0.25 * k * lado; } // gira sobre el asiento
 }
 
 /**
@@ -281,6 +294,8 @@ export class Personaje {
       pose.gesto = this.bucle;
       pose.o = quieto ? 0 : gestoOcasional(reloj, v);
       if (this.bucle === "teclear" && !quieto) Object.assign(pose, faseTrabajo(reloj, v)); // fase L: pausas para leer, mirar, acomodarse
+      // Vida en reposo: sentado y sin trabajo con evidencia, micro movimientos (maquina.js → faseVida).
+      if (!quieto && this.postura === "sentado" && BUCLES_CON_VIDA.has(this.bucle)) pose.vida = faseVida(reloj, v);
     }
     this.fase = pose.gesto === "teclear" ? pose.fase : null;
     // De pie en su lugar (error, celebración) se hace a un lado de la silla, deslizándose.

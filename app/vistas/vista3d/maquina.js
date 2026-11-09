@@ -150,6 +150,45 @@ export function faseTrabajo(reloj, v) {
   return { fase: "teclear", k: 1 };
 }
 
+// ---------- Vida en reposo (2026-11-09) ----------
+// Sentado sin trabajo con evidencia (reposo, consultar, atención) el personaje ya no se queda casi inmóvil: de vez
+// en cuando mira la pantalla de cerca, voltea a un lado, se acomoda en la silla o la gira un poco. Ninguna de estas
+// fases pone las manos en el teclado: no representan un proceso ni dicen nada del estado (eso lo dicen la postura,
+// la pantalla, el tablero y el panel). Secuencia fija y reproducible, distinta para cada personaje.
+export const FASES_VIDA = Object.freeze(["quieto", "mirar_pantalla", "mirar_lado", "acomodarse", "girar_silla"]);
+export const BUCLES_CON_VIDA = Object.freeze(new Set(["reposo", "consultar", "atencion"]));
+
+const TRAMOS_VIDA = Object.freeze([
+  ["quieto", 0.16], ["mirar_pantalla", 0.2], ["quieto", 0.1], ["mirar_lado", 0.14], ["quieto", 0.08],
+  ["girar_silla", 0.12], ["quieto", 0.06], ["acomodarse", 0.14],
+]);
+
+/**
+ * Fase de vida en reposo en el instante `reloj` (s) para la variación `v`.
+ * @returns {{fase: string, k: number, lado: number}} k = 0..1 (entra y sale suave, ≤ 0.9 s); lado = ±1 hacia
+ *   dónde voltea o gira (propio de cada personaje y de cada vuelta del ciclo). El ciclo dura 2 × v.periodo (14–26 s).
+ */
+export function faseVida(reloj, v) {
+  const ciclo = v.periodo * 2;
+  const bruto = reloj + v.fase * 7;
+  const vuelta = Math.floor(bruto / ciclo);
+  const t = ((bruto % ciclo) + ciclo) % ciclo;
+  const lado = ((vuelta + Math.round(v.fase * 10)) & 1) ? 1 : -1;
+  let inicio = 0;
+  for (let i = 0; i < TRAMOS_VIDA.length; i++) {
+    const [fase, frac] = TRAMOS_VIDA[i];
+    const dur = frac * ciclo;
+    if (t < inicio + dur || i === TRAMOS_VIDA.length - 1) {
+      if (fase === "quieto") return { fase, k: 0, lado };
+      const dentro = Math.min(dur, t - inicio), rampa = Math.min(0.9, dur / 3);
+      const x = Math.max(0, Math.min(1, dentro / rampa, (dur - dentro) / rampa));
+      return { fase, k: x * x * (3 - 2 * x), lado };
+    }
+    inicio += dur;
+  }
+  return { fase: "quieto", k: 0, lado };
+}
+
 /** Ángulo intermedio por el camino corto (para girar sin dar la vuelta completa). */
 export function girarHacia(actual, objetivo, k) {
   let d = objetivo - actual;

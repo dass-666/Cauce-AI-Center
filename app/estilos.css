@@ -661,6 +661,7 @@ html.sala-abierta .principal { grid-template-columns: 1fr !important; }
 /* Fundido corto al cambiar de piso o de modo (sin él con «reducir movimiento»). */
 .vista3d canvas { transition: opacity 0.35s ease; }
 @media (prefers-reduced-motion: reduce) { .vista3d canvas { transition: none; } }
+.camara-sin-animacion canvas { transition: none; }
 
 /* Tarjeta flotante del personaje o puesto elegido: solo texto, no recibe clics (el panel tiene las acciones). */
 .vista3d-tarjeta {

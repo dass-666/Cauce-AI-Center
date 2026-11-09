@@ -104,7 +104,7 @@ if (SAL) fs.mkdirSync(SAL, { recursive: true });
   const medio = await cam(p);
   const redir = await viaje(p, 'Montambre', 2200);
   const pisosVistos = [...new Set(redir.map((s) => s.piso))];
-  ok('redirigir a media salida (Ek Chuah → Montambre): un solo viaje que termina en Montambre', medio.ascensor === 'salida' && redir[redir.length - 1].piso === 'montambre' && redir[redir.length - 1].ascensor === null && !pisosVistos.includes('ek-chuah'), `pisos dibujados: ${pisosVistos.join(' → ')}`);
+  ok('redirigir a media salida (Ek Chuah → Montambre): un solo viaje que termina en Montambre', medio.ascensor === 'salida' && redir[redir.length - 1].piso === 'montambre' && redir[redir.length - 1].ascensor === null && !pisosVistos.includes('ek-chuah'), `medio: ${medio.ascensor}, pisos dibujados: ${pisosVistos.join(' → ')}`);
   ok('redirigir: el letrero cambia al nuevo destino (Piso 4)', redir.some((s) => /Piso 4 · Montambre/.test(s.letrero)));
   // Ráfaga: cinco pisos seguidos en menos de un segundo.
   for (const n of ['Compago', 'Ek Chuah', 'Montambre', 'Compago', 'Ek Chuah']) { await p.locator('#pisos .piso', { hasText: n }).first().click(); await p.waitForTimeout(90); }

@@ -162,8 +162,10 @@ function crearCuerpoKenney(gltf, recursos) {
 
   let gestoAnterior = null;
   let baseAnterior = null;
-  function aplicar({ base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false }, dt) {
+  function aplicar({ base, s, gesto, t, r, o = 0, fase = "teclear", k = 1, quieto = false, vida = null }, dt) {
     modelo.position.y = 0;
+    // Vida en reposo: giro corto sobre el asiento (el modelo gira dentro de su raíz; la silla no se mueve).
+    modelo.rotation.y = vida?.fase === "girar_silla" ? 0.32 * vida.k * vida.lado : 0;
     if (gesto !== gestoAnterior || base !== baseAnterior) {
       if (gesto !== gestoAnterior && CLIP_GESTO[gesto] && acciones[CLIP_GESTO[gesto]]) acciones[CLIP_GESTO[gesto]].time = 0; // empieza desde el inicio
       gestoAnterior = gesto;
@@ -250,6 +252,22 @@ function crearCuerpoKenney(gltf, recursos) {
       // Fase L: gesto breve de satisfacción (puño arriba una vez), sin saltar; termina en postura neutral.
       const kk = Math.sin(Math.min(1, t / 1.4) * Math.PI);
       h.brazoD.rotation.set(-2.4 * kk, 0, 0.25 * kk);
+    }
+
+    // Vida en reposo (maquina.js → faseVida): mirar la pantalla de cerca, voltear, acomodarse; nunca teclear.
+    if (vida && vida.k > 0) {
+      const { fase: fv, k: kv, lado } = vida;
+      if (fv === "mirar_pantalla") { h.torso.rotation.x += 0.16 * kv; h.cabeza.rotation.x += 0.14 * kv; }
+      else if (fv === "mirar_lado") { h.cabeza.rotation.y += 0.65 * kv * lado; h.torso.rotation.y += 0.16 * kv * lado; }
+      else if (fv === "acomodarse") {
+        h.torso.rotation.x -= 0.18 * kv;
+        h.cabeza.rotation.z += 0.09 * kv * lado;
+        if (gesto !== "atencion") { h.brazoI.rotation.x += 0.3 * kv; h.brazoD.rotation.x += 0.3 * kv; }
+      } else if (fv === "girar_silla") h.cabeza.rotation.y += 0.2 * kv * lado;
+    }
+    if (vida) { // respiración y vista un poco más visibles sentado en reposo (antes casi imperceptibles a distancia)
+      h.torso.rotation.x += Math.sin(r * 1.6) * 0.012;
+      h.cabeza.rotation.y += Math.sin(r * 0.5 + 1) * 0.05;
     }
 
     // Mezcla entre la postura del gesto anterior y la del actual.
