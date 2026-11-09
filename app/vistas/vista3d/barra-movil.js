@@ -9,7 +9,7 @@ import { ESTADOS } from "../../nucleo/estados.js";
 
 const claseEstado = (estado) => ESTADOS[estado]?.clase2d ?? "sin_datos";
 
-export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar, alVolverPiso, alRecepcion = null, alSiguienteAlerta = null, alSala = null, alAnterior = null }) {
+export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar, alVolverPiso, alRecepcion = null, alSiguienteAlerta = null, alSala = null, alAnterior = null, alCamaraInstantanea = null }) {
   const anterior = el("button", { type: "button", clase: "movil-flecha", "aria-label": "Departamento anterior" }, "◀");
   const siguiente = el("button", { type: "button", clase: "movil-flecha", "aria-label": "Departamento siguiente" }, "▶");
   const luz = el("span", { clase: "etiqueta-luz", "aria-hidden": "true" });
@@ -56,8 +56,8 @@ export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar
      * @param modo       "edificio" | "individual"
      * @param luzFija    boolean
      */
-    actualizar({ resumenes, actualId, modo, luzFija, hayAtencion = false, hayAnterior = false }) {
-      const clave = JSON.stringify([resumenes, actualId, modo, luzFija, hayAtencion, hayAnterior]);
+    actualizar({ resumenes, actualId, modo, luzFija, hayAtencion = false, hayAnterior = false, camaraInstantanea = false }) {
+      const clave = JSON.stringify([resumenes, actualId, modo, luzFija, hayAtencion, hayAnterior, camaraInstantanea]);
       if (clave === ultimo) return;
       ultimo = clave;
       const dep = resumenes.find((r) => r.id === actualId) ?? null;
@@ -90,6 +90,7 @@ export function crearBarraMovil({ alPaso, alElegir, alModo, alLuzFija, alCentrar
         opcion("Un cuarto", () => alModo("individual"), { "aria-checked": modo === "individual" ? "true" : "false", role: "menuitemradio" }),
         el("p", { clase: "movil-menu-titulo" }, "Cámara"),
         opcion("Centrar", alCentrar),
+        alCamaraInstantanea ? opcion(camaraInstantanea ? "Animar cambios de piso y cámara" : "Cámara instantánea (sin animación)", () => alCamaraInstantanea(!camaraInstantanea), { role: "menuitemcheckbox", "aria-checked": camaraInstantanea ? "true" : "false" }) : null,
         modo === "edificio" && actualId ? opcion("← Volver al piso", alVolverPiso) : null,
         modo === "edificio" && alAnterior && hayAnterior ? opcion("↶ Vista anterior", alAnterior) : null,
         modo === "edificio" && alRecepcion ? opcion("⌂ Ir a la recepción", alRecepcion) : null,

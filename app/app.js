@@ -437,6 +437,8 @@ function dibujarPestanas() {
 
 async function elegirProyecto(p) {
   if (p === estado.actual) return;
+  // Bloque D: en la vista 3D la cámara sube o baja hasta el piso elegido (ascensor). En el plano 2D, cambio directo.
+  vista?.viajarAPiso?.({ orden: estado.proyectos.map((x) => x.id), destino: p.id, nombre: p.nombre });
   estado.actual = p;
   estado.seleccion = null;
   seguidor.reiniciar(); // la primera lectura del otro piso no cuenta como cambio observado
